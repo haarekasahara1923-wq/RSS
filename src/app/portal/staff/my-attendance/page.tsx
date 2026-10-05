@@ -6,6 +6,8 @@ export default function StaffMyAttendancePage() {
     const { token, user } = useAuth()
     const [attendances, setAttendances] = useState<any[]>([])
     const [todayMarked, setTodayMarked] = useState(false)
+    const [todayOutMarked, setTodayOutMarked] = useState(false)
+    const [todayAttendanceId, setTodayAttendanceId] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [msg, setMsg] = useState('')
 
@@ -27,8 +29,10 @@ export default function StaffMyAttendancePage() {
                 
                 // Check if today is marked
                 const today = new Date().toDateString()
-                const marked = res.data.some((a: any) => new Date(a.date).toDateString() === today)
-                setTodayMarked(marked)
+                const todayRecord = res.data.find((a: any) => new Date(a.date).toDateString() === today)
+                setTodayMarked(!!todayRecord)
+                setTodayOutMarked(!!(todayRecord && todayRecord.outTime))
+                setTodayAttendanceId(todayRecord ? todayRecord.id : null)
             }
         } catch (e) {
             console.error(e)
@@ -36,30 +40,32 @@ export default function StaffMyAttendancePage() {
         setLoading(false)
     }
 
-    const markAttendance = async () => {
+    const markAttendance = async (type: 'IN' | 'OUT') => {
         if (!(user as any)?.teacherProfile?.id) return
-        setMsg('Marking...')
+        setMsg(type === 'IN' ? 'Marking IN...' : 'Marking OUT...')
         try {
             const now = new Date()
-            const inTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            
+            const payload = {
+                teacherId: (user as any).teacherProfile.id,
+                date: now.toISOString(),
+                status: 'PRESENT',
+                [type === 'IN' ? 'inTime' : 'outTime']: timeString,
+                notes: type === 'IN' ? 'Marked IN from Portal' : 'Marked OUT from Portal'
+            }
             
             const r = await fetch('/api/teachers/attendance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({
-                    teacherId: (user as any).teacherProfile.id,
-                    date: now.toISOString(),
-                    status: 'PRESENT',
-                    inTime: inTime,
-                    notes: 'Marked from Portal'
-                })
+                body: JSON.stringify(payload)
             })
             const res = await r.json()
             if (res.success) {
-                setMsg('Attendance marked successfully for today!')
+                setMsg(`Successfully marked ${type}!`)
                 fetchAttendance()
             } else {
-                setMsg(res.error || 'Failed to mark attendance')
+                setMsg(res.error || `Failed to mark ${type}`)
             }
         } catch (e) {
             setMsg('Network Error')
@@ -70,23 +76,34 @@ export default function StaffMyAttendancePage() {
         <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
             <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '24px' }}>My Attendance</h1>
 
-            <div className="card" style={{ padding: '32px', marginBottom: '32px', textAlign: 'center', background: todayMarked ? '#f0fdf4' : '#fff' }}>
-                <h2 style={{ fontSize: '20px', marginBottom: '16px' }}>
-                    {todayMarked ? '✅ You are marked Present today' : 'Ready to mark attendance?'}
+            <div className="card" style={{ padding: '32px', marginBottom: '32px', textAlign: 'center', background: (todayMarked && todayOutMarked) ? '#f0fdf4' : 'var(--surface-2)' }}>
+                <h2 style={{ fontSize: '20px', marginBottom: '16px', color: 'var(--text-color)' }}>
+                    {todayMarked && todayOutMarked ? '✅ You have completed your shift today' : todayMarked ? '✅ You are marked IN. Remember to mark OUT.' : 'Ready to mark your IN time?'}
                 </h2>
                 
-                {msg && <p style={{ marginBottom: '16px', color: '#0369a1' }}>{msg}</p>}
+                {msg && <p style={{ marginBottom: '16px', color: '#10b981' }}>{msg}</p>}
 
-                <button 
-                    onClick={markAttendance} 
-                    disabled={todayMarked}
-                    className={`btn ${todayMarked ? 'btn-secondary' : 'btn-primary'}`} 
-                    style={{ padding: '12px 32px', fontSize: '18px', cursor: todayMarked ? 'not-allowed' : 'pointer' }}
-                >
-                    {todayMarked ? 'Already Marked' : 'MARK IN - PRESENT'}
-                </button>
-                <p style={{ marginTop: '16px', color: '#64748b', fontSize: '14px' }}>
-                    Your IN time will be captured automatically.
+                <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+                    <button 
+                        onClick={() => markAttendance('IN')} 
+                        disabled={todayMarked}
+                        className={`btn`} 
+                        style={{ padding: '12px 32px', fontSize: '18px', cursor: todayMarked ? 'not-allowed' : 'pointer', background: todayMarked ? '#475569' : '#10b981', color: 'white', border: 'none' }}
+                    >
+                        {todayMarked ? 'IN Marked' : 'MARK IN'}
+                    </button>
+
+                    <button 
+                        onClick={() => markAttendance('OUT')} 
+                        disabled={!todayMarked || todayOutMarked}
+                        className={`btn`} 
+                        style={{ padding: '12px 32px', fontSize: '18px', cursor: (!todayMarked || todayOutMarked) ? 'not-allowed' : 'pointer', background: (!todayMarked || todayOutMarked) ? '#475569' : '#f59e0b', color: 'white', border: 'none' }}
+                    >
+                        {todayOutMarked ? 'OUT Marked' : 'MARK OUT'}
+                    </button>
+                </div>
+                <p style={{ marginTop: '16px', color: 'var(--text-muted)', fontSize: '14px' }}>
+                    Your IN and OUT times will be captured automatically.
                 </p>
             </div>
 

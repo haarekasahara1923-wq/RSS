@@ -21,7 +21,11 @@ export default function StaffHome() {
   }, [token])
 
   const actions = [
-    { href: '/portal/staff/attendance', icon: '✅', label: 'Mark Attendance', color: '#10b981' },
+    { href: '/portal/staff/my-attendance', icon: '⏱️', label: 'My Attendance', color: '#10b981' },
+    { href: '/portal/staff/attendance', icon: '✅', label: 'Student Attendance', color: '#059669' },
+    { href: '/portal/staff/leaves', icon: '🏖️', label: 'My Leaves', color: '#f59e0b' },
+    { href: '/portal/staff/timetable', icon: '📅', label: 'Time Table', color: '#3b82f6' },
+    { href: '/portal/staff/salary', icon: '💰', label: 'Salary Ledger', color: '#14b8a6' },
     { href: '/portal/staff/homework', icon: '📚', label: 'Assign Homework', color: '#6366f1' },
     { href: '/portal/staff/homework/submissions', icon: '📋', label: 'View Submissions', color: '#8b5cf6' },
     { href: '/portal/staff/notices', icon: '📢', label: 'Notices', color: '#ec4899' },
