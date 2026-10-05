@@ -42,9 +42,9 @@ function LoginForm() {
     setLoading(true)
     setError('')
 
-    // SUPER_ADMIN and all school roles must be scoped to the school tenant
-    // so their JWT tenantId matches the actual school data in the DB
-    const tenantId = SCHOOL_TENANT_ID || undefined
+    const tenantId = (role === 'SUPER_ADMIN' || role === 'COACHING_ADMIN' || role === 'ADMIN_OPERATION' || role === 'ADMIN_LIBRARY' || role === 'ADMIN_SPORTS' || role === 'ADMIN_TRANSPORT') 
+        ? undefined 
+        : (SCHOOL_TENANT_ID || undefined)
 
     const result = await login(identifier, password, role, tenantId)
     setLoading(false)
