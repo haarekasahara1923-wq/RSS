@@ -22,6 +22,7 @@ export default function AddStudentPage() {
     const [success, setSuccess] = useState(false)
     const [toast, setToast] = useState('')
     const [metadataLoading, setMetadataLoading] = useState(true)
+    const [showDocModal, setShowDocModal] = useState(false)
 
     const [form, setForm] = useState({
         scholarNo: '', fullName: '', fatherName: '', motherName: '', phone: '', parentPhone: '',
@@ -31,8 +32,46 @@ export default function AddStudentPage() {
         firstAdmissionClass: '', firstAdmissionDate: '', scholarshipScheme: '',
         feePlan: 'Annual', totalFee: '', feeWaiver: '', notes: '',
         aadhaarNo: '', penId: '', aparId: '', samagraId: '',
-        bankName: '', bankAccountNo: '', ifsc: '', subjectGroup: '', photo: ''
+        bankName: '', bankAccountNo: '', ifsc: '', subjectGroup: '', photo: '',
+        aadhaarFront: '', aadhaarBack: '', samagraIdDoc: '', aparIdDoc: '', penIdDoc: '', bankPassbook: ''
     })
+
+    const handleDocUpload = (field: string, type: 'Camera' | 'Gallery') => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        if (type === 'Camera') {
+            input.capture = 'environment';
+        }
+        input.onchange = (ev: any) => {
+            const file = ev.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (re: any) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const maxSize = 800; // slightly larger for documents
+                        let w = img.width;
+                        let h = img.height;
+                        if (w > h) {
+                            if (w > maxSize) { h *= maxSize / w; w = maxSize; }
+                        } else {
+                            if (h > maxSize) { w *= maxSize / h; h = maxSize; }
+                        }
+                        canvas.width = w;
+                        canvas.height = h;
+                        ctx?.drawImage(img, 0, 0, w, h);
+                        setForm(prev => ({...prev, [field]: canvas.toDataURL('image/jpeg', 0.8)}));
+                    };
+                    img.src = re.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    }
 
     useEffect(() => {
         if (!token) return
@@ -433,11 +472,57 @@ export default function AddStudentPage() {
                         ⬇️ Download PDF
                     </button>
 
+                    <button type="button" onClick={() => setShowDocModal(true)} className="btn" style={{ background: '#10b981', color: 'white', border: 'none' }}>
+                        📸 Upload Govt IDs
+                    </button>
+                    
                     <button type="submit" className="btn btn-primary" disabled={loading} style={{ paddingLeft: '24px', paddingRight: '24px' }}>
                         {loading ? <><div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} /> Saving...</> : '💾 Add Student'}
                     </button>
                 </div>
             </form>
+
+            {/* Document Upload Modal */}
+            {showDocModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="card" style={{ width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ margin: 0, fontWeight: '700', fontSize: '18px' }}>📸 Upload Government IDs</h3>
+                            <button type="button" onClick={() => setShowDocModal(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'white' }}>✕</button>
+                        </div>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+                            {[
+                                { key: 'aadhaarFront', label: 'Aadhaar Card (Front)' },
+                                { key: 'aadhaarBack', label: 'Aadhaar Card (Back)' },
+                                { key: 'samagraIdDoc', label: 'Samagra ID' },
+                                { key: 'aparIdDoc', label: 'Apar ID' },
+                                { key: 'penIdDoc', label: 'PEN ID' },
+                                { key: 'bankPassbook', label: 'Bank Passbook (First Page)' },
+                            ].map(doc => (
+                                <div key={doc.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface-2)', padding: '16px', borderRadius: '12px' }}>
+                                    <div>
+                                        <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>{doc.label}</div>
+                                        {form[doc.key as keyof typeof form] ? (
+                                            <span style={{ fontSize: '12px', color: '#10b981' }}>✓ Uploaded</span>
+                                        ) : (
+                                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Not uploaded yet</span>
+                                        )}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button type="button" onClick={() => handleDocUpload(doc.key, 'Camera')} className="btn" style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc', fontSize: '12px', padding: '6px 12px' }}>📷 Camera</button>
+                                        <button type="button" onClick={() => handleDocUpload(doc.key, 'Gallery')} className="btn" style={{ background: 'rgba(255,255,255,0.1)', color: 'white', fontSize: '12px', padding: '6px 12px' }}>📁 Gallery</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        <button type="button" onClick={() => setShowDocModal(false)} className="btn btn-primary" style={{ width: '100%', marginTop: '20px' }}>
+                            Done Uploading
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Hidden Printable Admission Form */}
             <div style={{ display: 'none' }}>

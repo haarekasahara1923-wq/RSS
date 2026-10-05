@@ -90,7 +90,8 @@ export async function POST(req: NextRequest) {
             fullName, phone, courseId, batchId, fatherName, motherName, parentPhone, email, address, gender, dob, 
             admissionDate, feePlan, totalFee, notes, aadhaarNo, penId, aparId, samagraId,
             scholarNo, caste, dobInWords, medium, firstAdmissionClass, firstAdmissionDate, scholarshipScheme, 
-            bankName, bankAccountNo, ifsc, subjectGroup, photo
+            bankName, bankAccountNo, ifsc, subjectGroup, photo,
+            aadhaarFront, aadhaarBack, samagraIdDoc, aparIdDoc, penIdDoc, bankPassbook
         } = body
 
         if (!fullName || !phone || !courseId || !batchId) {
@@ -142,6 +143,12 @@ export async function POST(req: NextRequest) {
                 ifsc: ifsc || '',
                 subjectGroup: subjectGroup || '',
                 photo: photo || null,
+                aadhaarFront: aadhaarFront || null,
+                aadhaarBack: aadhaarBack || null,
+                samagraIdDoc: samagraIdDoc || null,
+                aparIdDoc: aparIdDoc || null,
+                penIdDoc: penIdDoc || null,
+                bankPassbook: bankPassbook || null,
             }
         })
 
@@ -180,7 +187,8 @@ export async function PATCH(req: NextRequest) {
         const { 
             id, fullName, phone, courseId, batchId, status, fatherName, motherName, parentPhone, email, 
             totalFee, admissionDate, notes, scholarNo, dob, dobInWords, gender, caste, medium, 
-            aadhaarNo, samagraId, penId, aparId, bankName, bankAccountNo, ifsc, subjectGroup, photo
+            aadhaarNo, samagraId, penId, aparId, bankName, bankAccountNo, ifsc, subjectGroup, photo,
+            aadhaarFront, aadhaarBack, samagraIdDoc, aparIdDoc, penIdDoc, bankPassbook
         } = body
 
         if (!id) return NextResponse.json({ error: 'Student ID is required' }, { status: 400 })
@@ -215,6 +223,12 @@ export async function PATCH(req: NextRequest) {
                 ifsc: ifsc !== undefined ? ifsc : undefined,
                 subjectGroup: subjectGroup !== undefined ? subjectGroup : undefined,
                 photo: photo !== undefined ? photo : undefined,
+                aadhaarFront: aadhaarFront !== undefined ? aadhaarFront : undefined,
+                aadhaarBack: aadhaarBack !== undefined ? aadhaarBack : undefined,
+                samagraIdDoc: samagraIdDoc !== undefined ? samagraIdDoc : undefined,
+                aparIdDoc: aparIdDoc !== undefined ? aparIdDoc : undefined,
+                penIdDoc: penIdDoc !== undefined ? penIdDoc : undefined,
+                bankPassbook: bankPassbook !== undefined ? bankPassbook : undefined,
             }
         })
 

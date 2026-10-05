@@ -351,6 +351,12 @@ model Student {
   bankAccountNo       String?
   ifsc                String?
   subjectGroup        String?
+  aadhaarFront        String?
+  aadhaarBack         String?
+  samagraIdDoc        String?
+  aparIdDoc           String?
+  penIdDoc            String?
+  bankPassbook        String?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
