@@ -142,6 +142,7 @@ export async function POST(req: NextRequest) {
                 await tx.teacher.create({
                     data: {
                         tenantId: resolvedTenantId,
+                        userId: user.id,
                         name,
                         email: resolvedEmail,
                         phone: resolvedPhone || "",

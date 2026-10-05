@@ -17,9 +17,8 @@ export async function POST(req: NextRequest) {
             { phone: email } // 'email' field holds the input (can be phone too)
         ]
 
-        if (role) {
-            whereClause.role = role
-        }
+        // Role check removed so users can login regardless of which tab they clicked
+        // The frontend will redirect them properly based on the role in the response
 
         // For SUPER_ADMIN and platform-level admins — find by email/phone across all tenants
         // For tenant-scoped roles — use provided tenantId
