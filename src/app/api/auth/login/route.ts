@@ -28,13 +28,6 @@ export async function POST(req: NextRequest) {
         // Only scope to tenantId if explicitly provided (tenant-scoped users like student/parent/teacher)
         if (tenantId) {
             whereClause.tenantId = tenantId
-        } else if (role && !ADMIN_ROLES.includes(role)) {
-            // For non-admin roles without explicit tenantId, try legacy env var
-            const schoolSlug = process.env.NEXT_PUBLIC_SCHOOL_SLUG
-            if (schoolSlug) {
-                const school = await prisma.tenant.findUnique({ where: { slug: schoolSlug } })
-                if (school) whereClause.tenantId = school.id
-            }
         }
 
         const user = await prisma.user.findFirst({
