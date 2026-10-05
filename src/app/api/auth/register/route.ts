@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { hashPassword, signAccessToken, signRefreshToken } from '@/lib/auth'
 
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
             accessToken,
             refreshToken,
             user: { id: result.user.id, name, email: resolvedEmail, role: userRole, tenantId: resolvedTenantId, studentId: result.studentId || null },
-            tenant: { id: school.id, name: school.name, themeColor: school.themeColor, schoolCode: school.schoolCode },
+            tenant: { id: school.id, name: school.name, themeColor: school.themeColor, schoolCode: school.schoolCode, registrationCode: school.registrationCode, diseCode: school.diseCode },
         }, { status: 201 })
     } catch (error) {
         console.error('Register error:', error)

@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import jwt from 'jsonwebtoken'
 
@@ -42,6 +42,8 @@ export async function GET(req: NextRequest) {
                 name: t.name,
                 slug: t.slug,
                 schoolCode: t.schoolCode || null,
+                registrationCode: t.registrationCode || null,
+                diseCode: t.diseCode || null,
                 email: t.email,
                 phone: t.phone,
                 address: t.address,

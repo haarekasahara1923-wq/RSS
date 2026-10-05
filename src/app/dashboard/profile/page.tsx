@@ -10,7 +10,9 @@ export default function ProfilePage() {
         email: tenant?.email || '',
         address: tenant?.address || '',
         themeColor: tenant?.themeColor || '#6366f1',
-        logo: tenant?.logo || ''
+        logo: tenant?.logo || '',
+        registrationCode: tenant?.registrationCode || '',
+        diseCode: tenant?.diseCode || ''
     })
     const [saved, setSaved] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -81,6 +83,16 @@ export default function ProfilePage() {
                                 <label className="label">School Name</label>
                                 <input className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
                             </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div>
+                                    <label className="label">School / Registration Code</label>
+                                    <input className="input" value={form.registrationCode} onChange={e => setForm({ ...form, registrationCode: e.target.value })} placeholder="e.g. SCL-1234" />
+                                </div>
+                                <div>
+                                    <label className="label">DISE Code</label>
+                                    <input className="input" value={form.diseCode} onChange={e => setForm({ ...form, diseCode: e.target.value })} placeholder="e.g. 0912..." />
+                                </div>
+                            </div>
                             <div>
                                 <label className="label">Phone Number</label>
                                 <input className="input" type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
@@ -141,6 +153,7 @@ export default function ProfilePage() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {[
                                 { label: 'Tenant ID', value: user?.tenantId?.slice(0, 12) + '...' || '' },
+                                { label: 'Internal School ID', value: tenant?.schoolCode || 'N/A' },
                                 { label: 'Platform', value: 'UDBA v2.0' },
                                 { label: 'Region', value: 'India (Asia-South)' },
                             ].map(i => (

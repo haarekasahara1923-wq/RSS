@@ -8,6 +8,8 @@ interface Tenant {
   name: string
   slug: string
   schoolCode: string | null
+  registrationCode: string | null
+  diseCode: string | null
   email: string
   phone: string
   address: string
@@ -322,13 +324,25 @@ export default function DooperDashboard() {
                         <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', marginTop: '2px' }}>/{t.slug}</div>
                       </td>
                       <td>
-                        {t.schoolCode ? (
-                          <span className="school-code-badge" onClick={() => openBroadcast(t)}>
-                            {t.schoolCode} <span style={{ fontSize: '14px' }}>📢</span>
-                          </span>
-                        ) : (
-                          <span className="no-code-badge">No Code</span>
-                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {t.schoolCode ? (
+                            <span className="school-code-badge" onClick={() => openBroadcast(t)} style={{ width: 'fit-content' }}>
+                              App ID: {t.schoolCode} <span style={{ fontSize: '14px' }}>📢</span>
+                            </span>
+                          ) : (
+                            <span className="no-code-badge" style={{ width: 'fit-content' }}>No App ID</span>
+                          )}
+                          {t.registrationCode && (
+                            <div style={{ fontSize: '11px', color: '#6ee7b7', fontFamily: 'monospace', background: 'rgba(110,231,183,0.1)', padding: '2px 6px', borderRadius: '4px', width: 'fit-content' }}>
+                              Reg: {t.registrationCode}
+                            </div>
+                          )}
+                          {t.diseCode && (
+                            <div style={{ fontSize: '11px', color: '#93c5fd', fontFamily: 'monospace', background: 'rgba(147,197,253,0.1)', padding: '2px 6px', borderRadius: '4px', width: 'fit-content' }}>
+                              DISE: {t.diseCode}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td style={{ fontWeight: '600', color: '#e2e8f0' }}>{t.directorName || '—'}</td>
                       <td style={{ color: '#a5b4fc', fontWeight: '600' }}>{t.directorPhone || t.phone || '—'}</td>

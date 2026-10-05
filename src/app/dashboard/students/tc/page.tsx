@@ -249,7 +249,8 @@ export default function GenerateTCPage() {
                                 <h1 style={{ margin: '0', fontSize: '28px', color: tenant?.themeColor || '#000', textTransform: 'uppercase' }}>{tenant?.name}</h1>
                                 <p style={{ margin: '5px 0 0 0', fontSize: '14px' }}>{tenant?.address}</p>
                                 <p style={{ margin: '5px 0 0 0', fontSize: '14px' }}>Phone: {tenant?.phone} | Email: {tenant?.email}</p>
-                                {tenant?.schoolCode && <p style={{ margin: '5px 0 0 0', fontSize: '14px', fontWeight: 'bold' }}>School Code: {tenant.schoolCode}</p>}
+                                {tenant?.registrationCode && <p style={{ margin: '5px 0 0 0', fontSize: '14px', fontWeight: 'bold' }}>Registration No: {tenant.registrationCode}</p>}
+                                {tenant?.diseCode && <p style={{ margin: '5px 0 0 0', fontSize: '14px', fontWeight: 'bold' }}>DISE Code: {tenant.diseCode}</p>}
                             </div>
                         </div>
 

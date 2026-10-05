@@ -30,8 +30,10 @@ model Tenant {
   id           String    @id @default(cuid())
   name         String
   slug         String    @unique
-  schoolCode   String?   @unique // Unique School ID e.g. SCL-2026-ABCD
-  logo         String?
+  schoolCode       String?   @unique // Unique School ID e.g. SCL-2026-ABCD
+  registrationCode String?
+  diseCode         String?
+  logo             String?
   themeColor   String    @default("#6366f1")
   address      String?
   phone        String?

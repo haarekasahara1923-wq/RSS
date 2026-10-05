@@ -21,6 +21,8 @@ interface Tenant {
     email?: string
     address?: string
     schoolCode?: string
+    registrationCode?: string
+    diseCode?: string
     directorSign?: string
 }
 

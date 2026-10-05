@@ -65,16 +65,40 @@ export default function AdminDashboard() {
           <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', marginTop: '4px' }}>{new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          {user?.role === 'SUPER_ADMIN' && tenant?.schoolCode && (
-            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)' }}>
-              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700', marginBottom: '4px' }}>Unique School ID</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '20px', fontWeight: '900', color: '#fde047', fontFamily: 'monospace', letterSpacing: '2px' }}>{tenant.schoolCode}</span>
-                <button onClick={() => setShowBroadcastModal(true)}
-                  style={{ padding: '6px 12px', background: 'rgba(253,224,71,0.2)', border: '1px solid rgba(253,224,71,0.4)', borderRadius: '8px', color: '#fef08a', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+          {user?.role === 'SUPER_ADMIN' && (
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              {tenant?.schoolCode && (
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.2)' }}>
+                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700', marginBottom: '2px' }}>App School ID</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: '#fde047', fontFamily: 'monospace' }}>{tenant.schoolCode}</span>
+                    <button onClick={() => navigator.clipboard.writeText(tenant.schoolCode!)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }} title="Copy">📋</button>
+                  </div>
+                </div>
+              )}
+              {tenant?.registrationCode && (
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.2)' }}>
+                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700', marginBottom: '2px' }}>Reg / School Code</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: '#6ee7b7', fontFamily: 'monospace' }}>{tenant.registrationCode}</span>
+                    <button onClick={() => navigator.clipboard.writeText(tenant.registrationCode!)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }} title="Copy">📋</button>
+                  </div>
+                </div>
+              )}
+              {tenant?.diseCode && (
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.2)' }}>
+                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '700', marginBottom: '2px' }}>DISE Code</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: '#93c5fd', fontFamily: 'monospace' }}>{tenant.diseCode}</span>
+                    <button onClick={() => navigator.clipboard.writeText(tenant.diseCode!)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }} title="Copy">📋</button>
+                  </div>
+                </div>
+              )}
+              {tenant?.schoolCode && (
+                <button onClick={() => setShowBroadcastModal(true)} style={{ padding: '0 16px', background: 'rgba(253,224,71,0.2)', border: '1px solid rgba(253,224,71,0.4)', borderRadius: '10px', color: '#fef08a', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
                   📢 Broadcast
                 </button>
-              </div>
+              )}
             </div>
           )}
           <div style={{ fontSize: '48px', display: 'none' /* hidden for space if needed, or keep: display:'block' */ }}>🎓</div>

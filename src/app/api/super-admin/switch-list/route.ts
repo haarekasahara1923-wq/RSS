@@ -32,6 +32,8 @@ export async function GET(req: NextRequest) {
                         name: true,
                         slug: true,
                         schoolCode: true,
+                        registrationCode: true,
+                        diseCode: true,
                         themeColor: true,
                     }
                 }
@@ -79,6 +81,8 @@ export async function POST(req: NextRequest) {
                         name: true,
                         slug: true,
                         schoolCode: true,
+                        registrationCode: true,
+                        diseCode: true,
                         themeColor: true,
                     }
                 }
@@ -122,6 +126,8 @@ export async function POST(req: NextRequest) {
                 name: targetUser.tenant.name,
                 slug: targetUser.tenant.slug,
                 schoolCode: targetUser.tenant.schoolCode,
+                registrationCode: targetUser.tenant.registrationCode,
+                diseCode: targetUser.tenant.diseCode,
                 themeColor: targetUser.tenant.themeColor,
             },
             subscription: subscription ? {

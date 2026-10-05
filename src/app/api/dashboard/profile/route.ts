@@ -11,7 +11,7 @@ export async function PUT(req: NextRequest) {
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
         const body = await req.json()
-        const { name, phone, email, address, themeColor, logo } = body
+        const { name, phone, email, address, themeColor, logo, registrationCode, diseCode } = body
 
         if (user.role !== 'SUPER_ADMIN') {
             return NextResponse.json({ error: 'Only Super Admin can update school profile' }, { status: 403 })
@@ -25,6 +25,8 @@ export async function PUT(req: NextRequest) {
                 email,
                 address,
                 themeColor,
+                registrationCode,
+                diseCode,
                 ...(logo ? { logo } : {})
             }
         })

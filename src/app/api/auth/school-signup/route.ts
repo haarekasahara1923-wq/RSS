@@ -132,6 +132,8 @@ export async function POST(req: NextRequest) {
                 name: result.tenant.name,
                 slug: result.tenant.slug,
                 schoolCode: result.tenant.schoolCode,
+                registrationCode: result.tenant.registrationCode,
+                diseCode: result.tenant.diseCode,
                 themeColor: result.tenant.themeColor,
             }
         }, { status: 201 })
