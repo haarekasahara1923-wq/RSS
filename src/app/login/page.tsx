@@ -42,9 +42,9 @@ function LoginForm() {
     setLoading(true)
     setError('')
 
-    const tenantId = (role === 'SUPER_ADMIN' || role === 'COACHING_ADMIN' || role === 'ADMIN_OPERATION' || role === 'ADMIN_LIBRARY' || role === 'ADMIN_SPORTS' || role === 'ADMIN_TRANSPORT') 
-        ? undefined 
-        : (SCHOOL_TENANT_ID || undefined)
+    // Don't scope to SCHOOL_TENANT_ID from .env because the actual db tenantId might be a cuid.
+    // Let the API search globally by email/phone.
+    const tenantId = undefined
 
     const result = await login(identifier, password, role, tenantId)
     setLoading(false)

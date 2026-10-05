@@ -25,15 +25,10 @@ export async function POST(req: NextRequest) {
         // For tenant-scoped roles — use provided tenantId
         const ADMIN_ROLES = ['SUPER_ADMIN', 'COACHING_ADMIN', 'ADMIN_OPERATION', 'ADMIN_LIBRARY', 'ADMIN_SPORTS', 'ADMIN_TRANSPORT']
 
+        // If tenantId is explicitly provided (e.g., from a school-specific login page), use it.
+        // Otherwise, allow global search across all tenants by email/phone.
         if (tenantId) {
             whereClause.tenantId = tenantId
-        } else if (role && !ADMIN_ROLES.includes(role)) {
-            // For non-admin roles without explicit tenantId, try legacy env var
-            const schoolSlug = process.env.NEXT_PUBLIC_SCHOOL_SLUG
-            if (schoolSlug) {
-                const school = await prisma.tenant.findUnique({ where: { slug: schoolSlug } })
-                if (school) whereClause.tenantId = school.id
-            }
         }
 
         const user = await prisma.user.findFirst({
