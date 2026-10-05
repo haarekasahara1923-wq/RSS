@@ -107,10 +107,10 @@ export default function StaffMyAttendancePage() {
                 </p>
             </div>
 
-            <div className="card">
+            <div className="card" style={{ padding: '0' }}>
                 <h3 style={{ padding: '16px', borderBottom: '1px solid #e2e8f0', margin: 0 }}>Attendance History</h3>
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                    <table style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                             <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                                 <th style={{ padding: '12px 16px' }}>Date</th>

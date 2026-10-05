@@ -34,7 +34,9 @@ export async function POST(req: NextRequest) {
         const user = await prisma.user.findFirst({
             where: whereClause,
             include: {
-                studentProfile: true
+                studentProfile: true,
+                teacherProfile: true,
+                parentProfile: true
             }
         })
         if (!user) {
@@ -82,6 +84,8 @@ export async function POST(req: NextRequest) {
                 tenantId: user.tenantId,
                 phone: user.phone,
                 studentId: user.studentProfile?.id || null,
+                teacherProfile: user.teacherProfile || null,
+                parentProfile: user.parentProfile || null,
             },
             tenant: tenant ? {
                 id: tenant.id,
