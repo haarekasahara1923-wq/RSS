@@ -1,7 +1,8 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
+import Script from 'next/script'
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div>
@@ -11,8 +12,10 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 )
 
 export default function AddStudentPage() {
-    const { token, handleUnauthorized } = useAuth()
+    const { token, handleUnauthorized, tenant } = useAuth()
     const router = useRouter()
+    const formRef = useRef<HTMLDivElement>(null)
+    const [isPdfReady, setIsPdfReady] = useState(false)
     const [courses, setCourses] = useState<{ id: string; name: string; fees: number; installmentCount: number; classGroup?: string; subjectGroup?: string }[]>([])
     const [batches, setBatches] = useState<{ id: string; name: string; courseId: string }[]>([])
     const [loading, setLoading] = useState(false)
@@ -72,8 +75,60 @@ export default function AddStudentPage() {
         }
     }
 
+    const downloadPDF = () => {
+        if (!isPdfReady || !formRef.current) return
+        const opt = {
+            margin: [5, 5, 5, 5],
+            filename: `Admission_Form_${form.fullName || 'Student'}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        }
+        
+        // Temporarily make it visible for rendering
+        const originalDisplay = formRef.current.style.display
+        formRef.current.style.display = 'block'
+        
+        window.html2pdf().set(opt).from(formRef.current).save().then(() => {
+            if (formRef.current) formRef.current.style.display = originalDisplay
+        })
+    }
+
+    const downloadDOC = () => {
+        if (!formRef.current) return
+        
+        const originalDisplay = formRef.current.style.display
+        formRef.current.style.display = 'block'
+        
+        const html = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head><meta charset='utf-8'><title>Admission Form</title>
+            <style>
+                body { font-family: 'Arial', sans-serif; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                td, th { padding: 8px; border: 1px solid #ddd; }
+            </style>
+            </head><body>
+            ${formRef.current.innerHTML}
+            </body></html>
+        `
+        
+        formRef.current.style.display = originalDisplay
+        
+        const blob = new Blob(['\ufeff', html], { type: 'application/msword' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `Admission_Form_${form.fullName || 'Student'}.doc`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+    }
+
     return (
         <div>
+            <Script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" strategy="lazyOnload" onLoad={() => setIsPdfReady(true)} />
             <div className="page-header">
                 <div>
                     <h1 className="page-title">➕ Add New Student</h1>
@@ -367,13 +422,146 @@ export default function AddStudentPage() {
                 </div>
 
                 {/* Actions */}
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
                     <button type="button" onClick={() => router.back()} className="btn btn-secondary">Cancel</button>
-                    <button type="submit" className="btn btn-primary" disabled={loading}>
+                    
+                    <button type="button" onClick={downloadDOC} className="btn" style={{ background: '#2563eb', color: 'white', border: 'none' }}>
+                        📄 Download DOC
+                    </button>
+                    
+                    <button type="button" onClick={downloadPDF} disabled={!isPdfReady} className="btn" style={{ background: '#dc2626', color: 'white', border: 'none', opacity: isPdfReady ? 1 : 0.6 }}>
+                        ⬇️ Download PDF
+                    </button>
+
+                    <button type="submit" className="btn btn-primary" disabled={loading} style={{ paddingLeft: '24px', paddingRight: '24px' }}>
                         {loading ? <><div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} /> Saving...</> : '💾 Add Student'}
                     </button>
                 </div>
             </form>
+
+            {/* Hidden Printable Admission Form */}
+            <div style={{ display: 'none' }}>
+                <div ref={formRef} style={{ width: '100%', maxWidth: '210mm', background: 'white', color: 'black', padding: '30px', margin: '0 auto', fontFamily: 'Arial, sans-serif' }}>
+                    
+                    {/* Header Branding */}
+                    <div style={{ borderBottom: '3px solid #1a5c38', paddingBottom: '15px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            {tenant?.logo && <img src={tenant.logo} alt="Logo" style={{ width: '80px', height: '80px', objectFit: 'contain' }} />}
+                            <div>
+                                <h1 style={{ margin: '0', fontSize: '26px', color: '#0f3d26', textTransform: 'uppercase' }}>{tenant?.name || 'RSS PUBLIC SCHOOL'}</h1>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#444' }}>{tenant?.address || 'Ayodhya Nagari, Gwalior (MP)'}</p>
+                                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#444' }}>Phone: {tenant?.phone || '917489315077'} | Email: {tenant?.email || 'rsspublic1979@gmail.com'}</p>
+                            </div>
+                        </div>
+                        <div style={{ textAlign: 'right', fontSize: '11px', color: '#333' }}>
+                            {tenant?.schoolCode && <div style={{ marginBottom: '3px' }}><strong>App ID:</strong> {tenant.schoolCode}</div>}
+                            {tenant?.registrationCode && <div style={{ marginBottom: '3px' }}><strong>Reg No:</strong> {tenant.registrationCode}</div>}
+                            {tenant?.diseCode && <div><strong>DISE Code:</strong> {tenant.diseCode}</div>}
+                        </div>
+                    </div>
+
+                    <h2 style={{ textAlign: 'center', margin: '0 0 20px 0', fontSize: '20px', textTransform: 'uppercase', color: '#333', textDecoration: 'underline' }}>Admission Form (Session {new Date().getFullYear()}-{new Date().getFullYear() + 1})</h2>
+
+                    {/* Top Row: Info & Photo */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                        <div style={{ flex: 1, paddingRight: '20px' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                                <tbody>
+                                    <tr>
+                                        <td style={{ padding: '6px', border: '1px solid #ccc', fontWeight: 'bold', width: '40%' }}>Scholar No.</td>
+                                        <td style={{ padding: '6px', border: '1px solid #ccc' }}>{form.scholarNo || '_________________'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ padding: '6px', border: '1px solid #ccc', fontWeight: 'bold' }}>Admission Date</td>
+                                        <td style={{ padding: '6px', border: '1px solid #ccc' }}>{form.admissionDate ? new Date(form.admissionDate).toLocaleDateString('en-IN') : '_________________'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ padding: '6px', border: '1px solid #ccc', fontWeight: 'bold' }}>Course / Class</td>
+                                        <td style={{ padding: '6px', border: '1px solid #ccc' }}>{courses.find(c => c.id === form.courseId)?.name || '_________________'}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style={{ width: '120px', height: '140px', border: '2px dashed #999', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                            {form.photo ? <img src={form.photo} alt="Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: '#999', fontSize: '11px', textAlign: 'center' }}>Affix Recent<br/>Passport Size<br/>Photograph</span>}
+                        </div>
+                    </div>
+
+                    {/* Main Details Table */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', marginBottom: '20px' }}>
+                        <tbody>
+                            <tr>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', width: '30%', backgroundColor: '#f9f9f9' }}>Full Name of Student</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc' }} colSpan={3}>{form.fullName?.toUpperCase() || ''}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Date of Birth</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc' }}>{form.dob ? new Date(form.dob).toLocaleDateString('en-IN') : ''}</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Gender</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc' }}>{form.gender}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>DOB (In Words)</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc' }} colSpan={3}>{form.dobInWords || ''}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Father's Name</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc' }} colSpan={3}>{form.fatherName || ''}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Mother's Name</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc' }} colSpan={3}>{form.motherName || ''}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Caste / Category</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc' }}>{form.caste}</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Medium</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc' }}>{form.medium}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Aadhaar No.</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc' }}>{form.aadhaarNo || ''}</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Samagra ID</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc' }}>{form.samagraId || ''}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Contact Numbers</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc' }} colSpan={3}>{form.phone} {form.parentPhone ? `/ ${form.parentPhone}` : ''}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Residential Address</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc' }} colSpan={3}>{form.address || ''}</td>
+                            </tr>
+                            {form.subjectGroup && (
+                                <tr>
+                                    <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Subject Group</td>
+                                    <td style={{ padding: '8px', border: '1px solid #ccc' }} colSpan={3}>{form.subjectGroup}</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+
+                    {/* Declaration */}
+                    <div style={{ marginTop: '30px', fontSize: '12px', lineHeight: '1.6', color: '#444' }}>
+                        <p><strong>Declaration:</strong> I hereby declare that all the information provided above is true to the best of my knowledge and belief. I agree to abide by the rules and regulations of the school. In case any information is found incorrect, the school holds the right to cancel the admission of my ward.</p>
+                    </div>
+
+                    {/* Signatures */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '70px' }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ borderTop: '1px solid #000', width: '180px', paddingTop: '5px' }}>
+                                Signature of Parent / Guardian
+                            </div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ borderTop: '1px solid #000', width: '180px', paddingTop: '5px' }}>
+                                Authorised Signatory / Principal
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
         </div>
     )
 }
