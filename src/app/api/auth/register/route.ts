@@ -93,6 +93,9 @@ export async function POST(req: NextRequest) {
 
             let studentId = null
 
+            let parentProfile = null
+            let teacherProfile = null
+
             if (userRole === 'STUDENT') {
                 const existingStudent = await tx.student.findFirst({
                     where: {
@@ -130,7 +133,7 @@ export async function POST(req: NextRequest) {
                     studentId = newStudent.id
                 }
             } else if (userRole === 'PARENT') {
-                await tx.parentProfile.create({
+                parentProfile = await tx.parentProfile.create({
                     data: {
                         tenantId: resolvedTenantId,
                         userId: user.id,
@@ -139,7 +142,7 @@ export async function POST(req: NextRequest) {
                     }
                 })
             } else if (userRole === 'TEACHER') {
-                await tx.teacher.create({
+                teacherProfile = await tx.teacher.create({
                     data: {
                         tenantId: resolvedTenantId,
                         userId: user.id,
@@ -159,7 +162,7 @@ export async function POST(req: NextRequest) {
                 })
             }
 
-            return { tenant: school, user, studentId }
+            return { tenant: school, user, studentId, teacherProfile, parentProfile }
         })
 
         const payload = { userId: result.user.id, tenantId: resolvedTenantId, role: userRole, email: resolvedEmail }
@@ -171,7 +174,16 @@ export async function POST(req: NextRequest) {
             message: 'Registration successful',
             accessToken,
             refreshToken,
-            user: { id: result.user.id, name, email: resolvedEmail, role: userRole, tenantId: resolvedTenantId, studentId: result.studentId || null },
+            user: { 
+                id: result.user.id, 
+                name, 
+                email: resolvedEmail, 
+                role: userRole, 
+                tenantId: resolvedTenantId, 
+                studentId: result.studentId || null,
+                teacherProfile: result.teacherProfile || null,
+                parentProfile: result.parentProfile || null
+            },
             tenant: { id: school.id, name: school.name, themeColor: school.themeColor, schoolCode: school.schoolCode, registrationCode: school.registrationCode, diseCode: school.diseCode },
         }, { status: 201 })
     } catch (error) {
