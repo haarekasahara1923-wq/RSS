@@ -493,44 +493,88 @@ export default function DooperDashboard() {
               </p>
             </div>
 
-            {/* Big School Code Display */}
-            <div style={{ background: 'rgba(251,191,36,0.08)', border: '2px solid rgba(251,191,36,0.4)', borderRadius: '16px', padding: '24px', textAlign: 'center', marginBottom: '24px' }}>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: 'rgba(251,191,36,0.6)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '10px' }}>Unique School ID</div>
-              <div style={{ fontSize: '36px', fontWeight: '900', color: '#fbbf24', fontFamily: 'monospace', letterSpacing: '4px', marginBottom: '16px' }}>
-                {selectedTenant.schoolCode}
-              </div>
-              <button
-                onClick={() => copyToClipboard(selectedTenant.schoolCode!, 'code')}
-                style={{
-                  padding: '10px 24px', background: copiedCode === 'code' ? 'rgba(16,185,129,0.2)' : 'rgba(251,191,36,0.15)',
-                  border: `1px solid ${copiedCode === 'code' ? 'rgba(16,185,129,0.5)' : 'rgba(251,191,36,0.4)'}`,
-                  borderRadius: '10px', color: copiedCode === 'code' ? '#34d399' : '#fbbf24',
-                  fontSize: '14px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px'
-                }}>
-                {copiedCode === 'code' ? '✅ Copied!' : '📋 Copy School ID'}
-              </button>
-            </div>
+              {/* Big School Code Display */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ background: 'rgba(251,191,36,0.08)', border: '2px solid rgba(251,191,36,0.4)', borderRadius: '16px', padding: '20px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: 'rgba(251,191,36,0.6)', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '10px' }}>App School ID</div>
+                  <div style={{ fontSize: '28px', fontWeight: '900', color: '#fbbf24', fontFamily: 'monospace', letterSpacing: '4px', marginBottom: '16px' }}>
+                    {selectedTenant.schoolCode}
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(selectedTenant.schoolCode!, 'code')}
+                    style={{
+                      padding: '8px 20px', background: copiedCode === 'code' ? 'rgba(16,185,129,0.2)' : 'rgba(251,191,36,0.15)',
+                      border: `1px solid ${copiedCode === 'code' ? 'rgba(16,185,129,0.5)' : 'rgba(251,191,36,0.4)'}`,
+                      borderRadius: '8px', color: copiedCode === 'code' ? '#34d399' : '#fbbf24',
+                      fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px'
+                    }}>
+                    {copiedCode === 'code' ? '✅ Copied!' : '📋 Copy App ID'}
+                  </button>
+                </div>
 
-            {/* Instructions */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.5)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '10px' }}>📋 Broadcast Message (Copy & Send)</div>
-              <div style={{ fontSize: '13px', color: 'white', lineHeight: '1.8', fontStyle: 'italic', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                🏫 <strong style={{ color: 'white' }}>Important — School Registration ID</strong><br />
-                Dear Teachers, Parents & Students of <strong style={{ color: '#fbbf24' }}>{selectedTenant.name}</strong>,<br /><br />
-                Please use the following <strong>Unique School ID</strong> when signing up to the RSS Public School Management System:<br /><br />
-                🔑 <strong style={{ color: '#fbbf24', fontFamily: 'monospace', fontSize: '16px', letterSpacing: '2px' }}>{selectedTenant.schoolCode}</strong><br /><br />
-                This School ID ensures your data is securely linked to our school. Please do not share it outside.<br /><br />
-                — School Administration
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  {selectedTenant.registrationCode && (
+                    <div style={{ background: 'rgba(110,231,183,0.08)', border: '2px solid rgba(110,231,183,0.4)', borderRadius: '16px', padding: '16px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: 'rgba(110,231,183,0.6)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '8px' }}>Reg No</div>
+                      <div style={{ fontSize: '18px', fontWeight: '900', color: '#6ee7b7', fontFamily: 'monospace', letterSpacing: '2px', marginBottom: '12px' }}>
+                        {selectedTenant.registrationCode}
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(selectedTenant.registrationCode!, 'regcode')}
+                        style={{
+                          padding: '6px 16px', background: copiedCode === 'regcode' ? 'rgba(16,185,129,0.2)' : 'rgba(110,231,183,0.15)',
+                          border: `1px solid ${copiedCode === 'regcode' ? 'rgba(16,185,129,0.5)' : 'rgba(110,231,183,0.4)'}`,
+                          borderRadius: '8px', color: copiedCode === 'regcode' ? '#34d399' : '#6ee7b7',
+                          fontSize: '12px', fontWeight: '700', cursor: 'pointer'
+                        }}>
+                        {copiedCode === 'regcode' ? '✅ Copied' : '📋 Copy Reg No'}
+                      </button>
+                    </div>
+                  )}
+
+                  {selectedTenant.diseCode && (
+                    <div style={{ background: 'rgba(147,197,253,0.08)', border: '2px solid rgba(147,197,253,0.4)', borderRadius: '16px', padding: '16px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: 'rgba(147,197,253,0.6)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '8px' }}>DISE Code</div>
+                      <div style={{ fontSize: '18px', fontWeight: '900', color: '#93c5fd', fontFamily: 'monospace', letterSpacing: '2px', marginBottom: '12px' }}>
+                        {selectedTenant.diseCode}
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(selectedTenant.diseCode!, 'disecode')}
+                        style={{
+                          padding: '6px 16px', background: copiedCode === 'disecode' ? 'rgba(16,185,129,0.2)' : 'rgba(147,197,253,0.15)',
+                          border: `1px solid ${copiedCode === 'disecode' ? 'rgba(16,185,129,0.5)' : 'rgba(147,197,253,0.4)'}`,
+                          borderRadius: '8px', color: copiedCode === 'disecode' ? '#34d399' : '#93c5fd',
+                          fontSize: '12px', fontWeight: '700', cursor: 'pointer'
+                        }}>
+                        {copiedCode === 'disecode' ? '✅ Copied' : '📋 Copy DISE'}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <button
-                onClick={() => copyToClipboard(
-                  `🏫 Important — School Registration ID\nDear Teachers, Parents & Students of ${selectedTenant.name},\n\nPlease use the following Unique School ID when signing up to the RSS Public School Management System:\n\n🔑 ${selectedTenant.schoolCode}\n\nThis School ID ensures your data is securely linked to our school. Please do not share it outside.\n\n— School Administration`,
-                  'msg'
-                )}
-                style={{ marginTop: '10px', padding: '7px 16px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '8px', color: '#a5b4fc', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
-                {copiedCode === 'msg' ? '✅ Message Copied!' : '📱 Copy Full Message'}
-              </button>
-            </div>
+
+              {/* Instructions */}
+              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: 'rgba(255,255,255,0.5)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '10px' }}>📋 Broadcast Message (Copy & Send)</div>
+                <div style={{ fontSize: '13px', color: 'white', lineHeight: '1.8', fontStyle: 'italic', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  🏫 <strong style={{ color: 'white' }}>Important — School Registration ID</strong><br />
+                  Dear Teachers, Parents & Students of <strong style={{ color: '#fbbf24' }}>{selectedTenant.name}</strong>,<br /><br />
+                  Please use the following <strong>Unique App ID</strong> when signing up to our App/Portal:<br /><br />
+                  🔑 <strong style={{ color: '#fbbf24', fontFamily: 'monospace', fontSize: '16px', letterSpacing: '2px' }}>{selectedTenant.schoolCode}</strong><br /><br />
+                  {selectedTenant.registrationCode ? `Registration No: ${selectedTenant.registrationCode}\n` : ''}
+                  {selectedTenant.diseCode ? `DISE Code: ${selectedTenant.diseCode}\n\n` : '\n'}
+                  This App ID ensures your data is securely linked to our school. Please do not share it outside.<br /><br />
+                  — School Administration
+                </div>
+                <button
+                  onClick={() => copyToClipboard(
+                    `🏫 Important — School Registration ID\nDear Teachers, Parents & Students of ${selectedTenant.name},\n\nPlease use the following Unique App ID when signing up to our App/Portal:\n\n🔑 ${selectedTenant.schoolCode}\n\n${selectedTenant.registrationCode ? `Registration No: ${selectedTenant.registrationCode}\n` : ''}${selectedTenant.diseCode ? `DISE Code: ${selectedTenant.diseCode}\n\n` : '\n'}This App ID ensures your data is securely linked to our school. Please do not share it outside.\n\n— School Administration`,
+                    'msg'
+                  )}
+                  style={{ marginTop: '10px', padding: '7px 16px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '8px', color: '#a5b4fc', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+                  {copiedCode === 'msg' ? '✅ Message Copied!' : '📱 Copy Full Message'}
+                </button>
+              </div>
 
             <button onClick={() => setModal(null)}
               style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'rgba(255,255,255,0.6)', fontSize: '14px', cursor: 'pointer', fontWeight: '600' }}>
