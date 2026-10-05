@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.udba.app",
+      "sha256_cert_fingerprints": [
+        "6C:9F:B4:BA:48:D4:FA:08:9D:79:42:BA:98:2D:24:FA:37:A8:C5:4C:23:1D:F5:E5:49:C6:A4:1A:5A:11:41:D1"
+      ]
+    }
+  }
+]
