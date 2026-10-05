@@ -42,9 +42,9 @@ function LoginForm() {
     setLoading(true)
     setError('')
 
-    // Multi-tenant login: We don't scope to a specific tenantId from .env 
-    // so users from any registered school can log in.
-    const tenantId = undefined
+    const tenantId = (role === 'SUPER_ADMIN' || role === 'COACHING_ADMIN' || role === 'ADMIN_OPERATION' || role === 'ADMIN_LIBRARY' || role === 'ADMIN_SPORTS' || role === 'ADMIN_TRANSPORT') 
+        ? undefined 
+        : (SCHOOL_TENANT_ID || undefined)
 
     const result = await login(identifier, password, role, tenantId)
     setLoading(false)
