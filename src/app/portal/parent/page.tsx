@@ -79,6 +79,13 @@ export default function ParentHome() {
             <div style={{ fontSize: '18px', fontWeight: '800', color: '#6366f1', marginTop: '2px' }}>{notices.length}</div>
           </div>
         </Link>
+        <Link href="/portal/parent/admit-cards" style={{ textDecoration: 'none' }}>
+          <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '14px 8px', textAlign: 'center' }}>
+            <div style={{ fontSize: '26px', marginBottom: '6px' }}>🎫</div>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: 'white' }}>Admit Cards</div>
+            <div style={{ fontSize: '18px', fontWeight: '800', color: '#10b981', marginTop: '2px' }}>View</div>
+          </div>
+        </Link>
       </div>
 
       {children.length > 0 && (

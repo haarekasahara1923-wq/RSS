@@ -55,6 +55,7 @@ export default function StudentHome() {
         {[
           { href: '/portal/student/homework', icon: '📚', label: 'My Homework', color: '#6366f1' },
           { href: '/portal/student/notices', icon: '📢', label: 'Notices', color: '#ec4899' },
+          { href: '/portal/student/admit-cards', icon: '🎫', label: 'Admit Cards', color: '#10b981' },
         ].map(a => (
           <Link key={a.href} href={a.href} style={{ textDecoration: 'none' }}>
             <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', textAlign: 'center' }}>

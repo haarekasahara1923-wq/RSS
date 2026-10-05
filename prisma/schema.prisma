@@ -107,6 +107,8 @@ model Tenant {
   leaveApplications    LeaveApplication[]
   teacherSalaryLedgers TeacherSalaryLedger[]
   timeTables           TimeTable[]
+  admitCardEvents      AdmitCardEvent[]
+  admitCards           AdmitCard[]
 }
 
 model Affiliate {
@@ -276,9 +278,10 @@ model Course {
 
   tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   students   Student[]
-  batches    Batch[]
-  exams      Exam[]
-  timeTables TimeTable[]
+  batches         Batch[]
+  exams           Exam[]
+  timeTables      TimeTable[]
+  admitCardEvents AdmitCardEvent[]
 
   @@index([tenantId])
 }
@@ -304,9 +307,10 @@ model Batch {
   students    Student[]
   attendances Attendance[]
   mockTests   MockTest[]
-  homeworks   Homework[]
-  exams       Exam[]
-  timeTables  TimeTable[]
+  homeworks       Homework[]
+  exams           Exam[]
+  timeTables      TimeTable[]
+  admitCardEvents AdmitCardEvent[]
 
   @@index([tenantId])
 }
@@ -375,6 +379,7 @@ model Student {
   homeworkSubmissions HomeworkSubmission[]
   parentLinks         ParentProfile[]      @relation("ParentChildren")
   examResults         ExamResult[]
+  admitCards          AdmitCard[]
 
   @@index([tenantId])
   @@index([tenantId, fullName])
@@ -1140,3 +1145,43 @@ enum TimeTableStatus {
   PENDING_APPROVAL
   PUBLISHED
 }
+
+model AdmitCardEvent {
+  id          String   @id @default(cuid())
+  tenantId    String
+  courseId    String
+  batchId     String
+  examName    String
+  startDate   DateTime
+  endDate     DateTime
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  course      Course      @relation(fields: [courseId], references: [id])
+  batch       Batch       @relation(fields: [batchId], references: [id])
+  admitCards  AdmitCard[]
+
+  @@index([tenantId])
+}
+
+model AdmitCard {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  eventId            String
+  studentId          String
+  isPublished        Boolean  @default(false)
+  isBlocked          Boolean  @default(false)
+  superAdminApproved Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  tenant             Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  event              AdmitCardEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  student            Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, studentId])
+  @@index([tenantId])
+}
+
