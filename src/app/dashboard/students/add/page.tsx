@@ -89,7 +89,7 @@ export default function AddStudentPage() {
         const originalDisplay = formRef.current.style.display
         formRef.current.style.display = 'block'
         
-        window.html2pdf().set(opt).from(formRef.current).save().then(() => {
+        ;(window as any).html2pdf().set(opt).from(formRef.current).save().then(() => {
             if (formRef.current) formRef.current.style.display = originalDisplay
         })
     }
