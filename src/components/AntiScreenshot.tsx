@@ -85,9 +85,9 @@ export function AntiScreenshot() {
       img {
         -webkit-user-drag: none;
       }
-      /* When printing, show a black screen */
+      /* When printing, block screenshot on non-admit-card pages */
       @media print {
-        html, body {
+        body:not(.allow-print) * {
           display: none !important;
         }
       }
