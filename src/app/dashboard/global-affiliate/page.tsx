@@ -122,7 +122,7 @@ export default function AffiliateDashboard() {
                 <table className="table">
                     <thead>
                         <tr>
-                            <th>Coaching Name</th>
+                            <th>School Name</th>
                             <th>Signup Date</th>
                             <th style={{ textAlign: 'right' }}>Status</th>
                         </tr>

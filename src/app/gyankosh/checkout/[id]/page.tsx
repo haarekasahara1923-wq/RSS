@@ -201,8 +201,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                             </div>
                             <div>
                                 <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '6px' }}>Affiliate Code (Optional)</label>
-                                <input type="text" className="input" value={formData.affiliateTenantId} onChange={e => setFormData({ ...formData, affiliateTenantId: e.target.value })} style={{ width: '100%' }} placeholder="Enter coaching ID if any" />
-                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Support your coaching center by entering their code.</p>
+                                <input type="text" className="input" value={formData.affiliateTenantId} onChange={e => setFormData({ ...formData, affiliateTenantId: e.target.value })} style={{ width: '100%' }} placeholder="Enter school ID if any" />
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Support your school by entering their code.</p>
                             </div>
                             <button onClick={handlePayment} disabled={processing} style={{
                                 background: 'linear-gradient(135deg, #10b981, #059669)',

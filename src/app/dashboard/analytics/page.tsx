@@ -160,7 +160,7 @@ export default function AnalyticsPage() {
                 <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
                         <h1 className="page-title">📊 Analytics & Reports</h1>
-                        <p className="page-subtitle">Business intelligence for your coaching center</p>
+                        <p className="page-subtitle">Business intelligence for your school</p>
                     </div>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <button
