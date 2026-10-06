@@ -360,6 +360,8 @@ model Student {
   samagraIdDoc        String?
   aparIdDoc           String?
   penIdDoc            String?
+  tcGenerated         Boolean       @default(false)
+  tcDetails           Json?
   bankPassbook        String?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt

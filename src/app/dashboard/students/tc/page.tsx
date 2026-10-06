@@ -4,7 +4,8 @@ import { useAuth, useApi } from '@/contexts/AuthContext'
 import html2pdf from 'html2pdf.js'
 
 export default function GenerateTCPage() {
-    const { tenant, token, handleUnauthorized } = useAuth()
+    const { tenant, token, user, handleUnauthorized } = useAuth()
+    const [isGenerating, setIsGenerating] = useState(false)
 
     const [courses, setCourses] = useState<any[]>([])
     const [batches, setBatches] = useState<any[]>([])
@@ -59,6 +60,12 @@ export default function GenerateTCPage() {
     }, [token])
 
     useEffect(() => {
+        if (user && user.role !== 'SUPER_ADMIN' && user.role !== 'COACHING_ADMIN') {
+            setErrorMsg('Access Denied: Only Super Admin can generate TC.')
+        }
+    }, [user])
+
+    useEffect(() => {
         if (selectedCourseId && selectedBatchId && token) {
             setDebugInfo('Fetching students...');
             fetch(`/api/students?courseId=${selectedCourseId}&batchId=${selectedBatchId}`, {
@@ -99,32 +106,71 @@ export default function GenerateTCPage() {
     const selectedCourse = courses.find(c => c.id === selectedCourseId)
     const isHigherSec = selectedCourse && (selectedCourse.classGroup === 'Higher Sec' || selectedCourse.classGroup === 'Seinor Hr Secondary' || selectedCourse.name.includes('11') || selectedCourse.name.includes('12'))
 
-    const generatePDF = () => {
-        if (!tcRef.current) return
-        const element = tcRef.current
-        const opt = {
-            margin: 0,
-            filename: `TC_${studentData?.fullName || 'Student'}.pdf`,
-            image: { type: 'jpeg' as const, quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
+    const generatePDF = async () => {
+        if (!tcRef.current || !studentData) return
+        setIsGenerating(true)
+        try {
+            const res = await fetch('/api/tc', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ studentId: studentData.id, tcDetails })
+            })
+            const data = await res.json()
+            if (!data.success) {
+                alert(data.error || 'Failed to generate TC')
+                setIsGenerating(false)
+                return
+            }
+            // Update local state to reflect it's generated
+            setStudentData({ ...studentData, tcGenerated: true })
+            
+            const element = tcRef.current
+            const opt = {
+                margin: 0,
+                filename: `TC_${studentData?.fullName || 'Student'}.pdf`,
+                image: { type: 'jpeg' as const, quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
+            }
+            html2pdf().set(opt).from(element).save()
+        } catch (err) {
+            alert('Network error')
         }
-        html2pdf().set(opt).from(element).save()
+        setIsGenerating(false)
     }
 
-    const generateDOCX = () => {
-        if (!tcRef.current) return
-        const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Export HTML to Word Document with JavaScript</title></head><body>";
-        const footer = "</body></html>";
-        const sourceHTML = header + tcRef.current.innerHTML + footer;
-        
-        const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
-        const fileDownload = document.createElement("a");
-        document.body.appendChild(fileDownload);
-        fileDownload.href = source;
-        fileDownload.download = `TC_${studentData?.fullName || 'Student'}.doc`;
-        fileDownload.click();
-        document.body.removeChild(fileDownload);
+    const generateDOCX = async () => {
+        if (!tcRef.current || !studentData) return
+        setIsGenerating(true)
+        try {
+            const res = await fetch('/api/tc', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ studentId: studentData.id, tcDetails })
+            })
+            const data = await res.json()
+            if (!data.success) {
+                alert(data.error || 'Failed to generate TC')
+                setIsGenerating(false)
+                return
+            }
+            setStudentData({ ...studentData, tcGenerated: true })
+
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Export HTML to Word Document with JavaScript</title></head><body>";
+            const footer = "</body></html>";
+            const sourceHTML = header + tcRef.current.innerHTML + footer;
+            
+            const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+            const fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = source;
+            fileDownload.download = `TC_${studentData?.fullName || 'Student'}.doc`;
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
+        } catch (err) {
+            alert('Network error')
+        }
+        setIsGenerating(false)
     }
 
     return (
@@ -217,13 +263,20 @@ export default function GenerateTCPage() {
             </div>
 
             {studentData && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginBottom: '24px' }}>
-                    <button className="btn btn-secondary" onClick={generateDOCX} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        📄 Download DOCX
-                    </button>
-                    <button className="btn btn-primary" onClick={generatePDF} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        📥 Download PDF
-                    </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                    {studentData.tcGenerated && (
+                        <div style={{ color: '#d97706', fontWeight: 'bold', background: '#fef3c7', padding: '8px 16px', borderRadius: '8px' }}>
+                            ⚠️ TC has already been generated for this student.
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', gap: '16px', marginLeft: 'auto' }}>
+                        <button className="btn btn-secondary" onClick={generateDOCX} disabled={isGenerating || studentData.tcGenerated || user?.role !== 'SUPER_ADMIN'} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {isGenerating ? '⏳ Processing...' : '📄 Download DOCX'}
+                        </button>
+                        <button className="btn btn-primary" onClick={generatePDF} disabled={isGenerating || studentData.tcGenerated || user?.role !== 'SUPER_ADMIN'} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {isGenerating ? '⏳ Processing...' : '📥 Download PDF'}
+                        </button>
+                    </div>
                 </div>
             )}
 

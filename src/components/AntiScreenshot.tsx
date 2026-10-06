@@ -85,12 +85,6 @@ export function AntiScreenshot() {
       img {
         -webkit-user-drag: none;
       }
-      /* When printing, block screenshot on non-admit-card pages */
-      @media print {
-        body:not(.allow-print) * {
-          display: none !important;
-        }
-      }
     `}} />
   );
 }
