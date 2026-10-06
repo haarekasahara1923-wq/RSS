@@ -239,7 +239,7 @@ function SuperAdminSwitcher({ token }: { token: string }) {
         setOpen(false)
     }
 
-    if (superAdmins.length < 2) return null
+    if (superAdmins.length === 0) return null
 
     const currentAdmin = superAdmins.find(a => a.id === user?.id)
     const otherAdmin = superAdmins.find(a => a.id !== user?.id)
