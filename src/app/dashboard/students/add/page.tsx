@@ -110,6 +110,9 @@ export default function AddStudentPage() {
             // Token expired or invalid — clear and redirect to login
             handleUnauthorized()
         } else {
+            if (data.error === 'student added previously') {
+                alert('student added previously');
+            }
             setToast(data.error || 'Failed to add student')
         }
     }

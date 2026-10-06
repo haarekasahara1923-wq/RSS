@@ -94,8 +94,21 @@ export async function POST(req: NextRequest) {
             aadhaarFront, aadhaarBack, samagraIdDoc, aparIdDoc, penIdDoc, bankPassbook
         } = body
 
-        if (!fullName || !phone || !courseId || !batchId) {
-            return NextResponse.json({ error: 'Required fields missing' }, { status: 400 })
+        if (!fullName || !phone || !courseId || !batchId || !scholarNo || !fatherName) {
+            return NextResponse.json({ error: 'Required fields missing: Name, Phone, Course, Batch, Scholar No, and Father Name are mandatory.' }, { status: 400 })
+        }
+
+        const existingStudent = await prisma.student.findFirst({
+            where: {
+                tenantId: user!.tenantId,
+                scholarNo: scholarNo,
+                fullName: fullName,
+                fatherName: fatherName
+            }
+        });
+
+        if (existingStudent) {
+            return NextResponse.json({ error: 'student added previously' }, { status: 400 });
         }
 
         const course = await prisma.course.findUnique({

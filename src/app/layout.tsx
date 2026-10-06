@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { AntiScreenshot } from '@/components/AntiScreenshot';
+
 export default function RootLayout({
   children,
 }: {
@@ -32,7 +34,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
         <script src="https://checkout.razorpay.com/v1/checkout.js" async></script>
       </head>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        <AntiScreenshot />
+        {children}
+      </body>
     </html>
   );
 }

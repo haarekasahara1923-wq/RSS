@@ -78,6 +78,7 @@ export default function ParentChildren() {
             setProfile(d.profile)
         } else {
             setMsg(d.error || 'Failed to link children')
+            alert(d.error || 'Failed to link children')
         }
     } catch (err) {
         setSaving(false)
