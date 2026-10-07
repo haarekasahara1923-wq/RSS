@@ -39,11 +39,13 @@ export default function GenerateTCPage() {
         Promise.all([
             fetch('/api/courses', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
                 .then(r => {
+                    if (r.status === 401) { handleUnauthorized(); throw new Error('Unauthorized'); }
                     if (!r.ok) throw new Error(`Courses HTTP ${r.status}`);
                     return r.json();
                 }),
             fetch('/api/batches', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
                 .then(r => {
+                    if (r.status === 401) { handleUnauthorized(); throw new Error('Unauthorized'); }
                     if (!r.ok) throw new Error(`Batches HTTP ${r.status}`);
                     return r.json();
                 }),
@@ -57,7 +59,10 @@ export default function GenerateTCPage() {
 
             // Fetch current TC count
             fetch('/api/tc', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
-                .then(r => r.json())
+                .then(r => {
+                    if (r.status === 401) { handleUnauthorized(); throw new Error('Unauthorized'); }
+                    return r.json();
+                })
                 .then(res => {
                     if (res.success) {
                         setTcCount(res.count)
@@ -87,6 +92,7 @@ export default function GenerateTCPage() {
                 headers: { Authorization: `Bearer ${token}` },
                 cache: 'no-store'
             }).then(r => {
+                if (r.status === 401) { handleUnauthorized(); throw new Error('Unauthorized'); }
                 if (!r.ok) throw new Error(`Students HTTP ${r.status}`);
                 return r.json();
             }).then(res => {
