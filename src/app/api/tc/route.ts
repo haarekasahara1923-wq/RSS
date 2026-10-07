@@ -48,3 +48,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: error.message || 'Server error' }, { status: 500 })
   }
 }
+
+export async function GET(req: NextRequest) {
+  const { error, user } = requireAuth(req)
+  if (error) return error
+
+  try {
+      const count = await prisma.student.count({
+          where: {
+              tenantId: user.tenantId,
+              tcGenerated: true
+          }
+      })
+      return NextResponse.json({ success: true, count })
+  } catch (error: any) {
+      return NextResponse.json({ success: false, error: error.message || 'Server error' }, { status: 500 })
+  }
+}

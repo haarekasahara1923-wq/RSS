@@ -10,6 +10,7 @@ export default function GenerateTCPage() {
     const [courses, setCourses] = useState<any[]>([])
     const [batches, setBatches] = useState<any[]>([])
     const [students, setStudents] = useState<any[]>([])
+    const [tcCount, setTcCount] = useState<number>(0)
     const [errorMsg, setErrorMsg] = useState<string>('')
     const [debugInfo, setDebugInfo] = useState<string>('')
 
@@ -23,7 +24,7 @@ export default function GenerateTCPage() {
         attendance: 'Whole',
         accountsClearance: 'Clear',
         issueDate: '',
-        tcNumber: `TC-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`,
+        tcNumber: `TC-${new Date().getFullYear()}-0001`,
         reason: 'Passed highest class',
         character: 'Good',
         promotedTo: 'Higher Class',
@@ -53,6 +54,19 @@ export default function GenerateTCPage() {
             
             if (b.success) setBatches(b.data)
             else setErrorMsg(prev => prev + ` Batches Error: ${b.error}`)
+
+            // Fetch current TC count
+            fetch('/api/tc', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        setTcCount(res.count)
+                        setTcDetails(prev => ({
+                            ...prev,
+                            tcNumber: `TC-${new Date().getFullYear()}-${(res.count + 1).toString().padStart(4, '0')}`
+                        }))
+                    }
+                }).catch(err => console.error('TC Count Error:', err))
         }).catch(err => {
             console.error(err)
             setErrorMsg(`Network Error: ${err.message}`)
@@ -357,7 +371,10 @@ export default function GenerateTCPage() {
                                     <tr>
                                         <td style={{ padding: '8px 0' }}><strong>6. Govt IDs:</strong></td>
                                         <td style={{ padding: '8px 0' }} colSpan={2}>
-                                            Aadhaar: {studentData.aadhaarNo || 'N/A'} | Samagra ID: {studentData.samagraId || 'N/A'} | PEN: {studentData.penId || 'N/A'} | APAR: {studentData.aparId || 'N/A'}
+                                            Aadhaar: {studentData.aadhaarNo || 'N/A'}<br/>
+                                            Samagra ID: {studentData.samagraId || 'N/A'}<br/>
+                                            PEN: {studentData.penId || 'N/A'}<br/>
+                                            APAR: {studentData.aparId || 'N/A'}
                                         </td>
                                     </tr>
                                     <tr>
