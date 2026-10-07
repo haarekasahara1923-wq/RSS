@@ -22,11 +22,12 @@ export default function GenerateTCPage() {
     const [tcDetails, setTcDetails] = useState({
         attendance: 'Whole',
         accountsClearance: 'Clear',
-        issueDate: new Date().toISOString().split('T')[0],
+        issueDate: '',
         tcNumber: `TC-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`,
         reason: 'Passed highest class',
         character: 'Good',
-        promotedTo: 'Higher Class'
+        promotedTo: 'Higher Class',
+        result: 'Pass'
     })
 
     const tcRef = useRef<HTMLDivElement>(null)
@@ -247,6 +248,14 @@ export default function GenerateTCPage() {
                             <input type="date" className="input" value={tcDetails.issueDate} onChange={e => setTcDetails({...tcDetails, issueDate: e.target.value})} />
                         </div>
                         <div>
+                            <label className="label">Result</label>
+                            <select className="input" value={tcDetails.result} onChange={e => setTcDetails({...tcDetails, result: e.target.value})}>
+                                <option value="Pass">Pass</option>
+                                <option value="Fail">Fail</option>
+                                <option value="Supplementary">Supplementary</option>
+                            </select>
+                        </div>
+                        <div>
                             <label className="label">Reason for Leaving</label>
                             <input type="text" className="input" value={tcDetails.reason} onChange={e => setTcDetails({...tcDetails, reason: e.target.value})} />
                         </div>
@@ -313,7 +322,7 @@ export default function GenerateTCPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', fontSize: '14px' }}>
                             <div><strong>TC No:</strong> {tcDetails.tcNumber}</div>
                             <div><strong>Scholar No:</strong> {studentData.scholarNo || 'N/A'}</div>
-                            <div><strong>Date of Issue:</strong> {new Date(tcDetails.issueDate).toLocaleDateString('en-IN')}</div>
+                            <div><strong>Date of Issue:</strong> {tcDetails.issueDate ? new Date(tcDetails.issueDate).toLocaleDateString('en-IN') : 'N/A'}</div>
                         </div>
 
                         {/* Student Details Table format */}
@@ -346,59 +355,65 @@ export default function GenerateTCPage() {
                                         <td style={{ padding: '8px 0' }}>{studentData.caste || 'N/A'}</td>
                                     </tr>
                                     <tr>
-                                        <td style={{ padding: '8px 0' }}><strong>6. Date of First Admission & Class:</strong></td>
+                                        <td style={{ padding: '8px 0' }}><strong>6. Govt IDs:</strong></td>
+                                        <td style={{ padding: '8px 0' }} colSpan={2}>
+                                            Aadhaar: {studentData.aadhaarNo || 'N/A'} | Samagra ID: {studentData.samagraId || 'N/A'} | PEN: {studentData.penId || 'N/A'} | APAR: {studentData.aparId || 'N/A'}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ padding: '8px 0' }}><strong>7. Date of First Admission & Class:</strong></td>
                                         <td style={{ padding: '8px 0' }} colSpan={2}>
                                             {studentData.firstAdmissionDate ? new Date(studentData.firstAdmissionDate).toLocaleDateString('en-IN') : ''}{studentData.firstAdmissionClass ? ` in Class ${studentData.firstAdmissionClass}` : ''}
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td style={{ padding: '8px 0' }}><strong>7. Date of Birth (in Figures):</strong></td>
+                                        <td style={{ padding: '8px 0' }}><strong>8. Date of Birth (in Figures):</strong></td>
                                         <td style={{ padding: '8px 0' }} colSpan={2}>{studentData.dob ? new Date(studentData.dob).toLocaleDateString('en-IN') : 'N/A'}</td>
                                     </tr>
                                     <tr>
-                                        <td style={{ padding: '8px 0' }}><strong>8. Date of Birth (in Words):</strong></td>
+                                        <td style={{ padding: '8px 0' }}><strong>9. Date of Birth (in Words):</strong></td>
                                         <td style={{ padding: '8px 0' }} colSpan={2}>{studentData.dobInWords || 'N/A'}</td>
                                     </tr>
                                     <tr>
-                                        <td style={{ padding: '8px 0' }}><strong>9. Class in which pupil last studied:</strong></td>
+                                        <td style={{ padding: '8px 0' }}><strong>10. Class in which pupil last studied:</strong></td>
                                         <td style={{ padding: '8px 0' }} colSpan={2}>{studentData.courseName}</td>
                                     </tr>
                                     {isHigherSec && (
                                         <tr>
-                                            <td style={{ padding: '8px 0' }}><strong>10. Subject Group:</strong></td>
+                                            <td style={{ padding: '8px 0' }}><strong>11. Subject Group:</strong></td>
                                             <td style={{ padding: '8px 0' }} colSpan={2}>{studentData.subjectGroup || 'N/A'}</td>
                                         </tr>
                                     )}
                                     <tr>
-                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '11' : '10'}. Medium of Instruction:</strong></td>
+                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '12' : '11'}. Medium of Instruction:</strong></td>
                                         <td style={{ padding: '8px 0' }} colSpan={2}>{studentData.medium || 'N/A'}</td>
                                     </tr>
                                     <tr>
-                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '12' : '11'}. Whether failed, if so once/twice:</strong></td>
-                                        <td style={{ padding: '8px 0' }} colSpan={2}>No</td>
+                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '13' : '12'}. Result:</strong></td>
+                                        <td style={{ padding: '8px 0' }} colSpan={2}>{tcDetails.result}</td>
                                     </tr>
                                     <tr>
-                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '13' : '12'}. Whether qualified for promotion:</strong></td>
+                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '14' : '13'}. Whether qualified for promotion:</strong></td>
                                         <td style={{ padding: '8px 0' }} colSpan={2}>{tcDetails.promotedTo}</td>
                                     </tr>
                                     <tr>
-                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '14' : '13'}. Month upto which dues paid:</strong></td>
+                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '15' : '14'}. Month upto which dues paid:</strong></td>
                                         <td style={{ padding: '8px 0' }} colSpan={2}>{tcDetails.accountsClearance}</td>
                                     </tr>
                                     <tr>
-                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '15' : '14'}. Attendance:</strong></td>
+                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '16' : '15'}. Attendance:</strong></td>
                                         <td style={{ padding: '8px 0' }} colSpan={2}>{tcDetails.attendance}</td>
                                     </tr>
                                     <tr>
-                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '16' : '15'}. General Character:</strong></td>
+                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '17' : '16'}. General Character:</strong></td>
                                         <td style={{ padding: '8px 0' }} colSpan={2}>{tcDetails.character}</td>
                                     </tr>
                                     <tr>
-                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '17' : '16'}. Reason for leaving the school:</strong></td>
+                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '18' : '17'}. Reason for leaving the school:</strong></td>
                                         <td style={{ padding: '8px 0' }} colSpan={2}>{tcDetails.reason}</td>
                                     </tr>
                                     <tr>
-                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '18' : '17'}. Any other remarks:</strong></td>
+                                        <td style={{ padding: '8px 0' }}><strong>{isHigherSec ? '19' : '18'}. Any other remarks:</strong></td>
                                         <td style={{ padding: '8px 0' }} colSpan={2}>N/A</td>
                                     </tr>
                                 </tbody>
@@ -409,11 +424,7 @@ export default function GenerateTCPage() {
                         <div style={{ marginTop: 'auto', paddingTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%' }}>
                             <div style={{ textAlign: 'center' }}>
                                 <div style={{ borderBottom: '1px solid #000', width: '150px', marginBottom: '5px' }}></div>
-                                <div>Prepared By</div>
-                            </div>
-                            <div style={{ textAlign: 'center' }}>
-                                <div style={{ borderBottom: '1px solid #000', width: '150px', marginBottom: '5px' }}></div>
-                                <div>Checked By</div>
+                                <div>Class Teacher</div>
                             </div>
                             <div style={{ textAlign: 'center' }}>
                                 <div style={{ height: '60px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
@@ -423,7 +434,7 @@ export default function GenerateTCPage() {
                                         <div style={{ borderBottom: '1px solid #000', width: '150px' }}></div>
                                     )}
                                 </div>
-                                <div style={{ marginTop: '5px' }}>Authorized Signatory</div>
+                                <div style={{ marginTop: '5px' }}>{isHigherSec ? 'Principal' : 'Head Master'}</div>
                             </div>
                         </div>
 
