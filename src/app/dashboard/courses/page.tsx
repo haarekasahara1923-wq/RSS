@@ -9,13 +9,14 @@ const CLASS_OPTIONS = [
 ]
 
 const CLASS_GROUPS = [
-    { label: 'Junior (Upto 4th)', value: 'Junior' },
-    { label: 'Middle (5th to 8th)', value: 'Middle' },
-    { label: 'Higher Sec (9th to 10th)', value: 'Higher Sec' },
-    { label: 'Senior Hr Secondary (11th to 12th)', value: 'Senior Hr Secondary' },
+    { label: 'Class Nursery to UKG - Pre Primary', value: 'Pre Primary' },
+    { label: 'Class 1st To 5th - Primary', value: 'Primary' },
+    { label: 'Class 6th to 8th - Middle', value: 'Middle' },
+    { label: 'Class 9th to 10th - High School', value: 'High School' },
+    { label: 'Class 11th to 12th - Higher Secondary', value: 'Higher Secondary' },
 ]
 
-const SUBJECT_GROUPS = ['Science Bio', 'Science Maths', 'Arts', 'Commerce']
+const SUBJECT_GROUPS = ['Science Bio', 'Science Maths', 'Arts', 'Commerce', 'Agriculture']
 
 const SECTION_OPTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
 
@@ -252,7 +253,7 @@ export default function ClassesPage() {
                                 <div>
                                     <label className="label">Class Group *</label>
                                     <select className="input" value={courseForm.classGroup} onChange={e => {
-                                        setCourseForm({ ...courseForm, classGroup: e.target.value, subjectGroup: e.target.value !== 'Senior Hr Secondary' ? '' : courseForm.subjectGroup })
+                                        setCourseForm({ ...courseForm, classGroup: e.target.value, subjectGroup: e.target.value !== 'Higher Secondary' ? '' : courseForm.subjectGroup })
                                     }} required>
                                         <option value="">Select Group</option>
                                         {CLASS_GROUPS.map(g => (
@@ -260,7 +261,7 @@ export default function ClassesPage() {
                                         ))}
                                     </select>
                                 </div>
-                                {courseForm.classGroup === 'Senior Hr Secondary' && (
+                                {courseForm.classGroup === 'Higher Secondary' && (
                                     <div>
                                         <label className="label">Subject Group *</label>
                                         <select className="input" value={courseForm.subjectGroup} onChange={e => setCourseForm({ ...courseForm, subjectGroup: e.target.value })} required>
