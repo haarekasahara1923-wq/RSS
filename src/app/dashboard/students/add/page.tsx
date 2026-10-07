@@ -11,6 +11,57 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
     </div>
 )
 
+const convertDateToWords = (dateString: string) => {
+    if (!dateString) return '';
+    const [yearStr, monthStr, dayStr] = dateString.split('-');
+    if (!yearStr || !monthStr || !dayStr) return '';
+    
+    const day = parseInt(dayStr, 10);
+    const month = parseInt(monthStr, 10);
+    const year = parseInt(yearStr, 10);
+    
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const daysWords = ['', 'First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth', 'Eleventh', 'Twelfth', 'Thirteenth', 'Fourteenth', 'Fifteenth', 'Sixteenth', 'Seventeenth', 'Eighteenth', 'Nineteenth', 'Twentieth', 'Twenty First', 'Twenty Second', 'Twenty Third', 'Twenty Fourth', 'Twenty Fifth', 'Twenty Sixth', 'Twenty Seventh', 'Twenty Eighth', 'Twenty Ninth', 'Thirtieth', 'Thirty First'];
+    const months = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    const getYearInWords = (y: number) => {
+        if (y < 2000) {
+            const firstPart = Math.floor(y / 100);
+            const secondPart = y % 100;
+            let res = '';
+            if (firstPart < 20) res += ones[firstPart] + ' Hundred';
+            else res += (tens[Math.floor(firstPart / 10)] + ' ' + ones[firstPart % 10]).trim() + ' Hundred';
+            if (secondPart > 0) {
+                if (secondPart < 20) res += ' ' + ones[secondPart];
+                else res += ' ' + (tens[Math.floor(secondPart / 10)] + ' ' + ones[secondPart % 10]).trim();
+            }
+            return res.trim();
+        } else {
+            const thousands = Math.floor(y / 1000);
+            const remainder = y % 1000;
+            let res = ones[thousands] + ' Thousand';
+            if (remainder > 0) {
+                if (remainder < 20) res += ' ' + ones[remainder];
+                else if (remainder < 100) res += ' ' + (tens[Math.floor(remainder / 10)] + ' ' + ones[remainder % 10]).trim();
+                else {
+                    const h = Math.floor(remainder / 100);
+                    const r = remainder % 100;
+                    res += ' ' + ones[h] + ' Hundred';
+                    if (r > 0) {
+                        if (r < 20) res += ' ' + ones[r];
+                        else res += ' ' + (tens[Math.floor(r / 10)] + ' ' + ones[r % 10]).trim();
+                    }
+                }
+            }
+            return res.trim();
+        }
+    };
+    
+    if (day < 1 || day > 31 || month < 1 || month > 12) return '';
+    return `${daysWords[day]} ${months[month]} ${getYearInWords(year)}`;
+};
+
 export default function AddStudentPage() {
     const { token, handleUnauthorized, tenant } = useAuth()
     const router = useRouter()
@@ -288,7 +339,10 @@ export default function AddStudentPage() {
                             </select>
                         </Field>
                         <Field label="Date of Birth">
-                            <input className="input" type="date" value={form.dob} onChange={e => setForm({ ...form, dob: e.target.value })} />
+                            <input className="input" type="date" value={form.dob} onChange={e => {
+                                const val = e.target.value;
+                                setForm({ ...form, dob: val, dobInWords: convertDateToWords(val) });
+                            }} />
                         </Field>
                         <Field label="Date of Birth (in words)">
                             <input className="input" placeholder="First January Two Thousand" value={form.dobInWords} onChange={e => setForm({ ...form, dobInWords: e.target.value })} />
