@@ -64,8 +64,9 @@ function generateReceiptPDF(opts: {
     student: Student
     tenant: any
     installmentLabel: string
+    win?: Window | null
 }) {
-    const { receipt, student, tenant, installmentLabel } = opts
+    const { receipt, student, tenant, installmentLabel, win: providedWin } = opts
     const schoolName = tenant?.name || 'School'
     const schoolAddress = tenant?.address || ''
     const schoolPhone = tenant?.phone || ''
@@ -196,11 +197,17 @@ table.fee tfoot td:last-child{color:#059669;text-align:right}
 <script>window.onload=function(){window.print()}</script>
 </body>
 </html>`
-
-    const win = window.open('', '_blank', 'width=960,height=680')
-    if (!win) { alert('Please allow popups for this site to download receipts.'); return }
-    win.document.write(html)
-    win.document.close()
+    if (providedWin) {
+        providedWin.document.open()
+        providedWin.document.write(html)
+        providedWin.document.close()
+    } else {
+        const win = window.open('', '_blank', 'width=960,height=680')
+        if (!win) { alert('Please allow popups for this site to download receipts.'); return }
+        win.document.open()
+        win.document.write(html)
+        win.document.close()
+    }
 }
 
 // ─── Main Page Component ──────────────────────────────────────────────────────
@@ -274,6 +281,12 @@ export default function FeesPage() {
         if (!fee || !amount || parseFloat(amount) <= 0) { alert('Please enter a valid amount'); return }
         if (!date) { alert('Please select or enter the Date of Deposit'); return }
 
+        // Pre-open window before async to bypass popup blockers
+        const printWindow = window.open('', '_blank', 'width=960,height=680')
+        if (printWindow) {
+            printWindow.document.write('<div style="font-family:sans-serif;padding:40px;text-align:center;">Generating receipt, please wait...</div>')
+        }
+
         setDepositModal(prev => ({ ...prev, processing: true }))
         try {
             const res = await fetch('/api/payments', {
@@ -299,6 +312,7 @@ export default function FeesPage() {
                     student: selectedStudentForFees!,
                     tenant,
                     installmentLabel: fee.notes || 'Fee Installment',
+                    win: printWindow
                 })
 
                 // Refresh
@@ -307,10 +321,12 @@ export default function FeesPage() {
                 setDepositModal(prev => ({ ...prev, processing: false, open: false }))
             } else {
                 alert(data.error || 'Payment failed')
+                if (printWindow) printWindow.close()
                 setDepositModal(prev => ({ ...prev, processing: false }))
             }
         } catch {
             alert('Network error. Please try again.')
+            if (printWindow) printWindow.close()
             setDepositModal(prev => ({ ...prev, processing: false }))
         }
     }
@@ -576,8 +592,25 @@ export default function FeesPage() {
                                                             💳 Deposit
                                                         </button>
                                                     ) : (
-                                                        <div style={{ padding: '8px 14px', flexShrink: 0, background: 'rgba(16,185,129,0.1)', color: '#10b981', borderRadius: '8px', fontSize: '12px', fontWeight: '700' }}>
-                                                            ✅ Cleared
+                                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                                            {fee.payments && fee.payments.length > 0 && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        generateReceiptPDF({
+                                                                            receipt: fee.payments[0],
+                                                                            student: selectedStudentForFees!,
+                                                                            tenant,
+                                                                            installmentLabel: fee.notes || 'Fee Installment',
+                                                                        })
+                                                                    }}
+                                                                    style={{ padding: '8px 14px', flexShrink: 0, background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                                                                >
+                                                                    🧾 Receipt
+                                                                </button>
+                                                            )}
+                                                            <div style={{ padding: '8px 14px', flexShrink: 0, background: 'rgba(16,185,129,0.1)', color: '#10b981', borderRadius: '8px', fontSize: '12px', fontWeight: '700' }}>
+                                                                ✅ Cleared
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>

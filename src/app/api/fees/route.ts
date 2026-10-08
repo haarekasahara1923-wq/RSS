@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
         const fees = await prisma.fee.findMany({
             where: whereClause,
-            include: { student: { select: { fullName: true, phone: true } } },
+            include: { student: { select: { fullName: true, phone: true } }, payments: { orderBy: { createdAt: 'desc' }, take: 1 } },
             orderBy: { dueDate: 'asc' }
         })
 
