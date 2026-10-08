@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
                         examName: true,
                         startDate: true,
                         endDate: true,
+                        timeTable: true,
                         course: { select: { name: true } },
                         batch: { select: { name: true } }
                     }

@@ -1157,6 +1157,7 @@ model AdmitCardEvent {
   startDate   DateTime
   endDate     DateTime
   createdBy   String?
+  timeTable   Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

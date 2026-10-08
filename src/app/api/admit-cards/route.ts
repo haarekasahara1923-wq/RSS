@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
                 startDate: new Date(startDate),
                 endDate: new Date(endDate),
                 createdBy: user!.userId,
+                timeTable: body.timeTable || [],
                 admitCards: {
                     create: students.map(s => ({
                         tenantId: user!.tenantId,

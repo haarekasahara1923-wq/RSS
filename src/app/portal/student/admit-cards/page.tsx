@@ -174,6 +174,31 @@ export default function StudentAdmitCards() {
                                 </ul>
                             </div>
 
+                            {/* Time Table (if exists) */}
+                            {card.event.timeTable && card.event.timeTable.length > 0 && (
+                                <div style={{ marginTop: '14px' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#1a237e', marginBottom: '8px', textTransform: 'uppercase', borderBottom: '2px solid #1a237e', display: 'inline-block', paddingBottom: '2px', fontFamily: 'Arial, sans-serif' }}>Exam Time Table</div>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', fontFamily: 'Arial, sans-serif', border: '1px solid #e2e8f0' }}>
+                                        <thead>
+                                            <tr style={{ background: '#f1f5f9', color: '#0f172a' }}>
+                                                <th style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>Date</th>
+                                                <th style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>Subject</th>
+                                                <th style={{ padding: '6px 8px', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>Time</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {card.event.timeTable.map((t: any, idx: number) => (
+                                                <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                    <td style={{ padding: '6px 8px', fontWeight: 'bold' }}>{new Date(t.date).toLocaleDateString('en-IN')}</td>
+                                                    <td style={{ padding: '6px 8px' }}>{t.subject}</td>
+                                                    <td style={{ padding: '6px 8px' }}>{t.startTime} - {t.endTime}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+
                             {/* Footer Signatures */}
                             <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                                 <div style={{ textAlign: 'center' }}>

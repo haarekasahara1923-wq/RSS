@@ -14,6 +14,7 @@ export default function StaffAdmitCards() {
     const [examName, setExamName] = useState('')
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
+    const [timeTable, setTimeTable] = useState<{ date: string, subject: string, startTime: string, endTime: string }[]>([])
     
     // UI state
     const [loading, setLoading] = useState(false)
@@ -56,7 +57,8 @@ export default function StaffAdmitCards() {
                     batchId: selectedBatch,
                     examName,
                     startDate,
-                    endDate
+                    endDate,
+                    timeTable
                 })
             })
             const data = await res.json()
@@ -67,6 +69,7 @@ export default function StaffAdmitCards() {
                 setEndDate('')
                 setSelectedCourse('')
                 setSelectedBatch('')
+                setTimeTable([])
                 fetchData()
             } else {
                 alert(data.error || 'Failed to generate admit cards')
@@ -187,6 +190,22 @@ export default function StaffAdmitCards() {
                         </div>
                     </div>
 
+                    <div style={{ marginTop: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <label style={{ fontSize: '14px', color: 'white', fontWeight: 'bold' }}>Exam Time Table</label>
+                            <button type="button" onClick={() => setTimeTable([...timeTable, { date: '', subject: '', startTime: '', endTime: '' }])} style={{ background: '#3b82f6', color: 'white', padding: '6px 12px', borderRadius: '6px', border: 'none', fontSize: '12px', cursor: 'pointer' }}>+ Add Subject</button>
+                        </div>
+                        {timeTable.map((row, idx) => (
+                            <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                <input type="date" value={row.date} onChange={e => { const t = [...timeTable]; t[idx].date = e.target.value; setTimeTable(t) }} style={{ flex: 1, padding: '8px', borderRadius: '6px', background: '#1e293b', border: '1px solid #334155', color: 'white' }} required />
+                                <input type="text" placeholder="Subject" value={row.subject} onChange={e => { const t = [...timeTable]; t[idx].subject = e.target.value; setTimeTable(t) }} style={{ flex: 1.5, padding: '8px', borderRadius: '6px', background: '#1e293b', border: '1px solid #334155', color: 'white' }} required />
+                                <input type="time" value={row.startTime} onChange={e => { const t = [...timeTable]; t[idx].startTime = e.target.value; setTimeTable(t) }} style={{ flex: 1, padding: '8px', borderRadius: '6px', background: '#1e293b', border: '1px solid #334155', color: 'white' }} required />
+                                <input type="time" value={row.endTime} onChange={e => { const t = [...timeTable]; t[idx].endTime = e.target.value; setTimeTable(t) }} style={{ flex: 1, padding: '8px', borderRadius: '6px', background: '#1e293b', border: '1px solid #334155', color: 'white' }} required />
+                                <button type="button" onClick={() => setTimeTable(timeTable.filter((_, i) => i !== idx))} style={{ background: '#ef4444', color: 'white', padding: '8px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>✕</button>
+                            </div>
+                        ))}
+                    </div>
+
                     <button type="submit" disabled={loading} style={{ background: 'linear-gradient(135deg, #f43f5e, #e11d48)', color: 'white', padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginTop: '8px' }}>
                         {loading ? 'Generating...' : 'Generate Admit Cards'}
                     </button>
@@ -213,7 +232,61 @@ export default function StaffAdmitCards() {
                 <div style={{ position: 'fixed', inset: 0, background: '#0f172a', zIndex: 100, overflowY: 'auto', padding: '20px', paddingBottom: '80px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <button onClick={() => setViewEvent(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '16px', cursor: 'pointer' }}>← Back</button>
-                        <button onClick={publishAllEligible} style={{ background: '#10b981', color: 'white', padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>Publish All</button>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button onClick={() => {
+                                const html = `<!DOCTYPE html>
+                                <html>
+                                <head>
+                                    <title>Exam Time Table</title>
+                                    <style>
+                                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #333; }
+                                        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2c3e50; padding-bottom: 20px; }
+                                        .logo { max-height: 80px; margin-bottom: 10px; }
+                                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                                        th { background-color: #f8f9fa; font-weight: bold; color: #2c3e50; }
+                                        tr:nth-child(even) { background-color: #f8f9fa; }
+                                    </style>
+                                </head>
+                                <body>
+                                    <div class="header">
+                                        ${tenant?.logo ? `<img src="${tenant.logo}" class="logo" />` : ''}
+                                        <h1 style="margin: 0; color: #2c3e50;">${tenant?.name || 'School Name'}</h1>
+                                        <h2 style="margin: 5px 0;">Exam Time Table: ${eventDetails.examName}</h2>
+                                        <p style="margin: 0; color: #666;">Course: ${eventDetails.course.name} | Batch: ${eventDetails.batch.name}</p>
+                                    </div>
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Subject</th>
+                                                <th>Start Time</th>
+                                                <th>End Time</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${(eventDetails.timeTable || []).map((t: any) => `
+                                                <tr>
+                                                    <td>${new Date(t.date).toLocaleDateString('en-IN')}</td>
+                                                    <td>${t.subject}</td>
+                                                    <td>${t.startTime}</td>
+                                                    <td>${t.endTime}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                    <script>window.onload = () => window.print();</script>
+                                </body>
+                                </html>`;
+                                const win = window.open('', '_blank');
+                                if (win) {
+                                    win.document.open();
+                                    win.document.write(html);
+                                    win.document.close();
+                                }
+                            }} style={{ background: '#3b82f6', color: 'white', padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>📄 Download Time Table</button>
+                            <button onClick={publishAllEligible} style={{ background: '#10b981', color: 'white', padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>🚀 Publish All</button>
+                        </div>
                     </div>
 
                     <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', marginBottom: '8px' }}>{eventDetails.examName}</h2>
