@@ -39,9 +39,9 @@ export async function GET(req: NextRequest) {
 
         const data = students.map(s => ({
             ...s,
-            courseName: s.course.name,
-            courseSubjects: s.course.subjects || [],
-            batchName: s.batch.name,
+            courseName: s.course?.name || '',
+            courseSubjects: s.course?.subjects || [],
+            batchName: s.batch?.name || '',
             parentEmail: s.parentLinks?.[0]?.user?.email || null,
             parentPassword: s.parentLinks?.[0]?.user?.plainPassword || null,
         }))
