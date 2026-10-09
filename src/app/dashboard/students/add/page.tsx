@@ -146,25 +146,38 @@ export default function AddStudentPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
-        const res = await fetch('/api/students', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify(form),
-        })
-        const data = await res.json()
-        setLoading(false)
-        if (data.success) {
-            setSuccess(true)
-            setToast('Student added successfully!')
-            setTimeout(() => router.push('/dashboard/students'), 1500)
-        } else if (res.status === 401 || data?.error === 'Unauthorized') {
-            // Token expired or invalid — clear and redirect to login
-            handleUnauthorized()
-        } else {
-            if (data.error === 'student added previously') {
-                alert('student added previously');
+        try {
+            const res = await fetch('/api/students', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify(form),
+            })
+            
+            let data;
+            try {
+                data = await res.json()
+            } catch (err) {
+                setLoading(false)
+                setToast('Server error: Payload too large or invalid response.')
+                return
             }
-            setToast(data.error || 'Failed to add student')
+
+            setLoading(false)
+            if (data.success) {
+                setSuccess(true)
+                setToast('Student added successfully!')
+                setTimeout(() => router.push('/dashboard/students'), 1500)
+            } else if (res.status === 401 || data?.error === 'Unauthorized') {
+                handleUnauthorized()
+            } else {
+                if (data.error === 'student added previously') {
+                    alert('student added previously');
+                }
+                setToast(data.error || 'Failed to add student')
+            }
+        } catch (err: any) {
+            setLoading(false)
+            setToast('Network error: ' + err.message)
         }
     }
 
