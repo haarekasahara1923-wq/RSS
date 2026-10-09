@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
             data: {
                 tenantId: user!.tenantId,
                 courseId,
-                batchId: batchId || null,
+                batchId: batchId ? batchId : null,
                 studentId: `STU${String(currentCount + 1).padStart(3, '0')}`,
                 fullName,
                 fatherName: fatherName || '',
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
                 dob: dob ? new Date(dob) : null,
                 admissionDate: admissionDate ? new Date(admissionDate) : new Date(),
                 feePlan: feePlan || '',
-                totalFee: parseFloat(totalFee) || course.fees || 0,
+                totalFee: totalFee && !isNaN(parseFloat(totalFee)) ? parseFloat(totalFee) : (course.fees || 0),
                 paidFee: 0,
                 status: 'ACTIVE',
                 notes: notes || '',
@@ -185,9 +185,9 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json({ success: true, data: student }, { status: 201 })
-    } catch (err) {
+    } catch (err: any) {
         console.error('Create student error:', err)
-        return NextResponse.json({ error: 'Failed to create student' }, { status: 500 })
+        return NextResponse.json({ error: 'Failed to create student: ' + (err.message || err.toString()) }, { status: 500 })
     }
 }
 
