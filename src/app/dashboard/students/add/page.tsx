@@ -128,9 +128,15 @@ export default function AddStudentPage() {
         if (!token) return
         setMetadataLoading(true)
         Promise.all([
-            fetch('/api/courses', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-            fetch('/api/batches', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-        ]).then(([c, b]) => {
+            fetch('/api/courses', { headers: { Authorization: `Bearer ${token}` } }),
+            fetch('/api/batches', { headers: { Authorization: `Bearer ${token}` } }),
+        ]).then(async ([cRes, bRes]) => {
+            if (cRes.status === 401 || bRes.status === 401) {
+                handleUnauthorized();
+                return;
+            }
+            const c = await cRes.json();
+            const b = await bRes.json();
             if (c.success) setCourses(c.data)
             if (b.success) setBatches(b.data)
             setMetadataLoading(false)
@@ -139,7 +145,7 @@ export default function AddStudentPage() {
             setToast('Failed to load courses and batches. Please refresh.')
             setMetadataLoading(false)
         })
-    }, [token])
+    }, [token, handleUnauthorized])
 
     const filteredBatches = batches.filter(b => !form.courseId || b.courseId === form.courseId)
 
