@@ -94,8 +94,8 @@ export async function POST(req: NextRequest) {
             aadhaarFront, aadhaarBack, samagraIdDoc, aparIdDoc, penIdDoc, bankPassbook
         } = body
 
-        if (!fullName || !phone || !courseId || !batchId || !scholarNo || !fatherName) {
-            return NextResponse.json({ error: 'Required fields missing: Name, Phone, Course, Batch, Scholar No, and Father Name are mandatory.' }, { status: 400 })
+        if (!fullName || !phone || !courseId || !scholarNo || !fatherName) {
+            return NextResponse.json({ error: 'Required fields missing: Name, Phone, Course, Scholar No, and Father Name are mandatory.' }, { status: 400 })
         }
 
         const existingStudent = await prisma.student.findFirst({
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
             data: {
                 tenantId: user!.tenantId,
                 courseId,
-                batchId,
+                batchId: batchId || null,
                 studentId: `STU${String(currentCount + 1).padStart(3, '0')}`,
                 fullName,
                 fatherName: fatherName || '',
@@ -212,7 +212,7 @@ export async function PATCH(req: NextRequest) {
                 fullName,
                 phone,
                 courseId,
-                batchId,
+                batchId: batchId !== undefined ? (batchId || null) : undefined,
                 status: status as any,
                 fatherName,
                 motherName,

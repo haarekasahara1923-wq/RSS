@@ -319,7 +319,7 @@ model Student {
   id                  String        @id @default(cuid())
   tenantId            String
   courseId            String
-  batchId             String
+  batchId             String?
   branchId            String?
   studentId           String?
   userId              String?       @unique // Links to User account for login
@@ -368,7 +368,7 @@ model Student {
 
   tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   course              Course               @relation(fields: [courseId], references: [id])
-  batch               Batch                @relation(fields: [batchId], references: [id])
+  batch               Batch?               @relation(fields: [batchId], references: [id])
   branch              Branch?              @relation(fields: [branchId], references: [id])
   userAccount         User?                @relation(fields: [userId], references: [id])
   fees                Fee[]
