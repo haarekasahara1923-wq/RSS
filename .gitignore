@@ -48,3 +48,19 @@ next-env.d.ts
 # prisma
 prisma/migrations/*/migration_lock.toml
 
+# debug / one-off scripts (root level only — never commit these)
+/check_*.js
+/check_*.ts
+/check_*.mjs
+/fix_*.js
+/fix_*.ts
+/test_*.js
+/test_*.ts
+/test_*.mjs
+/test-*.js
+/test-*.ts
+/test-*.mjs
+/dump.ts
+/dump.js
+/process_logo.py
+
