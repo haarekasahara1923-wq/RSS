@@ -506,7 +506,7 @@ export default function AddStudentPage() {
                         <Field label="Subject Group">
                             {(() => {
                                 const selectedCourse = courses.find(c => c.id === form.courseId);
-                                const isSenior = selectedCourse?.classGroup === 'Senior Hr Secondary';
+                                const isSenior = selectedCourse?.classGroup === 'Higher Secondary' || selectedCourse?.name?.includes('11') || selectedCourse?.name?.includes('12');
                                 return (
                                     <select
                                         className="input"
