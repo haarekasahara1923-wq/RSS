@@ -265,6 +265,7 @@ export default function StudentsPage() {
                         <table>
                             <thead>
                                 <tr>
+                                    <th>Scholar No.</th>
                                     <th>Student</th>
                                     <th>Class / Section</th>
                                     <th>Phone</th>
@@ -281,6 +282,11 @@ export default function StudentsPage() {
                                     const pct = s.totalFee > 0 ? Math.round((s.paidFee / s.totalFee) * 100) : 0
                                     return (
                                         <tr key={s.id}>
+                                            <td>
+                                                <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                                    {s.scholarNo || '-'}
+                                                </div>
+                                            </td>
                                             <td>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                     <div className="avatar">
