@@ -363,6 +363,7 @@ model Student {
   tcGenerated         Boolean       @default(false)
   tcDetails           Json?
   bankPassbook        String?
+  siblingGroupId      String?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
@@ -386,6 +387,8 @@ model Student {
   @@index([tenantId])
   @@index([tenantId, fullName])
   @@index([tenantId, phone])
+  @@index([tenantId, scholarNo])
+  @@index([tenantId, siblingGroupId])
 }
 
 enum Gender {

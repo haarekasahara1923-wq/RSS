@@ -41,6 +41,9 @@ interface Student {
     dob?: string
     address?: string
     motherName?: string
+    hasSiblings?: boolean
+    siblingsCount?: number
+    siblingGroupId?: string
 }
 
 const statusColors: Record<string, string> = {
@@ -60,6 +63,16 @@ export default function StudentsPage() {
     const [isEditing, setIsEditing] = useState(false)
     const [editForm, setEditForm] = useState<any>({})
     const [actionLoading, setActionLoading] = useState(false)
+
+    // Sibling management state
+    const [siblingList, setSiblingList] = useState<any[]>([])
+    const [loadingSiblings, setLoadingSiblings] = useState(false)
+    const [showAddSiblingBox, setShowAddSiblingBox] = useState(false)
+    const [siblingSearchQuery, setSiblingSearchQuery] = useState('')
+    const [siblingCandidates, setSiblingCandidates] = useState<any[]>([])
+    const [searchingSiblings, setSearchingSiblings] = useState(false)
+    const [siblingActionLoading, setSiblingActionLoading] = useState(false)
+    const [siblingFeedback, setSiblingFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
 
     const downloadPDF = (elementId: string, title: string) => {
         const original = document.getElementById(elementId)
@@ -197,6 +210,118 @@ export default function StudentsPage() {
         setActionLoading(false)
     }
 
+    const loadSiblings = async (studentId: string) => {
+        if (!token) return
+        setLoadingSiblings(true)
+        try {
+            const res = await fetch(`/api/students/siblings?studentId=${studentId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            const data = await res.json()
+            if (data.success) {
+                setSiblingList(data.siblings || [])
+            }
+        } catch {}
+        setLoadingSiblings(false)
+    }
+
+    useEffect(() => {
+        if (selectedStudent) {
+            loadSiblings(selectedStudent.id)
+            setShowAddSiblingBox(false)
+            setSiblingSearchQuery('')
+            setSiblingCandidates([])
+            setSiblingFeedback(null)
+        } else {
+            setSiblingList([])
+            setShowAddSiblingBox(false)
+            setSiblingFeedback(null)
+        }
+    }, [selectedStudent?.id, token])
+
+    const handleSiblingSearch = async (q: string) => {
+        setSiblingSearchQuery(q)
+        if (!q.trim() || !selectedStudent || !token) {
+            setSiblingCandidates([])
+            return
+        }
+        setSearchingSiblings(true)
+        try {
+            const res = await fetch(`/api/students/siblings?studentId=${selectedStudent.id}&search=${encodeURIComponent(q.trim())}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            const data = await res.json()
+            if (data.success) {
+                setSiblingCandidates(data.candidates || [])
+            }
+        } catch {}
+        setSearchingSiblings(false)
+    }
+
+    const handleAddSibling = async (siblingId: string) => {
+        if (!selectedStudent || !token) return
+        setSiblingActionLoading(true)
+        setSiblingFeedback(null)
+        try {
+            const res = await fetch('/api/students/siblings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    studentId: selectedStudent.id,
+                    siblingId
+                })
+            })
+            const data = await res.json()
+            if (data.success) {
+                setSiblingFeedback({ type: 'success', msg: data.message })
+                setSiblingList(data.siblings || [])
+                setShowAddSiblingBox(false)
+                setSiblingSearchQuery('')
+                setSiblingCandidates([])
+                fetchStudents()
+            } else {
+                setSiblingFeedback({ type: 'error', msg: data.error || 'Failed to add sibling' })
+            }
+        } catch {
+            setSiblingFeedback({ type: 'error', msg: 'Error adding sibling' })
+        }
+        setSiblingActionLoading(false)
+    }
+
+    const handleRemoveSibling = async (siblingId: string, siblingName: string) => {
+        if (!selectedStudent || !token) return
+        if (!confirm(`Are you sure you want to remove ${siblingName} from siblings?`)) return
+        setSiblingActionLoading(true)
+        setSiblingFeedback(null)
+        try {
+            const res = await fetch('/api/students/siblings', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    studentId: selectedStudent.id,
+                    siblingId
+                })
+            })
+            const data = await res.json()
+            if (data.success) {
+                setSiblingFeedback({ type: 'success', msg: data.message })
+                loadSiblings(selectedStudent.id)
+                fetchStudents()
+            } else {
+                setSiblingFeedback({ type: 'error', msg: data.error || 'Failed to remove sibling' })
+            }
+        } catch {
+            setSiblingFeedback({ type: 'error', msg: 'Error removing sibling' })
+        }
+        setSiblingActionLoading(false)
+    }
+
     useEffect(() => { fetchStudents() }, [token, search])
 
     return (
@@ -219,7 +344,7 @@ export default function StudentsPage() {
                         <input
                             className="input"
                             style={{ flex: 1 }}
-                            placeholder="🔍 Search by student name or mobile no..."
+                            placeholder="🔍 Search by student name or scholar no..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && fetchStudents()}
@@ -293,7 +418,30 @@ export default function StudentsPage() {
                                                         {s.fullName.charAt(0)}
                                                     </div>
                                                     <div>
-                                                        <div style={{ fontWeight: '600', fontSize: '14px' }}>{s.fullName}</div>
+                                                        <div style={{ fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            {s.hasSiblings && (
+                                                                <span 
+                                                                    title={`👨‍👩‍👧 Has ${s.siblingsCount || 1} Sibling(s) linked`} 
+                                                                    style={{ 
+                                                                        display: 'inline-flex', 
+                                                                        alignItems: 'center', 
+                                                                        justifyContent: 'center', 
+                                                                        width: '18px', 
+                                                                        height: '18px', 
+                                                                        borderRadius: '50%', 
+                                                                        background: 'linear-gradient(135deg, #10b981, #059669)', 
+                                                                        color: 'white', 
+                                                                        fontSize: '13px', 
+                                                                        fontWeight: '900', 
+                                                                        lineHeight: '1',
+                                                                        boxShadow: '0 0 5px rgba(16, 185, 129, 0.45)',
+                                                                        cursor: 'help'
+                                                                    }}>
+                                                                    +
+                                                                </span>
+                                                            )}
+                                                            <span>{s.fullName}</span>
+                                                        </div>
                                                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{s.studentId}</div>
                                                     </div>
                                                 </div>
@@ -423,6 +571,145 @@ export default function StudentsPage() {
                                     <div><label className="label">Bank Name</label><input className="input" value={editForm.bankName || ''} onChange={e => setEditForm({...editForm, bankName: e.target.value})} /></div>
                                     <div><label className="label">Bank Account No.</label><input className="input" value={editForm.bankAccountNo || ''} onChange={e => setEditForm({...editForm, bankAccountNo: e.target.value})} /></div>
                                     <div className="col-span-2"><label className="label">IFSC Code</label><input className="input" value={editForm.ifsc || ''} onChange={e => setEditForm({...editForm, ifsc: e.target.value})} /></div>
+                                    
+                                    {/* Sibling Management Section */}
+                                    <div className="col-span-2" style={{ marginTop: '10px', padding: '16px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                                            <div>
+                                                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+                                                    👨‍👩‍👧 Family Siblings ({siblingList.length + 1}/3 Children)
+                                                </h4>
+                                                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+                                                    Link up to 3 siblings studying in this school for joint ledger & fee management
+                                                </p>
+                                            </div>
+                                            {siblingList.length + 1 < 3 ? (
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => { setShowAddSiblingBox(!showAddSiblingBox); setSiblingFeedback(null); }}
+                                                    className="btn btn-sm"
+                                                    style={{ background: showAddSiblingBox ? '#334155' : 'linear-gradient(135deg, #6366f1, #4f46e5)', color: 'white', border: 'none', fontWeight: '700', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer' }}
+                                                >
+                                                    {showAddSiblingBox ? '✕ Close Search' : '➕ Add Sibling'}
+                                                </button>
+                                            ) : (
+                                                <span style={{ fontSize: '11px', background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '3px 8px', borderRadius: '6px', fontWeight: '700' }}>
+                                                    ✓ Max 3 Siblings Linked
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Feedback message */}
+                                        {siblingFeedback && (
+                                            <div style={{ padding: '8px 12px', borderRadius: '8px', fontSize: '12px', marginBottom: '12px', fontWeight: '600', background: siblingFeedback.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: siblingFeedback.type === 'success' ? '#10b981' : '#ef4444', border: `1px solid ${siblingFeedback.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+                                                {siblingFeedback.msg}
+                                            </div>
+                                        )}
+
+                                        {/* Currently Linked Siblings List */}
+                                        {loadingSiblings ? (
+                                            <div style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>Loading siblings...</div>
+                                        ) : siblingList.length === 0 ? (
+                                            <div style={{ padding: '12px', textAlign: 'center', background: 'var(--surface)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
+                                                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>No siblings linked yet. Click "➕ Add Sibling" to search by Student Name or Scholar No.</p>
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                                                {siblingList.map((sib: any) => (
+                                                    <div key={sib.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                                                        <div>
+                                                            <div style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <span>👫 {sib.fullName}</span>
+                                                                {sib.scholarNo && (
+                                                                    <span style={{ fontSize: '10px', background: 'rgba(99,102,241,0.2)', color: '#818cf8', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>
+                                                                        Sch: {sib.scholarNo}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                                {sib.courseName} • {sib.batchName} &nbsp;|&nbsp; 👨 {sib.fatherName || 'Father N/A'}
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                            <span style={{ fontSize: '11px', fontWeight: '700', color: sib.outstanding > 0 ? '#f59e0b' : '#10b981' }}>
+                                                                {sib.outstanding > 0 ? `Due: ${formatCurrency(sib.outstanding)}` : '✓ Paid'}
+                                                            </span>
+                                                            <button 
+                                                                type="button" 
+                                                                disabled={siblingActionLoading}
+                                                                onClick={() => handleRemoveSibling(sib.id, sib.fullName)}
+                                                                className="btn btn-secondary btn-sm"
+                                                                style={{ color: '#ef4444', fontSize: '11px', padding: '4px 8px' }}
+                                                                title="Remove Sibling Link"
+                                                            >
+                                                                ❌ Remove
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Search Student Box for Adding Sibling */}
+                                        {showAddSiblingBox && siblingList.length + 1 < 3 && (
+                                            <div style={{ marginTop: '12px', padding: '14px', background: 'var(--surface)', border: '1px solid #6366f1', borderRadius: '10px' }}>
+                                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px' }}>
+                                                    🔍 Search Student by Scholar No. or Name:
+                                                </label>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <input 
+                                                        type="text"
+                                                        className="input"
+                                                        value={siblingSearchQuery}
+                                                        onChange={e => handleSiblingSearch(e.target.value)}
+                                                        placeholder="Type Scholar No or Student Name..."
+                                                        style={{ flex: 1 }}
+                                                        autoFocus
+                                                    />
+                                                    {siblingSearchQuery && (
+                                                        <button type="button" onClick={() => handleSiblingSearch('')} className="btn btn-secondary btn-sm">Clear</button>
+                                                    )}
+                                                </div>
+
+                                                {/* Search results */}
+                                                <div style={{ marginTop: '10px', maxHeight: '180px', overflowY: 'auto' }}>
+                                                    {searchingSiblings ? (
+                                                        <div style={{ padding: '10px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>Searching students...</div>
+                                                    ) : siblingSearchQuery && siblingCandidates.length === 0 ? (
+                                                        <div style={{ padding: '10px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>No students found matching "{siblingSearchQuery}"</div>
+                                                    ) : (
+                                                        siblingCandidates.map((candidate: any) => {
+                                                            const wouldExceed = (siblingList.length + 1) + candidate.currentGroupSize > 3
+                                                            return (
+                                                                <div key={candidate.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderBottom: '1px solid var(--border)', fontSize: '12px' }}>
+                                                                    <div>
+                                                                        <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                                            {candidate.fullName} 
+                                                                            {candidate.scholarNo && <span style={{ marginLeft: '6px', color: '#818cf8' }}>(Sch: {candidate.scholarNo})</span>}
+                                                                        </div>
+                                                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                                                            {candidate.courseName} • {candidate.batchName} {candidate.fatherName ? `| F: ${candidate.fatherName}` : ''}
+                                                                        </div>
+                                                                    </div>
+                                                                    <button 
+                                                                        type="button"
+                                                                        disabled={siblingActionLoading || wouldExceed}
+                                                                        onClick={() => handleAddSibling(candidate.id)}
+                                                                        className="btn btn-primary btn-sm"
+                                                                        style={{ fontSize: '11px', padding: '4px 10px', opacity: wouldExceed ? 0.5 : 1 }}
+                                                                        title={wouldExceed ? 'Cannot link: total would exceed 3 siblings limit' : 'Add as Sibling'}
+                                                                    >
+                                                                        {wouldExceed ? 'Limit Exceeded' : '➕ Add Sibling'}
+                                                                    </button>
+                                                                </div>
+                                                            )
+                                                        })
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <div className="col-span-2" style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                                         <button type="submit" className="btn btn-primary" disabled={actionLoading} style={{ flex: 1 }}>
                                             {actionLoading ? 'Saving...' : '💾 Save Changes'}
@@ -431,29 +718,58 @@ export default function StudentsPage() {
                                     </div>
                                 </form>
                             ) : (
-                                <div className="grid-cols-2">
-                                    {[
-                                        ['📱 Phone', selectedStudent.phone],
-                                        ['👨 Father', selectedStudent.fatherName || 'N/A'],
-                                        ['📧 Email', selectedStudent.email || 'N/A'],
-                                        ['📞 Parent Phone', selectedStudent.parentPhone || 'N/A'],
-                                        ['📚 Class', selectedStudent.courseName],
-                                        ['🕐 Section', selectedStudent.batchName],
-                                        ['💰 Total Fee', formatCurrency(selectedStudent.totalFee)],
-                                        ['✅ Paid', formatCurrency(selectedStudent.paidFee)],
-                                        ['⚠️ Pending', formatCurrency(selectedStudent.totalFee - selectedStudent.paidFee)],
-                                        ['📅 Admission', selectedStudent.admissionDate ? formatDate(selectedStudent.admissionDate) : 'N/A'],
-                                        ['🚩 Status', selectedStudent.status],
-                                        ['🪪 Aadhaar No.', selectedStudent.aadhaarNo || 'N/A'],
-                                        ['🆔 PEN ID', selectedStudent.penId || 'N/A'],
-                                        ['🆔 APAR ID', selectedStudent.aparId || 'N/A'],
-                                        ['🆔 Samagra ID', selectedStudent.samagraId || 'N/A'],
-                                    ].map(([label, value]) => (
-                                        <div key={label} style={{ padding: '10px', background: 'var(--surface-2)', borderRadius: '8px' }}>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</div>
-                                            <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{value}</div>
+                                <div>
+                                    <div className="grid-cols-2">
+                                        {[
+                                            ['🏷️ Scholar No.', selectedStudent.scholarNo || 'N/A'],
+                                            ['📱 Phone', selectedStudent.phone],
+                                            ['👨 Father', selectedStudent.fatherName || 'N/A'],
+                                            ['📧 Email', selectedStudent.email || 'N/A'],
+                                            ['📞 Parent Phone', selectedStudent.parentPhone || 'N/A'],
+                                            ['📚 Class', selectedStudent.courseName],
+                                            ['🕐 Section', selectedStudent.batchName],
+                                            ['💰 Total Fee', formatCurrency(selectedStudent.totalFee)],
+                                            ['✅ Paid', formatCurrency(selectedStudent.paidFee)],
+                                            ['⚠️ Pending', formatCurrency(selectedStudent.totalFee - selectedStudent.paidFee)],
+                                            ['📅 Admission', selectedStudent.admissionDate ? formatDate(selectedStudent.admissionDate) : 'N/A'],
+                                            ['🚩 Status', selectedStudent.status],
+                                            ['🪪 Aadhaar No.', selectedStudent.aadhaarNo || 'N/A'],
+                                            ['🆔 PEN ID', selectedStudent.penId || 'N/A'],
+                                            ['🆔 APAR ID', selectedStudent.aparId || 'N/A'],
+                                            ['🆔 Samagra ID', selectedStudent.samagraId || 'N/A'],
+                                        ].map(([label, value]) => (
+                                            <div key={label} style={{ padding: '10px', background: 'var(--surface-2)', borderRadius: '8px' }}>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</div>
+                                                <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{value}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Linked Siblings in View Mode */}
+                                    {siblingList.length > 0 && (
+                                        <div style={{ marginTop: '20px', padding: '16px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                                            <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                👨‍👩‍👧 Linked Siblings ({siblingList.length + 1} Family Members)
+                                            </h4>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                {siblingList.map((sib: any) => (
+                                                    <div key={sib.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                                                        <div>
+                                                            <div style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)' }}>
+                                                                👫 {sib.fullName} {sib.scholarNo && <span style={{ fontSize: '11px', color: '#818cf8' }}>(Sch: {sib.scholarNo})</span>}
+                                                            </div>
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                                                {sib.courseName} • {sib.batchName} {sib.fatherName ? `| Father: ${sib.fatherName}` : ''}
+                                                            </div>
+                                                        </div>
+                                                        <span style={{ fontSize: '11px', fontWeight: '700', color: sib.outstanding > 0 ? '#f59e0b' : '#10b981' }}>
+                                                            {sib.outstanding > 0 ? `Due: ${formatCurrency(sib.outstanding)}` : '✓ Cleared'}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
                             )}
 

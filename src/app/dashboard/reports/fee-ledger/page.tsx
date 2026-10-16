@@ -108,6 +108,8 @@ export default function FeeLedgerPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
+        studentId: siblingPayModal.id,
+        siblingGroupId: siblingPayModal.siblingGroupId,
         parentPhone: siblingPayModal.parentPhone || siblingPayModal.phone,
         totalAmount: parseFloat(siblingPayForm.amount),
         mode: siblingPayForm.mode,
@@ -139,7 +141,7 @@ export default function FeeLedgerPage() {
             {/* Search */}
             <div style={{ gridColumn: '1 / 3' }}>
               <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '5px', fontWeight: '600' }}>
-                🔍 Search (Name / Mobile / Receipt No.)
+                🔍 Search (Name / Scholar No. / Mobile / Receipt)
               </label>
               <div style={{ position: 'relative' }}>
                 <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
@@ -147,7 +149,7 @@ export default function FeeLedgerPage() {
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Student name, 9876543210, or REC-00001"
+                  placeholder="Student name, Scholar No., 9876543210, or REC-00001"
                   style={{ width: '100%', padding: '9px 12px 9px 32px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: 'white', fontSize: '13px', outline: 'none' }}
                 />
               </div>
@@ -290,49 +292,72 @@ export default function FeeLedgerPage() {
             ) : (
               <>
                 {/* Sibling list */}
-                <div style={{ marginBottom: '18px' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>
-                    SIBLINGS IN THIS GROUP (Parent: {siblingPayModal.parentPhone || siblingPayModal.phone})
-                  </div>
-                  <div style={{ background: '#0f172a', borderRadius: '10px', overflow: 'hidden' }}>
-                    {/* Main student */}
-                    <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e293b' }}>
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>{siblingPayModal.fullName}</div>
-                        <div style={{ fontSize: '11px', color: '#818cf8' }}>{siblingPayModal.class} • {siblingPayModal.section}</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '12px', color: '#ef4444', fontWeight: '700' }}>Due: {fmt(siblingPayModal.outstanding)}</div>
-                        <div style={{ fontSize: '10px', color: '#64748b' }}>of {fmt(siblingPayModal.totalFee)}</div>
-                      </div>
-                    </div>
-                    {/* Siblings */}
-                    {siblingPayModal.siblings?.map((sib: any) => (
-                      <div key={sib.id} style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', background: 'rgba(245,158,11,0.05)', borderBottom: '1px solid #1e293b' }}>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: '700', color: '#fde68a' }}>👫 {sib.fullName}</div>
-                          <div style={{ fontSize: '11px', color: '#818cf8' }}>{sib.class} • {sib.section}</div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '12px', color: '#ef4444', fontWeight: '700' }}>Due: {fmt(sib.balance)}</div>
-                          <div style={{ fontSize: '10px', color: '#64748b' }}>of {fmt(sib.totalFee)}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                {(() => {
+                  const parsedAmt = parseFloat(siblingPayForm.amount) || 0
+                  const allMembers = [
+                    { id: siblingPayModal.id, fullName: siblingPayModal.fullName, scholarNo: siblingPayModal.scholarNo, className: `${siblingPayModal.class} • ${siblingPayModal.section}`, due: Math.max(0, siblingPayModal.outstanding), total: siblingPayModal.totalFee },
+                    ...(siblingPayModal.siblings || []).map((sib: any) => ({
+                      id: sib.id, fullName: sib.fullName, scholarNo: sib.scholarNo, className: `${sib.class} • ${sib.section}`, due: Math.max(0, sib.balance), total: sib.totalFee
+                    }))
+                  ]
+                  const totalGroupDue = allMembers.reduce((sum, m) => sum + m.due, 0)
 
-                {/* Payment form */}
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '5px', fontWeight: '600' }}>Total Amount to Deposit (₹) *</label>
-                  <input type="number" value={siblingPayForm.amount}
-                    onChange={e => setSiblingPayForm({ ...siblingPayForm, amount: e.target.value })}
-                    placeholder="e.g. 10000"
-                    style={{ width: '100%', padding: '10px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: 'white', fontSize: '14px', outline: 'none' }} />
-                  <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-                    Amount will be split proportionally based on each sibling's outstanding balance.
-                  </p>
-                </div>
+                  return (
+                    <>
+                      <div style={{ marginBottom: '18px' }}>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>
+                          SIBLINGS IN THIS GROUP ({allMembers.length} Children | Total Due: {fmt(totalGroupDue)})
+                        </div>
+                        <div style={{ background: '#0f172a', borderRadius: '10px', overflow: 'hidden' }}>
+                          {allMembers.map((m, idx) => (
+                            <div key={m.id} style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', background: idx === 0 ? 'transparent' : 'rgba(245,158,11,0.04)', borderBottom: '1px solid #1e293b' }}>
+                              <div>
+                                <div style={{ fontSize: '13px', fontWeight: '700', color: idx === 0 ? 'white' : '#fde68a' }}>
+                                  {idx === 0 ? '👤 ' : '👫 '}{m.fullName}
+                                  {m.scholarNo && <span style={{ fontSize: '10px', marginLeft: '6px', background: '#334155', color: '#94a3b8', padding: '1px 6px', borderRadius: '4px' }}>Sch: {m.scholarNo}</span>}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#818cf8' }}>{m.className}</div>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: '12px', color: '#ef4444', fontWeight: '700' }}>Due: {fmt(m.due)}</div>
+                                <div style={{ fontSize: '10px', color: '#64748b' }}>of {fmt(m.total)}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Payment form */}
+                      <div style={{ marginBottom: '12px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '5px', fontWeight: '600' }}>Total Gross Amount to Deposit (₹) *</label>
+                        <input type="number" value={siblingPayForm.amount}
+                          onChange={e => setSiblingPayForm({ ...siblingPayForm, amount: e.target.value })}
+                          placeholder="e.g. 10000"
+                          style={{ width: '100%', padding: '10px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: 'white', fontSize: '14px', outline: 'none' }} />
+                        <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                          Amount will be split proportionally based on each sibling's outstanding balance.
+                        </p>
+
+                        {/* Live proportional preview */}
+                        {parsedAmt > 0 && totalGroupDue > 0 && (
+                          <div style={{ marginTop: '10px', padding: '10px 12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '11px', color: '#f59e0b', fontWeight: '700', marginBottom: '6px' }}>📊 Live Proportional Allocation Preview:</div>
+                            {allMembers.map(m => {
+                              const proportion = totalGroupDue > 0 ? (m.due / totalGroupDue) : 0
+                              const allocated = Math.round(parsedAmt * proportion * 100) / 100
+                              return (
+                                <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#cbd5e1', padding: '2px 0' }}>
+                                  <span>{m.fullName} {m.scholarNo ? `(Sch: ${m.scholarNo})` : ''}</span>
+                                  <span style={{ color: '#10b981', fontWeight: '700' }}>{fmt(allocated)}</span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )
+                })()}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '5px', fontWeight: '600' }}>Payment Mode</label>
@@ -378,11 +403,11 @@ function StudentLedgerCard({ student, expanded, onToggle, onPrintStudent, onSibl
         <div style={{ background: 'rgba(245,158,11,0.1)', borderBottom: '1px solid rgba(245,158,11,0.2)', padding: '5px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Users size={12} style={{ color: '#f59e0b' }} />
           <span style={{ fontSize: '11px', color: '#fde68a', fontWeight: '700' }}>
-            SIBLING FAMILY — {student.siblings.length + 1} students linked to this parent
+            SIBLING FAMILY — {student.siblings.length + 1} students linked in family
           </span>
           {student.siblings.map((s: any) => (
             <span key={s.id} style={{ fontSize: '10px', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', color: '#fde68a', padding: '1px 6px', borderRadius: '4px' }}>
-              {s.fullName} ({s.class})
+              {s.fullName} {s.scholarNo ? `(Sch: ${s.scholarNo})` : `(${s.class})`}
             </span>
           ))}
         </div>
@@ -393,6 +418,11 @@ function StudentLedgerCard({ student, expanded, onToggle, onPrintStudent, onSibl
         <div style={{ flex: 1, minWidth: '180px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>{student.fullName}</span>
+            {student.scholarNo && (
+              <span style={{ fontSize: '10px', background: 'rgba(99,102,241,0.25)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.4)', padding: '2px 7px', borderRadius: '4px', fontWeight: '700' }}>
+                Sch: {student.scholarNo}
+              </span>
+            )}
             {student.studentId && (
               <span style={{ fontSize: '10px', background: '#334155', color: '#94a3b8', padding: '2px 7px', borderRadius: '4px' }}>{student.studentId}</span>
             )}

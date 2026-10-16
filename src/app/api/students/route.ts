@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
                 { fullName: { contains: search, mode: 'insensitive' } },
                 { phone: { contains: search } },
                 { studentId: { contains: search, mode: 'insensitive' } },
+                { scholarNo: { contains: search, mode: 'insensitive' } },
             ]
         }
 
@@ -37,14 +38,34 @@ export async function GET(req: NextRequest) {
             orderBy: { createdAt: 'desc' }
         })
 
-        const data = students.map(s => ({
-            ...s,
-            courseName: s.course?.name || '',
-            courseSubjects: s.course?.subjects || [],
-            batchName: s.batch?.name || '',
-            parentEmail: s.parentLinks?.[0]?.user?.email || null,
-            parentPassword: s.parentLinks?.[0]?.user?.plainPassword || null,
-        }))
+        // Find sibling group counts
+        const groupIds = Array.from(new Set(students.map(s => s.siblingGroupId).filter(Boolean) as string[]))
+        const groupCounts: Record<string, number> = {}
+        if (groupIds.length > 0) {
+            const counts = await prisma.student.groupBy({
+                by: ['siblingGroupId'],
+                where: { tenantId: user!.tenantId, siblingGroupId: { in: groupIds } },
+                _count: { id: true },
+            })
+            counts.forEach(c => {
+                if (c.siblingGroupId) groupCounts[c.siblingGroupId] = c._count.id
+            })
+        }
+
+        const data = students.map(s => {
+            const groupSize = s.siblingGroupId ? (groupCounts[s.siblingGroupId] || 0) : 0
+            const hasSiblings = groupSize > 1
+            return {
+                ...s,
+                courseName: s.course?.name || '',
+                courseSubjects: s.course?.subjects || [],
+                batchName: s.batch?.name || '',
+                parentEmail: s.parentLinks?.[0]?.user?.email || null,
+                parentPassword: s.parentLinks?.[0]?.user?.plainPassword || null,
+                hasSiblings,
+                siblingsCount: hasSiblings ? groupSize - 1 : 0,
+            }
+        })
 
         // Total count for plan limit
         const totalCount = await prisma.student.count({ where: { tenantId: user!.tenantId } })

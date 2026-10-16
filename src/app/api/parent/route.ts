@@ -68,5 +68,18 @@ export async function POST(req: NextRequest) {
     },
   })
 
+  // Also sync siblingGroupId for all linked children
+  if (studentIds.length > 1) {
+    const existingWithGroup = await prisma.student.findFirst({
+      where: { id: { in: studentIds }, siblingGroupId: { not: null } },
+      select: { siblingGroupId: true },
+    })
+    const targetGroupId = existingWithGroup?.siblingGroupId || `sib_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+    await prisma.student.updateMany({
+      where: { id: { in: studentIds }, tenantId: user!.tenantId },
+      data: { siblingGroupId: targetGroupId },
+    })
+  }
+
   return NextResponse.json({ success: true, profile })
 }
