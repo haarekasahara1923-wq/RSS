@@ -131,23 +131,58 @@ function DashboardSidebar({ open, onClose }: { open: boolean; onClose: () => voi
 
     return (
         <>
-            {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1049 }} className="hide-desktop" />}
-            <aside className={`sidebar ${open ? 'open' : ''}`}>
-                {/* Logo */}
-                <div className="sidebar-logo">
-                    <div className="sidebar-logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                        {isSuperAdmin ? '👑' : <img src="/logo.png" alt="UDBA Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '13px', fontWeight: '800', color: 'white' }}>RSS Public School</div>
-                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {isSuperAdmin ? 'Super Admin' : (tenant?.name || 'School Management')}
+            {open && (
+                <div 
+                    onClick={onClose} 
+                    style={{ 
+                        position: 'fixed', 
+                        inset: 0, 
+                        background: 'rgba(0,0,0,0.7)', 
+                        backdropFilter: 'blur(4px)',
+                        zIndex: 2000 
+                    }} 
+                    className="hide-desktop" 
+                />
+            )}
+            <aside className={`sidebar ${open ? 'open' : ''}`} style={{ zIndex: 2001 }}>
+                {/* Logo & Close Button */}
+                <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="sidebar-logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                            {isSuperAdmin ? '👑' : <img src="/logo.png" alt="RSS Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />}
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '13px', fontWeight: '800', color: 'white' }}>RSS Public School</div>
+                            <div style={{ fontSize: '10px', color: '#10b981', fontWeight: '700', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {isSuperAdmin ? '⚡ SUPER ADMIN PORTAL' : (tenant?.name || 'School Management')}
+                            </div>
                         </div>
                     </div>
+                    <button 
+                        onClick={onClose}
+                        className="hide-desktop"
+                        style={{
+                            background: 'rgba(255,255,255,0.08)',
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            color: 'white',
+                            borderRadius: '8px',
+                            width: '32px',
+                            height: '32px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            padding: 0,
+                        }}
+                        aria-label="Close menu"
+                    >
+                        ✕
+                    </button>
                 </div>
 
                 {/* Nav */}
-                <nav className="sidebar-nav">
+                <nav className="sidebar-nav" style={{ paddingBottom: '20px' }}>
                     {allNavItems.map((group: any) => (
                         <div key={group.group}>
                             <div className="sidebar-section-title">{group.group}</div>
@@ -158,7 +193,7 @@ function DashboardSidebar({ open, onClose }: { open: boolean; onClose: () => voi
                                     className={`nav-item ${pathname === item.href ? 'active' : ''}`}
                                     onClick={onClose}
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
                                         <span style={{ fontSize: '16px' }}>{item.icon}</span>
                                         <span>{item.label}</span>
                                     </div>
@@ -168,17 +203,17 @@ function DashboardSidebar({ open, onClose }: { open: boolean; onClose: () => voi
                     ))}
 
                     {/* User info + Logout */}
-                    <div style={{ padding: '12px 8px', borderTop: '1px solid var(--border)', marginTop: '8px' }}>
+                    <div style={{ padding: '14px 10px', borderTop: '1px solid var(--border)', marginTop: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                            <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '12px' }}>
+                            <div className="avatar" style={{ width: '34px', height: '34px', fontSize: '13px' }}>
                                 {user?.name?.charAt(0) || 'U'}
                             </div>
-                            <div>
-                                <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>{user?.name}</div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{user?.role?.replace('_', ' ')}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
+                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{user?.role?.replace('_', ' ')}</div>
                             </div>
                         </div>
-                        <button onClick={logout} className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', padding: '8px', fontSize: '13px' }}>
+                        <button onClick={logout} className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', padding: '9px', fontSize: '13px' }}>
                             🚪 Logout
                         </button>
                     </div>
@@ -364,38 +399,80 @@ function DashboardHeader({ onMenuClick, onAiOpen }: { onMenuClick: () => void; o
             '/dashboard/transport': 'Transport',
             '/dashboard/profile': 'School Profile',
             '/dashboard/reports': 'Reports',
+            '/dashboard/reports/fee-ledger': 'Fee Ledger',
+            '/dashboard/super-admin/manage-admins': 'Manage Admins',
         }
         return map[pathname] || 'Dashboard'
     }
 
     return (
-        <header className="header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <button onClick={onMenuClick} className="hide-desktop" style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '20px', padding: '4px' }} id="mobile-menu-btn">
+        <header className="header" style={{ padding: '0 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flexShrink: 0 }}>
+                {/* Mobile Hamburger Menu Button */}
+                <button 
+                    onClick={onMenuClick} 
+                    className="hide-desktop" 
+                    style={{ 
+                        background: 'rgba(255,255,255,0.08)', 
+                        border: '1px solid rgba(255,255,255,0.15)', 
+                        color: 'var(--text-primary)', 
+                        cursor: 'pointer', 
+                        fontSize: '18px', 
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0
+                    }} 
+                    id="mobile-menu-btn"
+                    aria-label="Open Super Admin Navigation Drawer"
+                >
                     ☰
                 </button>
-                <div className="header-title-container">
-                    <h2 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>{getPageTitle()}</h2>
+                <div className="header-title-container" style={{ minWidth: 0 }}>
+                    <h2 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px', margin: 0 }}>
+                        {getPageTitle()}
+                    </h2>
                 </div>
             </div>
 
-            <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, justifyContent: 'flex-end', padding: '0 16px' }}>
+            <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, justifyContent: 'flex-end', padding: 0 }}>
                 <button
                     onClick={onAiOpen}
-                    className="btn btn-primary ai-btn"
-                    style={{ background: 'linear-gradient(135deg, #1a5c38 0%, #0f3d26 100%)', border: 'none', gap: '6px', padding: '8px 16px', fontSize: '14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+                    className="btn btn-primary ai-btn hide-mobile"
+                    style={{ background: 'linear-gradient(135deg, #1a5c38 0%, #0f3d26 100%)', border: 'none', gap: '6px', padding: '8px 14px', fontSize: '13px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}
                 >
-                    ✨ <span className="hide-mobile">AI Assistant</span>
+                    ✨ AI Assistant
                 </button>
-                {/* Global Student Search Bar */}
-                <div
-                    className="search-input-container"
-                    style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-2)', padding: '6px 14px', borderRadius: '12px', border: '1px solid var(--border)', maxWidth: '300px', width: '100%', gap: '8px', cursor: 'pointer' }}
-                    onClick={() => {
-                        if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-                            window.location.href = '/dashboard/students';
-                        }
+
+                {/* Mobile Search Button */}
+                <Link 
+                    href="/dashboard/students" 
+                    className="show-mobile"
+                    style={{ 
+                        width: '36px', 
+                        height: '36px', 
+                        borderRadius: '10px', 
+                        background: 'var(--surface-2)', 
+                        border: '1px solid var(--border)', 
+                        display: 'none', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        textDecoration: 'none', 
+                        fontSize: '15px',
+                        flexShrink: 0
                     }}
+                    title="Search Students"
+                >
+                    🔍
+                </Link>
+
+                {/* Desktop Global Student Search Bar */}
+                <div
+                    className="search-input-container hide-mobile"
+                    style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-2)', padding: '6px 14px', borderRadius: '12px', border: '1px solid var(--border)', maxWidth: '280px', width: '100%', gap: '8px' }}
                 >
                     <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>🔍</span>
                     <input
@@ -411,32 +488,34 @@ function DashboardHeader({ onMenuClick, onAiOpen }: { onMenuClick: () => void; o
                                 }
                             }
                         }}
-                        onClick={(e) => e.stopPropagation()}
                     />
                 </div>
             </div>
 
-            <div className="header-user-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="header-user-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 <div className="hide-mobile" style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', display: 'inline-block' }} />
                     Live
                 </div>
 
-                {/* Super Admin Switcher — only visible for SUPER_ADMIN */}
+                {/* Super Admin Switcher — only visible on desktop */}
                 {user?.role === 'SUPER_ADMIN' && token && (
-                    <SuperAdminSwitcher token={token} />
+                    <div className="hide-mobile">
+                        <SuperAdminSwitcher token={token} />
+                    </div>
                 )}
 
-                <Link href="/dashboard/leads" style={{ position: 'relative', textDecoration: 'none' }}>
-                    <div className="bell-icon" style={{ padding: '8px', background: 'var(--surface-2)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '16px' }}>🔔</div>
+                <Link href="/dashboard/notices" style={{ position: 'relative', textDecoration: 'none' }}>
+                    <div className="bell-icon" style={{ width: '36px', height: '36px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '15px' }}>
+                        🔔
+                    </div>
                 </Link>
-                <Link href="/dashboard/profile">
-                    <div className="avatar header-avatar">
-                        {tenant?.name?.charAt(0) || 'U'}
+                <Link href="/dashboard/profile" style={{ textDecoration: 'none' }}>
+                    <div className="avatar header-avatar" style={{ width: '36px', height: '36px', fontSize: '13px', borderRadius: '50%' }}>
+                        {tenant?.name?.charAt(0) || user?.name?.charAt(0) || '👑'}
                     </div>
                 </Link>
             </div>
-
         </header>
     )
 }
@@ -444,7 +523,8 @@ function DashboardHeader({ onMenuClick, onAiOpen }: { onMenuClick: () => void; o
 function DashboardShell({ children }: { children: React.ReactNode }) {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [aiModalOpen, setAiModalOpen] = useState(false)
-    const { user, isLoading } = useAuth()
+    const [quickActionsOpen, setQuickActionsOpen] = useState(false)
+    const { user, isLoading, logout } = useAuth()
     const router = useRouter()
     const pathname = usePathname()
 
@@ -455,7 +535,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     }, [user, isLoading, router, pathname])
 
     useEffect(() => {
-        if (sidebarOpen) {
+        if (sidebarOpen || quickActionsOpen) {
             document.body.style.overflow = 'hidden'
         } else {
             document.body.style.overflow = ''
@@ -463,7 +543,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         return () => {
             document.body.style.overflow = ''
         }
-    }, [sidebarOpen])
+    }, [sidebarOpen, quickActionsOpen])
 
     if (isLoading) {
         return (
@@ -478,85 +558,234 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
     if (!user) return null
 
-    const bottomNavItems = [
-        { href: '/dashboard', label: 'Home', icon: '🏠' },
-        { href: '/dashboard/students', label: 'Students', icon: '👨‍🎓' },
-        { href: '/dashboard/fees', label: 'Fees', icon: '💰' },
-        { href: '/dashboard/reports', label: 'Reports', icon: '📊' },
+    const quickActionLinks = [
+        { href: '/dashboard/students/add', label: 'Add Student', icon: '➕', color: '#10b981' },
+        { href: '/dashboard/fees', label: 'Collect Fee', icon: '💰', color: '#f59e0b' },
+        { href: '/dashboard/attendance', label: 'Attendance', icon: '✅', color: '#6366f1' },
+        { href: '/dashboard/students/tc', label: 'Generate TC', icon: '📄', color: '#ec4899' },
+        { href: '/dashboard/reports/fee-ledger', label: 'Fee Ledger', icon: '📒', color: '#3b82f6' },
+        { href: '/dashboard/teachers', label: 'Teachers', icon: '👩‍🏫', color: '#8b5cf6' },
+        { href: '/dashboard/transport', label: 'Transport', icon: '🚌', color: '#14b8a6' },
+        { href: '/dashboard/super-admin/manage-admins', label: 'Manage Admins', icon: '👥', color: '#f97316' },
     ]
-
-    const { logout } = useAuth()
 
     return (
         <div>
             <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             <DashboardHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} onAiOpen={() => setAiModalOpen(true)} />
             <main className="main-content" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-                <div className="page-content fade-in" style={{ paddingBottom: '80px' }}>
+                <div className="page-content fade-in" style={{ paddingBottom: '90px' }}>
                     {children}
                 </div>
             </main>
 
-            {/* Mobile Bottom Navigation Bar */}
-            <nav style={{
-                display: 'none',
-                position: 'fixed',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                width: '100%',
-                zIndex: 1000,
-                background: 'var(--surface)',
-                borderTop: '1px solid var(--border)',
-                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-                boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
-            }} className="dashboard-bottom-nav">
-                {bottomNavItems.map(item => {
-                    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
-                    return (
-                        <Link key={item.href} href={item.href} style={{
+            {/* Quick Actions Bottom Sheet Modal */}
+            {quickActionsOpen && (
+                <div 
+                    onClick={() => setQuickActionsOpen(false)}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.75)',
+                        backdropFilter: 'blur(6px)',
+                        zIndex: 2500,
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <div 
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            width: '100%',
+                            maxWidth: '520px',
+                            background: '#111a0e',
+                            borderTop: '2px solid rgba(26,92,56,0.4)',
+                            borderRadius: '24px 24px 0 0',
+                            padding: '20px 16px calc(24px + env(safe-area-inset-bottom, 0px))',
+                            boxShadow: '0 -10px 40px rgba(0,0,0,0.7)',
+                            animation: 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                        }}
+                    >
+                        <div style={{ width: '40px', height: '4px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px', margin: '0 auto 16px' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', padding: '0 4px' }}>
+                            <div>
+                                <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'white', margin: 0 }}>⚡ Quick Actions</h3>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Instant Super Admin Shortcuts</p>
+                            </div>
+                            <button 
+                                onClick={() => setQuickActionsOpen(false)}
+                                style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'white', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                            {quickActionLinks.map(action => (
+                                <Link
+                                    key={action.href}
+                                    href={action.href}
+                                    onClick={() => setQuickActionsOpen(false)}
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        padding: '12px 6px',
+                                        background: 'rgba(255,255,255,0.03)',
+                                        border: '1px solid rgba(255,255,255,0.06)',
+                                        borderRadius: '14px',
+                                        textDecoration: 'none',
+                                        textAlign: 'center',
+                                        gap: '6px',
+                                        transition: 'all 0.15s ease',
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        borderRadius: '12px',
+                                        background: `${action.color}18`,
+                                        border: `1px solid ${action.color}40`,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '18px',
+                                    }}>
+                                        {action.icon}
+                                    </div>
+                                    <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                                        {action.label}
+                                    </span>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Mobile Bottom Navigation Bar with Quick Action Button & Menu */}
+            <nav 
+                style={{
+                    display: 'none',
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    width: '100%',
+                    zIndex: 1000,
+                    background: 'rgba(17, 26, 14, 0.96)',
+                    backdropFilter: 'blur(20px)',
+                    borderTop: '1px solid rgba(26, 92, 56, 0.35)',
+                    paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                    boxShadow: '0 -4px 25px rgba(0,0,0,0.6)',
+                    height: '62px',
+                    alignItems: 'center',
+                    justifyContent: 'space-around',
+                }} 
+                className="dashboard-bottom-nav"
+            >
+                {/* 1. Home */}
+                <Link 
+                    href="/dashboard" 
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flex: 1,
+                        textDecoration: 'none',
+                        color: pathname === '/dashboard' ? '#10b981' : 'var(--text-muted)',
+                        gap: '2px',
+                    }}
+                >
+                    <span style={{ fontSize: '18px', lineHeight: 1 }}>🏠</span>
+                    <span style={{ fontSize: '10px', fontWeight: pathname === '/dashboard' ? 700 : 500 }}>Home</span>
+                </Link>
+
+                {/* 2. Students */}
+                <Link 
+                    href="/dashboard/students" 
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flex: 1,
+                        textDecoration: 'none',
+                        color: pathname.startsWith('/dashboard/students') ? '#10b981' : 'var(--text-muted)',
+                        gap: '2px',
+                    }}
+                >
+                    <span style={{ fontSize: '18px', lineHeight: 1 }}>👨‍🎓</span>
+                    <span style={{ fontSize: '10px', fontWeight: pathname.startsWith('/dashboard/students') ? 700 : 500 }}>Students</span>
+                </Link>
+
+                {/* 3. Center Elevated Quick Action (+) Button */}
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <button
+                        onClick={() => setQuickActionsOpen(!quickActionsOpen)}
+                        style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            border: '3px solid #111a0e',
+                            boxShadow: '0 4px 16px rgba(16,185,129,0.5)',
+                            color: 'white',
+                            fontSize: '22px',
+                            fontWeight: 'bold',
                             display: 'flex',
-                            flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            flex: 1,
-                            padding: '8px 4px',
-                            textDecoration: 'none',
-                            color: isActive ? 'var(--primary-light)' : 'var(--text-muted)',
-                            gap: '3px',
-                            transition: 'color 0.2s',
-                        }}>
-                            <span style={{ fontSize: '20px', lineHeight: 1 }}>{item.icon}</span>
-                            <span style={{ fontSize: '10px', fontWeight: isActive ? 600 : 400, letterSpacing: '0.3px' }}>{item.label}</span>
-                            {isActive && (
-                                <span style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    width: '24px',
-                                    height: '2px',
-                                    background: 'var(--primary)',
-                                    borderRadius: '0 0 2px 2px',
-                                }} />
-                            )}
-                        </Link>
-                    )
-                })}
-                {/* Logout Button in Bottom Nav */}
-                <button onClick={logout} style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flex: 1,
-                    padding: '8px 4px',
-                    background: 'none',
-                    border: 'none',
-                    color: '#ef4444',
-                    gap: '3px',
-                    cursor: 'pointer',
-                }}>
-                    <span style={{ fontSize: '20px', lineHeight: 1 }}>🚪</span>
-                    <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.3px' }}>Logout</span>
+                            cursor: 'pointer',
+                            marginTop: '-22px',
+                            transition: 'transform 0.15s ease',
+                        }}
+                        aria-label="Super Admin Quick Actions"
+                    >
+                        ⚡
+                    </button>
+                </div>
+
+                {/* 4. Fees */}
+                <Link 
+                    href="/dashboard/fees" 
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flex: 1,
+                        textDecoration: 'none',
+                        color: pathname.startsWith('/dashboard/fees') ? '#10b981' : 'var(--text-muted)',
+                        gap: '2px',
+                    }}
+                >
+                    <span style={{ fontSize: '18px', lineHeight: 1 }}>💰</span>
+                    <span style={{ fontSize: '10px', fontWeight: pathname.startsWith('/dashboard/fees') ? 700 : 500 }}>Fees</span>
+                </Link>
+
+                {/* 5. Menu (Opens Super Admin Sidebar Drawer) */}
+                <button
+                    onClick={() => setSidebarOpen(true)}
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flex: 1,
+                        background: 'none',
+                        border: 'none',
+                        color: sidebarOpen ? '#10b981' : 'var(--text-muted)',
+                        gap: '2px',
+                        cursor: 'pointer',
+                        padding: 0,
+                    }}
+                    aria-label="Open Super Admin Menu Drawer"
+                >
+                    <span style={{ fontSize: '18px', lineHeight: 1 }}>☰</span>
+                    <span style={{ fontSize: '10px', fontWeight: 600 }}>Menu</span>
                 </button>
             </nav>
             <AIGeneratorModal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} />

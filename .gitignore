@@ -64,3 +64,10 @@ prisma/migrations/*/migration_lock.toml
 /dump.js
 /process_logo.py
 
+# Android build outputs
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
+*.aab
