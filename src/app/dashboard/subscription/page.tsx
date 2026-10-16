@@ -6,32 +6,18 @@ import Link from 'next/link'
 
 const plans = [
     {
-        name: 'Basic',
-        price: 999,
-        period: 'month',
-        features: ['100 students', '2 teachers', 'Fee management', 'Basic attendance', 'Email support'],
-        color: '#6366f1',
-    },
-    {
-        name: 'Pro',
-        price: 2999,
-        period: 'month',
-        features: ['500 students', '10 teachers', 'WhatsApp automation', 'Mock tests', 'AI question generator', 'Analytics', 'Priority support'],
-        color: '#ec4899',
+        name: 'Unlimited School Plan',
+        price: 0,
+        period: 'lifetime',
+        features: ['Unlimited students', 'Unlimited teachers', 'Fee management', 'Attendance', 'Parent & Staff Portal', 'Mock tests & Exams', 'Reports & TC generation'],
+        color: '#10b981',
         popular: true,
-    },
-    {
-        name: 'Elite',
-        price: 5999,
-        period: 'month',
-        features: ['Unlimited students', 'Unlimited teachers', 'Multi-branch', 'White-label', 'API access', 'Franchise mode', 'Dedicated support'],
-        color: '#f59e0b',
     },
 ]
 
 export default function SubscriptionPage() {
     const { subscription, tenant, token } = useAuth()
-    const currentPlan = subscription?.plan || 'BASIC'
+    const currentPlan = 'UNLIMITED SCHOOL PLAN'
     const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
 
     const handleUpgrade = async (planName: string, price: number) => {
@@ -103,51 +89,36 @@ export default function SubscriptionPage() {
         }
     }
 
-    const isExpired = subscription?.status === 'TRIAL' && subscription?.trialEndsAt && new Date() > new Date(subscription.trialEndsAt)
+    const isExpired = false
 
     return (
         <div>
             <Script id="razorpay-checkout-js" src="https://checkout.razorpay.com/v1/checkout.js" />
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">⭐ Subscription Plans</h1>
-                    <p className="page-subtitle">Manage your UDBA subscription</p>
+                    <h1 className="page-title">⭐ School License & Plan</h1>
+                    <p className="page-subtitle">Unlimited access enabled for RSS Public School</p>
                 </div>
             </div>
 
-            {isExpired && (
-                <div style={{ padding: '20px', background: '#fee2e2', border: '2px solid #ef4444', borderRadius: '12px', marginBottom: '24px', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{ fontSize: '32px' }}>⚠️</div>
-                    <div>
-                        <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '4px' }}>Free Trial Expired</h3>
-                        <p style={{ fontSize: '14px' }}>Your 7-day free trial has ended. Your services have been paused. Please upgrade to your registered plan below to reactivate your services.</p>
-                    </div>
-                </div>
-            )}
-
             {/* Current Plan */}
-            <div className="card" style={{ marginBottom: '24px', background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(236,72,153,0.1))', border: isExpired ? '2px solid #ef4444' : '1px solid rgba(99,102,241,0.3)', position: 'relative' }}>
-                {isExpired && (
-                    <div style={{ position: 'absolute', top: '-12px', right: '20px', background: '#ef4444', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', animation: 'pulse 2s infinite' }}>Action Required</div>
-                )}
+            <div className="card" style={{ marginBottom: '24px', background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(99,102,241,0.1))', border: '1px solid rgba(16,185,129,0.3)', position: 'relative' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', marginBottom: '6px' }}>Current Plan</div>
+                        <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', marginBottom: '6px' }}>Current License</div>
                         <div style={{ fontSize: '28px', fontWeight: '900', color: 'white', marginBottom: '6px' }}>
                             {currentPlan} {'✨'}
                         </div>
                         <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                            Status: <span style={{ color: subscription?.status === 'ACTIVE' ? '#10b981' : '#f59e0b', fontWeight: '700' }}>{subscription?.status || 'TRIAL'}</span>
-                            {subscription?.trialEndsAt && (
-                                <> &nbsp;• Trial ends: {new Date(subscription.trialEndsAt).toLocaleDateString('en-IN')}</>
-                            )}
+                            Status: <span style={{ color: '#10b981', fontWeight: '700' }}>ACTIVE (UNLIMITED)</span>
+                            &nbsp;• Unlimited Students, Teachers & All Features Included
                         </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '36px', fontWeight: '900', color: 'white' }}>
-                            ₹{subscription?.amount?.toLocaleString('en-IN') || '2,999'}
+                        <div style={{ fontSize: '32px', fontWeight: '900', color: '#10b981' }}>
+                            UNLIMITED
                         </div>
-                        <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>per month</div>
+                        <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No student limits</div>
                     </div>
                 </div>
             </div>

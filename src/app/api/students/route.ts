@@ -67,19 +67,18 @@ export async function GET(req: NextRequest) {
             }
         })
 
-        // Total count for plan limit
+        // Total count for stats
         const totalCount = await prisma.student.count({ where: { tenantId: user!.tenantId } })
-        const limitCheck = await checkPlanLimit(user!.tenantId, 'maxStudents', totalCount)
 
         return NextResponse.json({
             success: true,
             data,
             total: data.length,
             planInfo: {
-                limit: limitCheck.limit,
+                limit: -1,
                 used: totalCount,
-                currentPlan: limitCheck.currentPlan,
-                canAdd: limitCheck.allowed,
+                currentPlan: 'UNLIMITED',
+                canAdd: true,
             },
         })
     } catch (err) {
@@ -94,17 +93,6 @@ export async function POST(req: NextRequest) {
 
     try {
         const currentCount = await prisma.student.count({ where: { tenantId: user!.tenantId } })
-        const limitCheck = await checkPlanLimit(user!.tenantId, 'maxStudents', currentCount)
-
-        if (!limitCheck.allowed) {
-            return NextResponse.json({
-                error: limitCheck.message,
-                code: 'PLAN_LIMIT_REACHED',
-                currentPlan: limitCheck.currentPlan,
-                limit: limitCheck.limit,
-                used: currentCount,
-            }, { status: 403 })
-        }
 
         const body = await req.json()
         const { 

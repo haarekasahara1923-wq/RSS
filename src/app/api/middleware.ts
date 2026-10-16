@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAccessToken } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
-import { getPlanConfig, hasFeature, isWithinLimit, getUpgradePlanForFeature, type PlanFeatures, type PlanLimits } from '@/lib/planLimits'
+import type { PlanFeatures, PlanLimits } from '@/lib/planLimits'
 
 export function getAuthUser(req: NextRequest) {
     const authHeader = req.headers.get('authorization')
@@ -51,61 +50,19 @@ export function isSubAdminRole(role: string): boolean {
 }
 
 
-// Get the current tenant's subscription plan from database
+// Get the current tenant's subscription plan (all tenants have full unlimited access)
 export async function getTenantPlan(tenantId: string): Promise<string> {
-    try {
-        const sub = await prisma.subscription.findUnique({ where: { tenantId } })
-        return sub?.plan || 'BASIC'
-    } catch (err) {
-        console.error('getTenantPlan error:', err)
-        return 'BASIC'
-    }
+    return 'UNLIMITED'
 }
 
-// Check if a feature is available for the tenant's plan
+// Check if a feature is available for the tenant's plan - all features enabled
 export async function requireFeature(req: NextRequest, feature: keyof PlanFeatures) {
     const { error, user } = requireAuth(req)
     if (error) return { error, user: null }
-
-    const plan = await getTenantPlan(user!.tenantId)
-    if (!hasFeature(plan, feature)) {
-        const upgradeTo = getUpgradePlanForFeature(feature)
-        return {
-            error: NextResponse.json({
-                error: `This feature requires ${upgradeTo} plan or higher. Please upgrade your subscription.`,
-                code: 'PLAN_UPGRADE_REQUIRED',
-                requiredPlan: upgradeTo,
-                currentPlan: plan,
-            }, { status: 403 }),
-            user: null,
-        }
-    }
     return { error: null, user }
 }
 
-// Check if adding a new entity is within the plan limit
+// Check if adding a new entity is within the plan limit - always allowed (unlimited)
 export async function checkPlanLimit(tenantId: string, limitKey: keyof PlanLimits, currentCount: number) {
-    const plan = await getTenantPlan(tenantId)
-    const config = getPlanConfig(plan)
-    const max = config.limits[limitKey]
-
-    if (max === 0) {
-        return {
-            allowed: false,
-            message: `This feature is not available on the ${config.displayName} plan. Please upgrade to access it.`,
-            currentPlan: plan,
-            limit: max,
-        }
-    }
-
-    if (max !== -1 && currentCount >= max) {
-        return {
-            allowed: false,
-            message: `You've reached the maximum limit of ${max} for your ${config.displayName} plan. Please upgrade to add more.`,
-            currentPlan: plan,
-            limit: max,
-        }
-    }
-
-    return { allowed: true, currentPlan: plan, limit: max }
+    return { allowed: true, currentPlan: 'UNLIMITED', limit: -1, message: '' }
 }

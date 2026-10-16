@@ -40,20 +40,6 @@ export async function POST(req: NextRequest) {
     if (error) return error
 
     try {
-        // Check plan limit before adding
-        const currentCount = await prisma.teacher.count({ where: { tenantId: user!.tenantId } })
-        const limitCheck = await checkPlanLimit(user!.tenantId, 'maxTeachers', currentCount)
-
-        if (!limitCheck.allowed) {
-            return NextResponse.json({
-                error: limitCheck.message,
-                code: 'PLAN_LIMIT_REACHED',
-                currentPlan: limitCheck.currentPlan,
-                limit: limitCheck.limit,
-                used: currentCount,
-            }, { status: 403 })
-        }
-
         const body = await req.json()
         console.log('[API POST /teachers] Received payload:', body)
         const { name, email, phone, subject, salary, joinDate } = body

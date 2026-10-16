@@ -54,53 +54,18 @@ export interface PlanConfig {
 export const PLAN_CONFIGS: Record<PlanType, PlanConfig> = {
     BASIC: {
         name: 'BASIC',
-        displayName: 'Basic',
-        price: 999,
+        displayName: 'Unlimited School Plan',
+        price: 0,
         limits: {
-            maxStudents: -1,
-            maxTeachers: -1,
-            maxBranches: 1,
-            maxMockTests: 5,
-            maxAIQuestions: 0,       // Not available in basic
-            maxWhatsAppMessages: 0,  // Not available in basic
-            maxLeads: 0,             // Not available in basic
-            maxCourses: 5,
-            maxBatches: 10,
-        },
-        features: {
-            feeManagement: true,
-            attendance: true,       // Basic attendance only
-            analytics: false,       // Pro+ feature
-            mockTests: false,       // Pro+ feature
-            aiTools: false,         // Pro+ feature
-            whatsApp: false,        // Pro+ feature
-            leadManagement: false,  // Pro+ feature
-            expenseTracking: true,  // Basic has basic expense tracking
-            multiBranch: false,     // Elite feature
-            whiteLabel: false,      // Elite feature
-            customDomain: false,    // Elite feature
-            apiAccess: false,       // Elite feature
-            franchiseMode: false,   // Elite feature
-            advancedReports: false, // Pro+ feature
-            bulkSmsEmail: false,    // Pro+ feature
-            parentPortal: false,    // Pro+ feature
-        },
-    },
-
-    PRO: {
-        name: 'PRO',
-        displayName: 'Pro',
-        price: 2999,
-        limits: {
-            maxStudents: 500,
-            maxTeachers: 10,
-            maxBranches: 1,
-            maxMockTests: -1,        // Unlimited
-            maxAIQuestions: 500,     // 500 per month
-            maxWhatsAppMessages: 1000,
-            maxLeads: -1,            // Unlimited
-            maxCourses: -1,
-            maxBatches: -1,
+            maxStudents: -1,        // Unlimited
+            maxTeachers: -1,        // Unlimited
+            maxBranches: -1,        // Unlimited
+            maxMockTests: -1,       // Unlimited
+            maxAIQuestions: -1,     // Unlimited
+            maxWhatsAppMessages: -1,// Unlimited
+            maxLeads: -1,           // Unlimited
+            maxCourses: -1,         // Unlimited
+            maxBatches: -1,         // Unlimited
         },
         features: {
             feeManagement: true,
@@ -111,11 +76,46 @@ export const PLAN_CONFIGS: Record<PlanType, PlanConfig> = {
             whatsApp: true,
             leadManagement: true,
             expenseTracking: true,
-            multiBranch: false,     // Elite feature
-            whiteLabel: false,      // Elite feature
-            customDomain: false,    // Elite feature
-            apiAccess: false,       // Elite feature
-            franchiseMode: false,   // Elite feature
+            multiBranch: true,
+            whiteLabel: true,
+            customDomain: true,
+            apiAccess: true,
+            franchiseMode: true,
+            advancedReports: true,
+            bulkSmsEmail: true,
+            parentPortal: true,
+        },
+    },
+
+    PRO: {
+        name: 'PRO',
+        displayName: 'Unlimited School Plan',
+        price: 0,
+        limits: {
+            maxStudents: -1,        // Unlimited
+            maxTeachers: -1,        // Unlimited
+            maxBranches: -1,        // Unlimited
+            maxMockTests: -1,       // Unlimited
+            maxAIQuestions: -1,     // Unlimited
+            maxWhatsAppMessages: -1,// Unlimited
+            maxLeads: -1,           // Unlimited
+            maxCourses: -1,         // Unlimited
+            maxBatches: -1,         // Unlimited
+        },
+        features: {
+            feeManagement: true,
+            attendance: true,
+            analytics: true,
+            mockTests: true,
+            aiTools: true,
+            whatsApp: true,
+            leadManagement: true,
+            expenseTracking: true,
+            multiBranch: true,
+            whiteLabel: true,
+            customDomain: true,
+            apiAccess: true,
+            franchiseMode: true,
             advancedReports: true,
             bulkSmsEmail: true,
             parentPortal: true,
@@ -124,8 +124,8 @@ export const PLAN_CONFIGS: Record<PlanType, PlanConfig> = {
 
     ELITE: {
         name: 'ELITE',
-        displayName: 'Elite',
-        price: 5999,
+        displayName: 'Unlimited School Plan',
+        price: 0,
         limits: {
             maxStudents: -1,        // Unlimited
             maxTeachers: -1,        // Unlimited
@@ -163,35 +163,26 @@ export const PLAN_CONFIGS: Record<PlanType, PlanConfig> = {
 // =============================================
 
 export function getPlanConfig(plan: string): PlanConfig {
-    const normalized = (plan || 'BASIC').toUpperCase() as PlanType
-    return PLAN_CONFIGS[normalized] || PLAN_CONFIGS.BASIC
+    return PLAN_CONFIGS.ELITE
 }
 
 export function hasFeature(plan: string, feature: keyof PlanFeatures): boolean {
-    const config = getPlanConfig(plan)
-    return config.features[feature]
+    return true
 }
 
 export function getLimit(plan: string, limit: keyof PlanLimits): number {
-    const config = getPlanConfig(plan)
-    return config.limits[limit]
+    return -1
 }
 
 export function isWithinLimit(plan: string, limit: keyof PlanLimits, currentCount: number): boolean {
-    const max = getLimit(plan, limit)
-    if (max === -1) return true // Unlimited
-    return currentCount < max
+    return true // Always unlimited
 }
 
 export function getLimitDisplay(plan: string, limit: keyof PlanLimits): string {
-    const max = getLimit(plan, limit)
-    if (max === -1) return 'Unlimited'
-    if (max === 0) return 'Not available'
-    return max.toString()
+    return 'Unlimited'
 }
 
 export function getUpgradePlanForFeature(feature: keyof PlanFeatures): PlanType {
-    if (PLAN_CONFIGS.PRO.features[feature]) return 'PRO'
     return 'ELITE'
 }
 

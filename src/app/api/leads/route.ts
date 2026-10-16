@@ -41,24 +41,6 @@ export async function POST(req: NextRequest) {
     if (error) return error
 
     try {
-        // Feature gate check
-        const featureCheck = await requireFeature(req, 'leadManagement')
-        if (featureCheck.error) return featureCheck.error
-
-        // Limit check
-        const currentCount = await prisma.lead.count({ where: { tenantId: user!.tenantId } })
-        const limitCheck = await checkPlanLimit(user!.tenantId, 'maxLeads', currentCount)
-
-        if (!limitCheck.allowed) {
-            return NextResponse.json({
-                error: limitCheck.message,
-                code: 'PLAN_LIMIT_REACHED',
-                currentPlan: limitCheck.currentPlan,
-                limit: limitCheck.limit,
-                used: currentCount,
-            }, { status: 403 })
-        }
-
         const body = await req.json()
         const { name, phone, email, course, source, followUpDate, notes, assignedTo } = body
 
