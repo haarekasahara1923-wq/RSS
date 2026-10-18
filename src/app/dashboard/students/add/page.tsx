@@ -74,6 +74,8 @@ export default function AddStudentPage() {
     const [toast, setToast] = useState('')
     const [metadataLoading, setMetadataLoading] = useState(true)
     const [showDocModal, setShowDocModal] = useState(false)
+    const [scholarDuplicateError, setScholarDuplicateError] = useState<string | null>(null)
+    const [isCheckingScholar, setIsCheckingScholar] = useState(false)
 
     const [form, setForm] = useState({
         scholarNo: '', fullName: '', fatherName: '', motherName: '', phone: '', parentPhone: '',
@@ -86,6 +88,36 @@ export default function AddStudentPage() {
         bankName: '', bankAccountNo: '', ifsc: '', subjectGroup: '', photo: '',
         aadhaarFront: '', aadhaarBack: '', samagraIdDoc: '', aparIdDoc: '', penIdDoc: '', bankPassbook: ''
     })
+
+    const checkScholarDuplicate = async (scholarNoVal: string) => {
+        const val = scholarNoVal?.trim()
+        if (!val || !token) {
+            setScholarDuplicateError(null)
+            return false
+        }
+        setIsCheckingScholar(true)
+        try {
+            const res = await fetch(`/api/students?search=${encodeURIComponent(val)}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            const data = await res.json()
+            if (data.success && Array.isArray(data.data)) {
+                const match = data.data.find((s: any) => 
+                    s.scholarNo && s.scholarNo.trim().toLowerCase() === val.toLowerCase()
+                )
+                if (match) {
+                    const msg = `Scholar No. "${val}" pehle se student "${match.fullName}" (${match.courseName || 'Class N/A'}) ke naam par registered hai.`
+                    setScholarDuplicateError(msg)
+                    alert(`⚠️ DUPLICATE ENTRY ALERT!\n\nScholar No. "${val}" pehle se database me registered hai!\n\n👤 Student: ${match.fullName}\n🏫 Class: ${match.courseName || 'N/A'}\n\nDuplicate student database me save nahi ho sakta. Kripya naya Scholar No. enter karein.`)
+                    setIsCheckingScholar(false)
+                    return true
+                }
+            }
+        } catch {}
+        setScholarDuplicateError(null)
+        setIsCheckingScholar(false)
+        return false
+    }
 
     const handleDocUpload = (field: string, type: 'Camera' | 'Gallery') => {
         const input = document.createElement('input');
@@ -151,12 +183,31 @@ export default function AddStudentPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        const trimmedScholar = form.scholarNo?.trim()
+        if (!trimmedScholar) {
+            alert('⚠️ Scholar No. is required!')
+            return
+        }
+
+        // Strict Scholar No duplicate check before submitting
+        const isDuplicate = await checkScholarDuplicate(trimmedScholar)
+        if (isDuplicate) {
+            setToast(`Duplicate Entry! Scholar No. "${trimmedScholar}" already exists.`)
+            return
+        }
+
         setLoading(true)
         try {
             const res = await fetch('/api/students', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify(form),
+                body: JSON.stringify({
+                    ...form,
+                    scholarNo: trimmedScholar,
+                    fullName: form.fullName?.trim(),
+                    fatherName: form.fatherName?.trim()
+                }),
             })
             
             let data;
@@ -176,8 +227,10 @@ export default function AddStudentPage() {
             } else if (res.status === 401 || data?.error === 'Unauthorized') {
                 handleUnauthorized()
             } else {
-                if (data.error === 'student added previously') {
-                    alert('student added previously');
+                if (data.duplicate || data.error?.toLowerCase().includes('duplicate') || data.error?.toLowerCase().includes('already exists') || data.error?.toLowerCase().includes('scholar no') || data.error === 'student added previously') {
+                    alert(`⚠️ DUPLICATE ENTRY ALERT!\n\n${data.error || 'Student with this Scholar No. already exists in database.'}\n\nDuplicate student database me save nahi kiya gaya.`);
+                } else {
+                    alert(`⚠️ Error: ${data.error || 'Failed to add student'}`)
                 }
                 setToast(data.error || 'Failed to add student')
             }
@@ -330,7 +383,33 @@ export default function AddStudentPage() {
                     </div>
                     <div className="grid-cols-2">
                         <Field label="Scholar No. *">
-                            <input className="input" placeholder="1001" value={form.scholarNo} onChange={e => setForm({ ...form, scholarNo: e.target.value })} required />
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    className="input"
+                                    placeholder="1001"
+                                    value={form.scholarNo}
+                                    onChange={e => {
+                                        setForm({ ...form, scholarNo: e.target.value })
+                                        if (scholarDuplicateError) setScholarDuplicateError(null)
+                                    }}
+                                    onBlur={e => checkScholarDuplicate(e.target.value)}
+                                    style={{
+                                        borderColor: scholarDuplicateError ? '#ef4444' : undefined,
+                                        background: scholarDuplicateError ? 'rgba(239, 68, 68, 0.05)' : undefined
+                                    }}
+                                    required
+                                />
+                                {isCheckingScholar && (
+                                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', color: '#6366f1', fontWeight: '600' }}>
+                                        ⏳ Checking...
+                                    </span>
+                                )}
+                            </div>
+                            {scholarDuplicateError && (
+                                <div style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', fontWeight: '600' }}>
+                                    ⚠️ {scholarDuplicateError}
+                                </div>
+                            )}
                         </Field>
                         <Field label="Full Name *">
                             <input className="input" placeholder="Arjun Sharma" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} required />

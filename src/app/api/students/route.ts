@@ -103,21 +103,62 @@ export async function POST(req: NextRequest) {
             aadhaarFront, aadhaarBack, samagraIdDoc, aparIdDoc, penIdDoc, bankPassbook
         } = body
 
-        if (!fullName || !phone || !courseId || !scholarNo || !fatherName) {
-            return NextResponse.json({ error: 'Required fields missing: Name, Phone, Course, Scholar No, and Father Name are mandatory.' }, { status: 400 })
+        const trimmedScholarNo = scholarNo ? String(scholarNo).trim() : ''
+        const trimmedFullName = fullName ? String(fullName).trim() : ''
+        const trimmedFatherName = fatherName ? String(fatherName).trim() : ''
+
+        if (!trimmedFullName || !phone || !courseId || !trimmedScholarNo || !trimmedFatherName) {
+            return NextResponse.json({ 
+                success: false,
+                error: 'Required fields missing: Name, Phone, Course, Scholar No, and Father Name are mandatory.' 
+            }, { status: 400 })
         }
 
-        const existingStudent = await prisma.student.findFirst({
+        // STRICT RESTRICTION 1: Check by Scholar No. FIRST
+        // No duplicate Scholar No. allowed within the tenant/school
+        const existingStudentByScholar = await prisma.student.findFirst({
             where: {
                 tenantId: user!.tenantId,
-                scholarNo: scholarNo,
-                fullName: fullName,
-                fatherName: fatherName
+                scholarNo: {
+                    equals: trimmedScholarNo,
+                    mode: 'insensitive'
+                }
+            },
+            include: {
+                course: { select: { name: true } },
+                batch: { select: { name: true } }
             }
         });
 
-        if (existingStudent) {
-            return NextResponse.json({ error: 'student added previously' }, { status: 400 });
+        if (existingStudentByScholar) {
+            const classText = existingStudentByScholar.course?.name 
+                ? ` [Class: ${existingStudentByScholar.course.name}${existingStudentByScholar.batch?.name ? ` - ${existingStudentByScholar.batch.name}` : ''}]` 
+                : ''
+            return NextResponse.json({ 
+                success: false,
+                duplicate: true,
+                error: `Duplicate Entry! Scholar No. "${trimmedScholarNo}" already exists for student "${existingStudentByScholar.fullName}"${classText}. Duplicate student database me save nahi ho sakta.` 
+            }, { status: 400 });
+        }
+
+        // RESTRICTION 2: Also check if student with same Name and Father Name already exists
+        const existingStudentByNameAndFather = await prisma.student.findFirst({
+            where: {
+                tenantId: user!.tenantId,
+                fullName: { equals: trimmedFullName, mode: 'insensitive' },
+                fatherName: { equals: trimmedFatherName, mode: 'insensitive' }
+            },
+            include: {
+                course: { select: { name: true } }
+            }
+        });
+
+        if (existingStudentByNameAndFather) {
+            return NextResponse.json({
+                success: false,
+                duplicate: true,
+                error: `Duplicate Entry! Student "${trimmedFullName}" with Father's Name "${trimmedFatherName}" already exists with Scholar No. "${existingStudentByNameAndFather.scholarNo || 'N/A'}". Duplicate student database me save nahi ho sakta.`
+            }, { status: 400 });
         }
 
         const course = await prisma.course.findUnique({
@@ -134,9 +175,9 @@ export async function POST(req: NextRequest) {
                 courseId,
                 batchId: batchId ? batchId : undefined,
                 studentId: `STU${String(currentCount + 1).padStart(3, '0')}`,
-                fullName,
-                fatherName: fatherName || '',
-                motherName: motherName || '',
+                fullName: trimmedFullName,
+                fatherName: trimmedFatherName,
+                motherName: motherName ? String(motherName).trim() : '',
                 phone,
                 parentPhone: parentPhone || '',
                 email: email || '',
@@ -153,7 +194,7 @@ export async function POST(req: NextRequest) {
                 penId: penId || '',
                 aparId: aparId || '',
                 samagraId: samagraId || '',
-                scholarNo: scholarNo || '',
+                scholarNo: trimmedScholarNo,
                 caste: caste || '',
                 dobInWords: dobInWords || '',
                 medium: medium || '',
@@ -215,22 +256,42 @@ export async function PATCH(req: NextRequest) {
 
         if (!id) return NextResponse.json({ error: 'Student ID is required' }, { status: 400 })
 
+        if (scholarNo !== undefined) {
+            const trimmedScholar = scholarNo ? String(scholarNo).trim() : ''
+            if (trimmedScholar) {
+                const duplicateScholar = await prisma.student.findFirst({
+                    where: {
+                        tenantId: user!.tenantId,
+                        scholarNo: { equals: trimmedScholar, mode: 'insensitive' },
+                        NOT: { id: id }
+                    }
+                })
+                if (duplicateScholar) {
+                    return NextResponse.json({
+                        success: false,
+                        duplicate: true,
+                        error: `Duplicate Entry! Scholar No. "${trimmedScholar}" is already assigned to "${duplicateScholar.fullName}". Duplicate student record save nahi ho sakta.`
+                    }, { status: 400 })
+                }
+            }
+        }
+
         const student = await prisma.student.update({
             where: { id, tenantId: user!.tenantId },
             data: {
-                fullName,
+                fullName: fullName !== undefined ? (fullName ? String(fullName).trim() : '') : undefined,
                 phone,
                 courseId,
                 batchId: batchId !== undefined ? (batchId || null) : undefined,
                 status: status as any,
-                fatherName,
+                fatherName: fatherName !== undefined ? (fatherName ? String(fatherName).trim() : '') : undefined,
                 motherName,
                 parentPhone,
                 email,
                 totalFee: totalFee !== undefined ? parseFloat(totalFee) : undefined,
                 admissionDate: admissionDate ? new Date(admissionDate) : undefined,
                 notes,
-                scholarNo: scholarNo !== undefined ? scholarNo : undefined,
+                scholarNo: scholarNo !== undefined ? (scholarNo ? String(scholarNo).trim() : '') : undefined,
                 dob: dob ? new Date(dob) : undefined,
                 dobInWords: dobInWords !== undefined ? dobInWords : undefined,
                 gender: gender as any,
