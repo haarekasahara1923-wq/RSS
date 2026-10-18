@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import Script from 'next/script'
@@ -56,6 +56,7 @@ const statusColors: Record<string, string> = {
 export default function StudentsPage() {
     const { token, user, tenant, handleUnauthorized } = useAuth()
     const canEditOrDelete = user?.role === 'SUPER_ADMIN' || user?.role === 'COACHING_ADMIN'
+    const isSuperAdmin = user?.role === 'SUPER_ADMIN'
     const [students, setStudents] = useState<Student[]>([])
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
@@ -63,6 +64,20 @@ export default function StudentsPage() {
     const [isEditing, setIsEditing] = useState(false)
     const [editForm, setEditForm] = useState<any>({})
     const [actionLoading, setActionLoading] = useState(false)
+
+    // Selection mode (name | scholar | classwise)
+    const [selectionMode, setSelectionMode] = useState<'name' | 'scholar' | 'classwise'>('name')
+    const [showModeDropdown, setShowModeDropdown] = useState(false)
+    const modeDropdownRef = useRef<HTMLDivElement>(null)
+
+    // Classwise selection state
+    const [courses, setCourses] = useState<any[]>([])
+    const [batches, setBatches] = useState<any[]>([])
+    const [selectedCourseId, setSelectedCourseId] = useState('')
+    const [selectedBatchId, setSelectedBatchId] = useState('')
+    const [classwiseStudents, setClasswiseStudents] = useState<Student[]>([])
+    const [classwiseLoading, setClasswiseLoading] = useState(false)
+    const [classwiseFetched, setClasswiseFetched] = useState(false)
 
     // Sibling management state
     const [siblingList, setSiblingList] = useState<any[]>([])
@@ -132,6 +147,185 @@ export default function StudentsPage() {
         const data = await res.json()
         if (data.success) setStudents(data.data)
         setLoading(false)
+    }
+
+    const fetchCourses = async () => {
+        if (!token) return
+        try {
+            const res = await fetch('/api/courses', { headers: { Authorization: `Bearer ${token}` } })
+            const data = await res.json()
+            if (data.success) setCourses(data.data)
+        } catch {}
+    }
+
+    const fetchBatchesForCourse = async (courseId: string) => {
+        if (!token || !courseId) { setBatches([]); return }
+        try {
+            const res = await fetch('/api/batches', { headers: { Authorization: `Bearer ${token}` } })
+            const data = await res.json()
+            if (data.success) {
+                setBatches(data.data.filter((b: any) => b.courseId === courseId))
+            }
+        } catch {}
+    }
+
+    const fetchClasswiseStudents = async (courseIdParam?: string, batchIdParam?: string) => {
+        const cId = courseIdParam !== undefined ? courseIdParam : selectedCourseId
+        const bId = batchIdParam !== undefined ? batchIdParam : selectedBatchId
+        if (!token || !cId) {
+            setClasswiseStudents([])
+            setClasswiseFetched(false)
+            return
+        }
+        setClasswiseLoading(true)
+        try {
+            const params = new URLSearchParams()
+            params.set('courseId', cId)
+            if (bId) params.set('batchId', bId)
+            const res = await fetch(`/api/students?${params}`, { headers: { Authorization: `Bearer ${token}` } })
+            const data = await res.json()
+            if (data.success) setClasswiseStudents(data.data)
+            setClasswiseFetched(true)
+        } catch {}
+        setClasswiseLoading(false)
+    }
+
+    const handleCourseSelect = (courseId: string) => {
+        setSelectedCourseId(courseId)
+        setSelectedBatchId('')
+        if (courseId) {
+            fetchBatchesForCourse(courseId)
+            fetchClasswiseStudents(courseId, '')
+        } else {
+            setBatches([])
+            setClasswiseStudents([])
+            setClasswiseFetched(false)
+        }
+    }
+
+    const handleBatchSelect = (batchId: string) => {
+        setSelectedBatchId(batchId)
+        if (selectedCourseId) {
+            fetchClasswiseStudents(selectedCourseId, batchId)
+        }
+    }
+
+    // CSV download
+    const downloadCSV = (studentsList: Student[], filename: string) => {
+        const headers = ['Scholar No', 'Full Name', 'Father Name', 'Class', 'Section', 'Phone', 'Gender', 'Status', 'Admission Date', 'Total Fee', 'Paid Fee', 'Due Fee']
+        const rows = studentsList.map(s => [
+            s.scholarNo || '',
+            s.fullName,
+            s.fatherName || '',
+            s.courseName,
+            s.batchName || '',
+            s.phone || '',
+            s.gender || '',
+            s.status,
+            s.admissionDate ? formatDate(s.admissionDate) : '',
+            s.totalFee,
+            s.paidFee,
+            s.totalFee - s.paidFee
+        ])
+        const csvContent = [headers, ...rows].map(r => r.map((c: any) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url; a.download = `${filename}.csv`; a.click()
+        URL.revokeObjectURL(url)
+    }
+
+    // Excel download (XLSX via XML Spreadsheet)
+    const downloadExcel = (studentsList: Student[], filename: string) => {
+        const headers = ['Scholar No', 'Full Name', 'Father Name', 'Class', 'Section', 'Phone', 'Gender', 'Status', 'Admission Date', 'Total Fee', 'Paid Fee', 'Due Fee']
+        const rows = studentsList.map(s => [
+            s.scholarNo || '',
+            s.fullName,
+            s.fatherName || '',
+            s.courseName,
+            s.batchName || '',
+            s.phone || '',
+            s.gender || '',
+            s.status,
+            s.admissionDate ? formatDate(s.admissionDate) : '',
+            s.totalFee,
+            s.paidFee,
+            s.totalFee - s.paidFee
+        ])
+        const xmlRows = [headers, ...rows].map(row =>
+            `<Row>${row.map((c: any) => `<Cell><Data ss:Type="String">${String(c).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</Data></Cell>`).join('')}</Row>`
+        ).join('')
+        const xml = `<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Students"><Table>${xmlRows}</Table></Worksheet></Workbook>`
+        const blob = new Blob([xml], { type: 'application/vnd.ms-excel' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url; a.download = `${filename}.xls`; a.click()
+        URL.revokeObjectURL(url)
+    }
+
+    // PDF download for classwise list
+    const downloadClasswisePDF = (studentsList: Student[], className: string, batchName: string) => {
+        const courseName = courses.find(c => c.id === selectedCourseId)?.name || className
+        const bName = batches.find(b => b.id === selectedBatchId)?.name || batchName
+        const title = bName ? `${courseName} - ${bName}` : courseName
+        const tenantName = tenant?.name || 'School'
+
+        const rows = studentsList.map((s, i) => `
+            <tr style="border-bottom:1px solid #e2e8f0;">
+                <td style="padding:8px 10px;">${i + 1}</td>
+                <td style="padding:8px 10px;">${s.scholarNo || '-'}</td>
+                <td style="padding:8px 10px;font-weight:600;">${s.fullName}</td>
+                <td style="padding:8px 10px;">${s.fatherName || '-'}</td>
+                <td style="padding:8px 10px;">${s.gender || '-'}</td>
+                <td style="padding:8px 10px;">${s.phone || '-'}</td>
+                <td style="padding:8px 10px;">${s.status}</td>
+                <td style="padding:8px 10px;">${s.admissionDate ? formatDate(s.admissionDate) : '-'}</td>
+            </tr>`).join('')
+
+        const html = `
+            <html><head><style>body{font-family:Arial,sans-serif;margin:20px;}table{width:100%;border-collapse:collapse;}th{background:#f1f5f9;padding:8px 10px;text-align:left;font-size:12px;}td{font-size:12px;}</style></head>
+            <body>
+                <div style="text-align:center;margin-bottom:20px;">
+                    <h2 style="margin:0;">${tenantName}</h2>
+                    <h3 style="margin:4px 0 0 0;color:#6366f1;">Student List — ${title}</h3>
+                    <p style="margin:2px 0;font-size:12px;color:#64748b;">Total Students: ${studentsList.length} | Generated: ${new Date().toLocaleDateString('en-IN')}</p>
+                </div>
+                <table>
+                    <thead><tr><th>#</th><th>Scholar No</th><th>Student Name</th><th>Father Name</th><th>Gender</th><th>Phone</th><th>Status</th><th>Admission Date</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </body></html>`
+
+        const wrapper = document.createElement('div')
+        wrapper.style.position = 'absolute'
+        wrapper.style.left = '-9999px'
+        wrapper.style.top = '0'
+        wrapper.innerHTML = html
+        document.body.appendChild(wrapper)
+        const opt = {
+            margin: 10,
+            filename: `${title.replace(/\s+/g, '_')}_Student_List.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        }
+        // @ts-ignore
+        if (typeof window !== 'undefined' && window.html2pdf) {
+            // @ts-ignore
+            window.html2pdf().set(opt).from(wrapper).save()
+                .then(() => { if (document.body.contains(wrapper)) document.body.removeChild(wrapper) })
+                .catch(() => { if (document.body.contains(wrapper)) document.body.removeChild(wrapper) })
+        } else {
+            const printWin = window.open('', '_blank')
+            if (printWin) {
+                printWin.document.write(html)
+                printWin.document.close()
+                printWin.focus()
+                printWin.print()
+                printWin.close()
+            }
+            if (document.body.contains(wrapper)) document.body.removeChild(wrapper)
+        }
     }
 
     const handleDelete = async (id: string) => {
@@ -324,6 +518,22 @@ export default function StudentsPage() {
 
     useEffect(() => { fetchStudents() }, [token, search])
 
+    useEffect(() => {
+        if (selectionMode === 'classwise' && token) fetchCourses()
+    }, [selectionMode, token])
+
+
+    // Close mode dropdown on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (modeDropdownRef.current && !modeDropdownRef.current.contains(e.target as Node)) {
+                setShowModeDropdown(false)
+            }
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [])
+
     return (
         <div>
             <Script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" strategy="lazyOnload" />
@@ -337,25 +547,337 @@ export default function StudentsPage() {
                 </div>
             </div>
 
-            {/* Search & Filter */}
+            {/* Smart Selection Bar */}
             <div className="card" style={{ marginBottom: '20px', padding: '16px' }}>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1, minWidth: '200px', display: 'flex', gap: '8px' }}>
-                        <input
-                            className="input"
-                            style={{ flex: 1 }}
-                            placeholder="🔍 Search by student name or scholar no..."
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && fetchStudents()}
-                        />
-                        <button className="btn btn-primary" onClick={fetchStudents} style={{ whiteSpace: 'nowrap' }}>
-                            🔍 Search
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                    {/* Mode Selector Dropdown */}
+                    <div ref={modeDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
+                        <button
+                            onClick={() => setShowModeDropdown(v => !v)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                padding: '10px 16px', borderRadius: '10px', cursor: 'pointer',
+                                background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                                color: 'white', border: 'none', fontWeight: '700', fontSize: '14px',
+                                whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(99,102,241,0.35)'
+                            }}
+                        >
+                            {selectionMode === 'name' && '👤 By Name'}
+                            {selectionMode === 'scholar' && '🏷️ By Scholar No.'}
+                            {selectionMode === 'classwise' && '🏫 Classwise'}
+                            <span style={{ fontSize: '10px', opacity: 0.85 }}>▼</span>
                         </button>
+                        {showModeDropdown && (
+                            <div style={{
+                                position: 'absolute', top: '110%', left: 0, zIndex: 999,
+                                background: 'var(--surface)', border: '1px solid var(--border)',
+                                borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+                                minWidth: '200px', overflow: 'hidden'
+                            }}>
+                                {[
+                                    { id: 'name', icon: '👤', label: 'By Student Name', desc: 'Search by full name' },
+                                    { id: 'scholar', icon: '🏷️', label: 'By Scholar No.', desc: 'Search by scholar number' },
+                                    { id: 'classwise', icon: '🏫', label: 'Classwise Selection', desc: 'Browse by class & batch' },
+                                ].map(opt => (
+                                    <div
+                                        key={opt.id}
+                                        onClick={() => { setSelectionMode(opt.id as any); setShowModeDropdown(false); setSearch(''); }}
+                                        style={{
+                                            padding: '12px 16px', cursor: 'pointer', display: 'flex', gap: '10px', alignItems: 'center',
+                                            background: selectionMode === opt.id ? 'rgba(99,102,241,0.1)' : 'transparent',
+                                            borderLeft: selectionMode === opt.id ? '3px solid #6366f1' : '3px solid transparent',
+                                            transition: 'background 0.15s'
+                                        }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.06)')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = selectionMode === opt.id ? 'rgba(99,102,241,0.1)' : 'transparent')}
+                                    >
+                                        <span style={{ fontSize: '18px' }}>{opt.icon}</span>
+                                        <div>
+                                            <div style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)' }}>{opt.label}</div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{opt.desc}</div>
+                                        </div>
+                                        {selectionMode === opt.id && <span style={{ marginLeft: 'auto', color: '#6366f1', fontWeight: '900' }}>✓</span>}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                    <button className="btn btn-secondary" onClick={() => { setSearch(''); setTimeout(fetchStudents, 0); }}>🔄 Refresh</button>
+
+                    {/* Search input and direct student dropdown — shown for name/scholar modes */}
+                    {selectionMode !== 'classwise' && (
+                        <div style={{ flex: 1, minWidth: '280px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <div style={{ flex: 1, minWidth: '200px', display: 'flex', gap: '8px' }}>
+                                <input
+                                    className="input"
+                                    style={{ flex: 1 }}
+                                    placeholder={selectionMode === 'name' ? '🔍 Type student name or search...' : '🔍 Type scholar no. or search...'}
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && fetchStudents()}
+                                    list={selectionMode === 'name' ? 'students-name-datalist' : 'students-scholar-datalist'}
+                                />
+                                <datalist id="students-name-datalist">
+                                    {students.map(s => (
+                                        <option key={s.id} value={s.fullName}>
+                                            {s.fullName} {s.scholarNo ? `(Sch: ${s.scholarNo})` : ''} - {s.courseName}
+                                        </option>
+                                    ))}
+                                </datalist>
+                                <datalist id="students-scholar-datalist">
+                                    {students.filter(s => s.scholarNo).map(s => (
+                                        <option key={s.id} value={s.scholarNo}>
+                                            {s.scholarNo} - {s.fullName} ({s.courseName})
+                                        </option>
+                                    ))}
+                                </datalist>
+                                <button className="btn btn-primary" onClick={fetchStudents} style={{ whiteSpace: 'nowrap' }}>
+                                    🔍 Search
+                                </button>
+                            </div>
+
+                            {/* Direct Dropdown to select a student */}
+                            <div style={{ minWidth: '220px' }}>
+                                <select
+                                    className="input"
+                                    value=""
+                                    onChange={e => {
+                                        const selected = students.find(s => s.id === e.target.value)
+                                        if (selected) {
+                                            setSelectedStudent(selected)
+                                            setSearch(selectionMode === 'name' ? selected.fullName : (selected.scholarNo || selected.fullName))
+                                        }
+                                    }}
+                                >
+                                    <option value="">
+                                        {selectionMode === 'name' ? '👤 Select by Student Name...' : '🏷️ Select by Scholar No...'}
+                                    </option>
+                                    {students
+                                        .slice()
+                                        .sort((a, b) => selectionMode === 'name' ? a.fullName.localeCompare(b.fullName) : (a.scholarNo || '').localeCompare(b.scholarNo || ''))
+                                        .map(s => (
+                                            <option key={s.id} value={s.id}>
+                                                {selectionMode === 'name'
+                                                    ? `${s.fullName} ${s.scholarNo ? `(Sch: ${s.scholarNo})` : ''} - ${s.courseName}`
+                                                    : `${s.scholarNo || 'No Sch#'} - ${s.fullName} (${s.courseName})`}
+                                            </option>
+                                        ))}
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Classwise selectors */}
+                    {selectionMode === 'classwise' && (
+                        <div style={{ flex: 1, display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                            <div style={{ minWidth: '180px', flex: 1 }}>
+                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: '600' }}>SELECT CLASS</label>
+                                <select
+                                    className="input"
+                                    value={selectedCourseId}
+                                    onChange={e => handleCourseSelect(e.target.value)}
+                                >
+                                    <option value="">-- Select Class --</option>
+                                    {courses.map((c: any) => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            {selectedCourseId && (
+                                <div style={{ minWidth: '160px', flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: '600' }}>SELECT BATCH (OPTIONAL)</label>
+                                    <select
+                                        className="input"
+                                        value={selectedBatchId}
+                                        onChange={e => handleBatchSelect(e.target.value)}
+                                    >
+                                        <option value="">-- All Batches --</option>
+                                        {batches.map((b: any) => (
+                                            <option key={b.id} value={b.id}>{b.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => fetchClasswiseStudents()}
+                                disabled={!selectedCourseId || classwiseLoading}
+                                style={{ whiteSpace: 'nowrap', alignSelf: 'flex-end' }}
+                            >
+                                {classwiseLoading ? '⏳ Loading...' : '🔄 Refresh List'}
+                            </button>
+                        </div>
+                    )}
+
+                    <button className="btn btn-secondary" onClick={() => { setSearch(''); if (selectionMode === 'classwise') { setClasswiseStudents([]); setClasswiseFetched(false); setSelectedCourseId(''); setSelectedBatchId(''); } else { setTimeout(fetchStudents, 0); } }} style={{ whiteSpace: 'nowrap', alignSelf: 'flex-end' }}>🔄 Refresh</button>
                 </div>
             </div>
+
+            {/* Classwise Student List */}
+            {selectionMode === 'classwise' && classwiseFetched && (
+                <div className="card" style={{ marginBottom: '20px', padding: 0 }}>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                        <div>
+                            <div style={{ fontWeight: '800', fontSize: '16px', color: 'var(--text-primary)' }}>
+                                🏫 {courses.find(c => c.id === selectedCourseId)?.name || 'Class'}
+                                {selectedBatchId && batches.find(b => b.id === selectedBatchId) && (
+                                    <span style={{ marginLeft: '8px', fontSize: '13px', color: '#6366f1', background: 'rgba(99,102,241,0.1)', padding: '2px 8px', borderRadius: '6px' }}>
+                                        {batches.find(b => b.id === selectedBatchId)?.name}
+                                    </span>
+                                )}
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                {classwiseStudents.length} student{classwiseStudents.length !== 1 ? 's' : ''} found
+                            </div>
+                        </div>
+                        {/* Download Buttons */}
+                        {classwiseStudents.length > 0 && (
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                <button
+                                    className="btn btn-secondary btn-sm"
+                                    onClick={() => downloadCSV(classwiseStudents, `${courses.find(c => c.id === selectedCourseId)?.name || 'Class'}${selectedBatchId ? '_' + (batches.find(b => b.id === selectedBatchId)?.name || '') : ''}_Students`)}
+                                    style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', fontWeight: '700', fontSize: '12px' }}
+                                >
+                                    📥 Download CSV
+                                </button>
+                                <button
+                                    className="btn btn-secondary btn-sm"
+                                    onClick={() => downloadExcel(classwiseStudents, `${courses.find(c => c.id === selectedCourseId)?.name || 'Class'}${selectedBatchId ? '_' + (batches.find(b => b.id === selectedBatchId)?.name || '') : ''}_Students`)}
+                                    style={{ background: 'rgba(34,197,94,0.1)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.3)', fontWeight: '700', fontSize: '12px' }}
+                                >
+                                    📊 Download Excel
+                                </button>
+                                <button
+                                    className="btn btn-secondary btn-sm"
+                                    onClick={() => downloadClasswisePDF(classwiseStudents, courses.find(c => c.id === selectedCourseId)?.name || '', batches.find(b => b.id === selectedBatchId)?.name || '')}
+                                    style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', fontWeight: '700', fontSize: '12px' }}
+                                >
+                                    📄 Download PDF
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    {classwiseLoading ? (
+                        <div style={{ padding: '40px', textAlign: 'center' }}>
+                            <div className="spinner" style={{ margin: '0 auto 12px', width: '32px', height: '32px' }} />
+                            <p style={{ color: 'var(--text-muted)' }}>Loading students...</p>
+                        </div>
+                    ) : classwiseStudents.length === 0 ? (
+                        <div style={{ padding: '40px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '40px', marginBottom: '12px' }}>📭</div>
+                            <p style={{ color: 'var(--text-muted)' }}>No students found for this class{selectedBatchId ? '/batch' : ''}.</p>
+                        </div>
+                    ) : (
+                        <div className="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Scholar No.</th>
+                                        <th>Student</th>
+                                        <th>Father Name</th>
+                                        <th>Gender</th>
+                                        <th>Phone</th>
+                                        <th>Status</th>
+                                        <th>Fee Status</th>
+                                        <th>Admission</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {classwiseStudents.map((s, idx) => {
+                                        const owing = s.totalFee - s.paidFee
+                                        const pct = s.totalFee > 0 ? Math.round((s.paidFee / s.totalFee) * 100) : 0
+                                        return (
+                                            <tr key={s.id}>
+                                                <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{idx + 1}</td>
+                                                <td>
+                                                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>{s.scholarNo || '-'}</span>
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '14px' }}>{s.fullName.charAt(0)}</div>
+                                                        <div>
+                                                            <div style={{ fontWeight: '600', fontSize: '13px' }}>{s.fullName}</div>
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{s.studentId}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td style={{ fontSize: '13px' }}>{s.fatherName || '-'}</td>
+                                                <td style={{ fontSize: '13px' }}>{s.gender || '-'}</td>
+                                                <td style={{ fontSize: '13px' }}>{s.phone || '-'}</td>
+                                                <td><span className={`badge ${statusColors[s.status] || 'badge-gray'}`}>{s.status}</span></td>
+                                                <td>
+                                                    <div style={{ fontSize: '11px', color: owing > 0 ? '#f59e0b' : '#10b981', fontWeight: '600' }}>
+                                                        {pct}% {owing > 0 ? `• Due: ${formatCurrency(owing)}` : '✓'}
+                                                    </div>
+                                                </td>
+                                                <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{s.admissionDate ? formatDate(s.admissionDate) : '-'}</td>
+                                                <td>
+                                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                                        <button onClick={() => setSelectedStudent(s)} className="btn btn-secondary btn-sm" title="View">👁️</button>
+                                                        {canEditOrDelete && (
+                                                            <button onClick={() => { setSelectedStudent(s); setEditForm(s); setIsEditing(true); }} className="btn btn-secondary btn-sm" title="Edit">✏️</button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {/* Bottom Download Options Below List */}
+                    {classwiseStudents.length > 0 && (
+                        <div style={{
+                            padding: '16px 20px',
+                            background: 'var(--surface-2)',
+                            borderTop: '1px solid var(--border)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '12px'
+                        }}>
+                            <div>
+                                <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span>📥</span> Download {courses.find(c => c.id === selectedCourseId)?.name || 'Class'} Student List
+                                </div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                    Download all {classwiseStudents.length} students of {courses.find(c => c.id === selectedCourseId)?.name || 'Class'}{selectedBatchId ? ` (${batches.find(b => b.id === selectedBatchId)?.name})` : ''} in PDF, Excel, or CSV
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => downloadClasswisePDF(classwiseStudents, courses.find(c => c.id === selectedCourseId)?.name || '', batches.find(b => b.id === selectedBatchId)?.name || '')}
+                                    style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px' }}
+                                >
+                                    📄 Download in PDF
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => downloadExcel(classwiseStudents, `${courses.find(c => c.id === selectedCourseId)?.name || 'Class'}${selectedBatchId ? '_' + (batches.find(b => b.id === selectedBatchId)?.name || '') : ''}_Students`)}
+                                    style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.3)', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px' }}
+                                >
+                                    📊 Download in Excel
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => downloadCSV(classwiseStudents, `${courses.find(c => c.id === selectedCourseId)?.name || 'Class'}${selectedBatchId ? '_' + (batches.find(b => b.id === selectedBatchId)?.name || '') : ''}_Students`)}
+                                    style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px' }}
+                                >
+                                    📥 Download in CSV
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
