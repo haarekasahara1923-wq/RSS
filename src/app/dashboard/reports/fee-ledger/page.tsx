@@ -417,12 +417,12 @@ function StudentLedgerCard({ student, expanded, onToggle, onPrintStudent, onSibl
       <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', flexWrap: 'wrap' }} onClick={onToggle}>
         <div style={{ flex: 1, minWidth: '180px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>{student.fullName}</span>
             {student.scholarNo && (
-              <span style={{ fontSize: '10px', background: 'rgba(99,102,241,0.25)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.4)', padding: '2px 7px', borderRadius: '4px', fontWeight: '700' }}>
-                Sch: {student.scholarNo}
+              <span style={{ fontSize: '11px', background: 'rgba(99,102,241,0.25)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.4)', padding: '2px 8px', borderRadius: '4px', fontWeight: '800' }}>
+                🏷️ Sch: {student.scholarNo}
               </span>
             )}
+            <span style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>{student.fullName}</span>
             {student.studentId && (
               <span style={{ fontSize: '10px', background: '#334155', color: '#94a3b8', padding: '2px 7px', borderRadius: '4px' }}>{student.studentId}</span>
             )}

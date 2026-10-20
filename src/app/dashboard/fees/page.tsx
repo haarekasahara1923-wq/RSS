@@ -15,6 +15,7 @@ interface Student {
     status: string
     fatherName?: string
     studentId?: string
+    scholarNo?: string
     address?: string
 }
 
@@ -161,11 +162,11 @@ table.fee tfoot td:last-child{color:#059669;text-align:right}
   <div class="title-band">✦ &nbsp; Fee Payment Receipt &nbsp; ✦</div>
   <div class="body">
     <div class="stu-grid">
+      <div class="stu-cell"><div class="lbl">Scholar No.</div><div class="val" style="color:#1a3c5e;font-weight:700;">${student.scholarNo || student.studentId || '—'}</div></div>
       <div class="stu-cell"><div class="lbl">Student Name</div><div class="val">${student.fullName}</div></div>
       <div class="stu-cell"><div class="lbl">Father's Name</div><div class="val">${student.fatherName || '—'}</div></div>
       <div class="stu-cell"><div class="lbl">Class / Course</div><div class="val">${student.courseName}</div></div>
       <div class="stu-cell"><div class="lbl">Contact</div><div class="val">${student.parentPhone || student.phone || '—'}</div></div>
-      ${student.studentId ? `<div class="stu-cell"><div class="lbl">Student ID</div><div class="val">${student.studentId}</div></div>` : '<div class="stu-cell"><div class="lbl">Date of Deposit</div><div class="val">${depositDate}</div></div>'}
       <div class="stu-cell"><div class="lbl">Payment Mode</div><div class="val">${modeLabel}</div></div>
     </div>
     <table class="fee">
@@ -216,6 +217,7 @@ export default function FeesPage() {
     const [students, setStudents] = useState<Student[]>([])
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('outstanding')
+    const [searchQuery, setSearchQuery] = useState('')
     const [toast, setToast] = useState('')
 
     // Installments Modal State
@@ -331,7 +333,21 @@ export default function FeesPage() {
         }
     }
 
-    const getCurrentList = () => activeTab === 'outstanding' ? outstanding : activeTab === 'paid' ? paid : students
+    const filterList = (list: Student[]) => {
+        if (!searchQuery.trim()) return list
+        const q = searchQuery.toLowerCase().trim()
+        return list.filter(s =>
+            (s.scholarNo || '').toLowerCase().includes(q) ||
+            (s.fullName || '').toLowerCase().includes(q) ||
+            (s.studentId || '').toLowerCase().includes(q) ||
+            (s.phone || '').includes(q)
+        )
+    }
+
+    const getCurrentList = () => {
+        const base = activeTab === 'outstanding' ? outstanding : activeTab === 'paid' ? paid : students
+        return filterList(base)
+    }
 
     const handleExportCSV = () => {
         const list = getCurrentList()
@@ -344,12 +360,12 @@ export default function FeesPage() {
             ['Total Outstanding Dues', formatCurrency(totalDue)],
             ['Total Collected', formatCurrency(totalCollected)],
             [],
-            ['Student Name', 'Phone', 'Parent Phone', 'Course', 'Total Fee (INR)', 'Paid Fee (INR)', 'Pending Due (INR)', 'Payment %', 'Status']
+            ['Scholar No.', 'Student Name', 'Phone', 'Parent Phone', 'Course', 'Total Fee (INR)', 'Paid Fee (INR)', 'Pending Due (INR)', 'Payment %', 'Status']
         ]
         list.forEach(s => {
             const pending = s.totalFee - s.paidFee
             const pct = s.totalFee > 0 ? Math.round((s.paidFee / s.totalFee) * 100) : 0
-            rows.push([s.fullName, s.phone || '-', s.parentPhone || '-', s.courseName || '-', s.totalFee, s.paidFee, Math.max(0, pending), `${pct}%`, s.status])
+            rows.push([s.scholarNo || s.studentId || '-', s.fullName, s.phone || '-', s.parentPhone || '-', s.courseName || '-', s.totalFee, s.paidFee, Math.max(0, pending), `${pct}%`, s.status])
         })
         downloadCSV(`fees-${activeTab}-${timestamp}.csv`, rows)
     }
@@ -370,11 +386,11 @@ export default function FeesPage() {
             ],
             tables: [{
                 title: `Fee Accounts (${list.length} Students)`,
-                headers: ['Student Name', 'Phone', 'Course', 'Total Fee', 'Paid', 'Pending Due', 'Payment %'],
+                headers: ['Scholar No.', 'Student Name', 'Phone', 'Course', 'Total Fee', 'Paid', 'Pending Due', 'Payment %'],
                 rows: list.map(s => {
                     const pending = s.totalFee - s.paidFee
                     const pct = s.totalFee > 0 ? Math.round((s.paidFee / s.totalFee) * 100) : 0
-                    return [s.fullName, s.parentPhone || s.phone || '-', s.courseName, formatCurrency(s.totalFee), formatCurrency(s.paidFee), pending > 0 ? formatCurrency(pending) : '✅ Clear', `${pct}%`]
+                    return [s.scholarNo || s.studentId || '-', s.fullName, s.parentPhone || s.phone || '-', s.courseName, formatCurrency(s.totalFee), formatCurrency(s.paidFee), pending > 0 ? formatCurrency(pending) : '✅ Clear', `${pct}%`]
                 })
             }]
         })
@@ -413,12 +429,61 @@ export default function FeesPage() {
                 ))}
             </div>
 
-            {/* Tabs */}
-            <div className="tabs">
-                <button className={`tab ${activeTab === 'outstanding' ? 'active' : ''}`} onClick={() => setActiveTab('outstanding')}>⚠️ Outstanding ({outstanding.length})</button>
-                <button className={`tab ${activeTab === 'paid' ? 'active' : ''}`} onClick={() => setActiveTab('paid')}>✅ Paid ({paid.length})</button>
-                <button className={`tab ${activeTab === 'all' ? 'active' : ''}`} onClick={() => setActiveTab('all')}>👥 All Students</button>
+            {/* Tabs & Search */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '16px' }}>
+                <div className="tabs" style={{ marginBottom: 0 }}>
+                    <button className={`tab ${activeTab === 'outstanding' ? 'active' : ''}`} onClick={() => setActiveTab('outstanding')}>⚠️ Outstanding ({outstanding.length})</button>
+                    <button className={`tab ${activeTab === 'paid' ? 'active' : ''}`} onClick={() => setActiveTab('paid')}>✅ Paid ({paid.length})</button>
+                    <button className={`tab ${activeTab === 'all' ? 'active' : ''}`} onClick={() => setActiveTab('all')}>👥 All Students ({students.length})</button>
+                </div>
+
+                {/* Instant Student Search Box */}
+                <div style={{ position: 'relative', minWidth: '280px', flex: '1', maxWidth: '440px' }}>
+                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: 'var(--text-muted)' }}>🔍</span>
+                    <input
+                        type="text"
+                        className="input"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="Search by Scholar No. or Student Name..."
+                        style={{
+                            paddingLeft: '36px',
+                            paddingRight: searchQuery ? '32px' : '12px',
+                            fontSize: '13px',
+                            borderRadius: '10px',
+                            height: '40px',
+                            background: 'var(--surface)',
+                        }}
+                    />
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            onClick={() => setSearchQuery('')}
+                            style={{
+                                position: 'absolute',
+                                right: '10px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--text-muted)',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                padding: '2px',
+                            }}
+                            title="Clear search"
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
             </div>
+
+            {searchQuery && (
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                    Showing <strong>{getCurrentList().length}</strong> student(s) matching &quot;{searchQuery}&quot; (by Scholar No. or Name)
+                </div>
+            )}
 
             <div className="card" style={{ padding: 0 }}>
                 <div className="table-container">
@@ -428,54 +493,94 @@ export default function FeesPage() {
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Student</th><th>Course</th><th>Total Fee</th>
-                                    <th>Paid</th><th>Pending</th><th>Payment %</th><th>Actions</th>
+                                    <th style={{ width: '130px' }}>Scholar No.</th>
+                                    <th>Student Name</th>
+                                    <th>Course</th>
+                                    <th>Total Fee</th>
+                                    <th>Paid</th>
+                                    <th>Pending</th>
+                                    <th>Payment %</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {(activeTab === 'outstanding' ? outstanding : activeTab === 'paid' ? paid : students).map(s => {
-                                    const pending = s.totalFee - s.paidFee
-                                    const pct = s.totalFee > 0 ? Math.round((s.paidFee / s.totalFee) * 100) : 0
-                                    return (
-                                        <tr key={s.id}>
-                                            <td>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                    <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '12px' }}>{s.fullName.charAt(0)}</div>
-                                                    <div>
-                                                        <div style={{ fontWeight: '600', fontSize: '14px' }}>{s.fullName}</div>
-                                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{s.phone}</div>
+                                {getCurrentList().length === 0 ? (
+                                    <tr>
+                                        <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                            {searchQuery
+                                                ? `🔍 No students found matching "${searchQuery}" by Scholar No. or Student Name`
+                                                : 'No students in this list.'}
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    getCurrentList().map(s => {
+                                        const pending = s.totalFee - s.paidFee
+                                        const pct = s.totalFee > 0 ? Math.round((s.paidFee / s.totalFee) * 100) : 0
+                                        return (
+                                            <tr key={s.id}>
+                                                <td>
+                                                    <span style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        padding: '4px 8px',
+                                                        background: s.scholarNo ? 'rgba(99,102,241,0.12)' : 'var(--surface-2)',
+                                                        border: `1px solid ${s.scholarNo ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`,
+                                                        borderRadius: '6px',
+                                                        fontSize: '12px',
+                                                        fontWeight: '700',
+                                                        color: s.scholarNo ? '#6366f1' : 'var(--text-muted)',
+                                                        fontFamily: 'monospace',
+                                                    }}>
+                                                        {s.scholarNo ? `🏷️ ${s.scholarNo}` : (s.studentId ? `ID: ${s.studentId}` : '—')}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '12px' }}>{s.fullName.charAt(0)}</div>
+                                                        <div>
+                                                            <div style={{ fontWeight: '600', fontSize: '14px' }}>
+                                                                {s.scholarNo && (
+                                                                    <span style={{ color: '#6366f1', fontWeight: '800', marginRight: '6px', fontSize: '12px' }}>
+                                                                        [{s.scholarNo}]
+                                                                    </span>
+                                                                )}
+                                                                {s.fullName}
+                                                            </div>
+                                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{s.phone}</div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{s.courseName}</td>
-                                            <td style={{ fontWeight: '600', fontSize: '14px' }}>{formatCurrency(s.totalFee)}</td>
-                                            <td style={{ color: '#10b981', fontWeight: '700' }}>{formatCurrency(s.paidFee)}</td>
-                                            <td style={{ color: pending > 0 ? '#ef4444' : '#10b981', fontWeight: '700' }}>
-                                                {pending > 0 ? formatCurrency(pending) : '✅ Clear'}
-                                            </td>
-                                            <td>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <div className="progress-bar" style={{ flex: 1 }}>
-                                                        <div className="progress-fill" style={{ width: `${pct}%`, background: pct >= 100 ? '#10b981' : pct > 50 ? '#f59e0b' : '#ef4444' }} />
+                                                </td>
+                                                <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{s.courseName}</td>
+                                                <td style={{ fontWeight: '600', fontSize: '14px' }}>{formatCurrency(s.totalFee)}</td>
+                                                <td style={{ color: '#10b981', fontWeight: '700' }}>{formatCurrency(s.paidFee)}</td>
+                                                <td style={{ color: pending > 0 ? '#ef4444' : '#10b981', fontWeight: '700' }}>
+                                                    {pending > 0 ? formatCurrency(pending) : '✅ Clear'}
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <div className="progress-bar" style={{ flex: 1 }}>
+                                                            <div className="progress-fill" style={{ width: `${pct}%`, background: pct >= 100 ? '#10b981' : pct > 50 ? '#f59e0b' : '#ef4444' }} />
+                                                        </div>
+                                                        <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', minWidth: '32px' }}>{pct}%</span>
                                                     </div>
-                                                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', minWidth: '32px' }}>{pct}%</span>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div style={{ display: 'flex', gap: '6px' }}>
-                                                    <button onClick={() => openInstallments(s)} className="btn btn-primary btn-sm" style={{ padding: '5px 10px', fontSize: '11px', fontWeight: '700' }}>
-                                                        📜 Installments
-                                                    </button>
-                                                    {pending > 0 && (
-                                                        <button onClick={() => sendWhatsAppReminder(s)} style={{ padding: '5px 10px', background: '#25d36615', border: '1px solid #25d36640', borderRadius: '6px', color: '#25d366', fontSize: '11px', cursor: 'pointer', fontWeight: '700' }}>
-                                                            💬 Remind
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                                        <button onClick={() => openInstallments(s)} className="btn btn-primary btn-sm" style={{ padding: '5px 10px', fontSize: '11px', fontWeight: '700' }}>
+                                                            📜 Installments
                                                         </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
+                                                        {pending > 0 && (
+                                                            <button onClick={() => sendWhatsAppReminder(s)} style={{ padding: '5px 10px', background: '#25d36615', border: '1px solid #25d36640', borderRadius: '6px', color: '#25d366', fontSize: '11px', cursor: 'pointer', fontWeight: '700' }}>
+                                                                💬 Remind
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })
+                                )}
                             </tbody>
                         </table>
                     )}
@@ -496,7 +601,14 @@ export default function FeesPage() {
                         <div className="modal-header">
                             <div>
                                 <h3 style={{ fontWeight: '700', fontSize: '18px' }}>📜 Fee Installments</h3>
-                                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{selectedStudentForFees.fullName} • {selectedStudentForFees.courseName}</p>
+                                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                                    {selectedStudentForFees.scholarNo && (
+                                        <span style={{ color: '#6366f1', fontWeight: '800', marginRight: '6px' }}>
+                                            [Sch: {selectedStudentForFees.scholarNo}]
+                                        </span>
+                                    )}
+                                    {selectedStudentForFees.fullName} • {selectedStudentForFees.courseName}
+                                </p>
                             </div>
                             <button onClick={() => setSelectedStudentForFees(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer' }}>✕</button>
                         </div>
@@ -699,6 +811,11 @@ export default function FeesPage() {
                             <div>
                                 <h3 style={{ fontWeight: '700', fontSize: '18px' }}>💳 Deposit Fee</h3>
                                 <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                                    {selectedStudentForFees?.scholarNo && (
+                                        <span style={{ color: '#6366f1', fontWeight: '800', marginRight: '6px' }}>
+                                            [Sch: {selectedStudentForFees.scholarNo}]
+                                        </span>
+                                    )}
                                     {selectedStudentForFees?.fullName} — {depositModal.fee?.notes || 'Installment'}
                                 </p>
                             </div>
@@ -708,9 +825,13 @@ export default function FeesPage() {
 
                             {/* Student Preview */}
                             <div style={{ padding: '12px 16px', background: 'var(--surface-2)', borderRadius: '10px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', fontSize: '13px' }}>
                                     <div>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Student</div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Scholar No.</div>
+                                        <div style={{ fontWeight: '800', color: '#6366f1' }}>{selectedStudentForFees?.scholarNo || '—'}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>Student Name</div>
                                         <div style={{ fontWeight: '700' }}>{selectedStudentForFees?.fullName}</div>
                                     </div>
                                     <div>
