@@ -548,6 +548,10 @@ export default function StudentsPage() {
         return () => document.removeEventListener('mousedown', handler)
     }, [])
 
+    const getActiveToken = () => {
+        return token || (typeof window !== 'undefined' ? (localStorage.getItem('scalevo_token') || localStorage.getItem('udba_token')) : '') || ''
+    }
+
     // Parse Excel file using SheetJS (loaded from CDN via Script tag)
     const handleExcelFile = async (file: File) => {
         setImportFile(file)
@@ -560,47 +564,73 @@ export default function StudentsPage() {
             const sheet = workbook.Sheets[workbook.SheetNames[0]]
             const jsonData: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
             if (jsonData.length < 2) { alert('Excel file is empty or has no data rows.'); return }
-            const headers: string[] = (jsonData[0] as string[]).map((h: string) => String(h).trim())
-            const rows = jsonData.slice(1).filter((r: any[]) => r.some((c: any) => String(c).trim() !== ''))
+
+            // Find header row (some sheets have titles on row 0)
+            let headerRowIdx = 0
+            for (let r = 0; r < Math.min(5, jsonData.length); r++) {
+                const row = jsonData[r]
+                if (Array.isArray(row)) {
+                    const rowStr = row.map(c => String(c ?? '').toLowerCase()).join(' ')
+                    if (rowStr.includes('scholar') || rowStr.includes('name') || rowStr.includes('student') || rowStr.includes('mobile')) {
+                        headerRowIdx = r
+                        break
+                    }
+                }
+            }
+
+            const headers: string[] = (jsonData[headerRowIdx] as string[]).map((h: string) => String(h ?? '').trim())
+            const rows = jsonData.slice(headerRowIdx + 1).filter((r: any[]) => r.some((c: any) => String(c ?? '').trim() !== ''))
             setExcelHeaders(headers)
             setRawExcelRows(rows)
 
             // Auto-detect column mapping
             const autoMap: Record<string, string> = {}
             const fieldPatterns: { field: string; patterns: string[] }[] = [
-                { field: 'scholarNo', patterns: ['scholar', 'scholar no', 'scholar no.', 'scholarno'] },
-                { field: 'fullName', patterns: ['student name', 'name', 'full name', 'student'] },
-                { field: 'fatherName', patterns: ["father", "father name", "father's name", "fathername"] },
-                { field: 'motherName', patterns: ["mother", "mother name", "mother's name", "mothername"] },
+                { field: 'scholarNo', patterns: ['scholar', 'scholar no', 'scholar no.', 'scholarno', 'sr no', 's.no', 'sno', 'admission no', 'adm no', 'enrollment'] },
+                { field: 'fullName', patterns: ['student name', 'name', 'full name', 'student', 'vidyarthi', 'naam'] },
+                { field: 'fatherName', patterns: ['father', 'father name', 'fathers name', "father's name", 'fathername', 'pita', 'guardian'] },
+                { field: 'motherName', patterns: ['mother', 'mother name', 'mothers name', "mother's name", 'mothername', 'mata'] },
                 { field: 'gender', patterns: ['gender', 'sex', 'ling', 'लिंग'] },
-                { field: 'dob', patterns: ['birth date', 'dob', 'date of birth', 'd.o.b', 'birthdate', 'birth', 'd.o.b.', 'janm tithi', 'जन्म तारीख', 'जन्म दिनांक'] },
-                { field: 'mobileNo', patterns: ['mobile', 'mobile no', 'mobile no.', 'phone', 'contact'] },
-                { field: 'parentMobileNo', patterns: ['parent mobile', 'parent mobile no', 'parent phone', 'guardian mobile'] },
-                { field: 'email', patterns: ['email', 'mail id', 'mail', 'e-mail'] },
-                { field: 'caste', patterns: ['caste', 'category'] },
-                { field: 'medium', patterns: ['medium'] },
-                { field: 'address', patterns: ['address', 'addr'] },
-                { field: 'aadhaarNo', patterns: ['adhar', 'aadhaar', 'aadhar', 'aadhar no', 'aadhaar no', 'adhar no'] },
+                { field: 'dob', patterns: ['birth date', 'dob', 'date of birth', 'd.o.b', 'birthdate', 'birth', 'd.o.b.', 'janm tithi', 'bitrh date', 'bitrh', 'जन्म तारीख', 'जन्म दिनांक'] },
+                { field: 'mobileNo', patterns: ['mobile', 'mobile no', 'mobile no.', 'phone', 'contact', 'cell', 'student mobile'] },
+                { field: 'parentMobileNo', patterns: ['parent mobile', 'parent mobile no', 'parent phone', 'guardian mobile', 'father mobile'] },
+                { field: 'email', patterns: ['email', 'mail id', 'mail', 'e-mail', 'email id'] },
+                { field: 'caste', patterns: ['caste', 'category', 'varg', 'jaati'] },
+                { field: 'medium', patterns: ['medium', 'madhyam'] },
+                { field: 'address', patterns: ['address', 'addr', 'pata', 'residential address'] },
+                { field: 'aadhaarNo', patterns: ['adhar', 'aadhaar', 'aadhar', 'aadhar no', 'aadhaar no', 'adhar no', 'uid'] },
                 { field: 'penId', patterns: ['pen id', 'pen', 'penid'] },
                 { field: 'aparId', patterns: ['apar id', 'apar', 'aparid'] },
-                { field: 'samagraId', patterns: ['samagra', 'samagra id', 'samagram'] },
-                { field: 'className', patterns: ['class', 'course', 'class (section', 'class(section', 'kaksha', 'कक्षा'] },
+                { field: 'samagraId', patterns: ['samagra', 'samagra id', 'samagraid', 'samagram'] },
+                { field: 'className', patterns: ['class', 'course', 'class (section', 'class(section', 'kaksha', 'कक्षा', 'std', 'standard', 'grade'] },
                 { field: 'section', patterns: ['section', 'batch', 'division', 'sec'] },
-                { field: 'firstAdmissionDate', patterns: ['first admission date', 'admission date', 'adm date', 'adm. date', 'admission dt', 'date of admission', 'pravesh dinank', 'प्रवेश दिनांक'] },
-                { field: 'firstAdmissionClass', patterns: ['first admission class', 'first class', 'admission class', 'pravesh kaksha', 'प्रवेश कक्षा'] },
+                { field: 'firstAdmissionDate', patterns: ['first admission date', 'admission date', 'adm date', 'adm. date', 'admission dt', 'date of admission', 'pravesh dinank', 'first admission dt', 'प्रवेश दिनांक'] },
+                { field: 'firstAdmissionClass', patterns: ['first admission class', 'first class', 'admission class', 'pravesh kaksha', 'first damission class', 'first damission', 'damission', 'प्रवेश कक्षा'] },
                 { field: 'bankName', patterns: ['bank name', 'bank'] },
-                { field: 'bankAccountNo', patterns: ['bank account', 'account no', 'account number', 'bank account no'] },
+                { field: 'bankAccountNo', patterns: ['bank account', 'account no', 'account number', 'bank account no', 'ac no', 'a/c no'] },
                 { field: 'ifsc', patterns: ['ifsc', 'ifsc code'] },
             ]
+
             headers.forEach((h, idx) => {
-                const hl = h.toLowerCase()
+                const rawLower = h.toLowerCase().trim()
+                const cleaned = rawLower.replace(/[^a-z0-9]/g, '')
                 for (const { field, patterns } of fieldPatterns) {
-                    if (patterns.some(p => hl === p || hl.startsWith(p) || hl.includes(p))) {
-                        if (!Object.values(autoMap).includes(String(idx))) autoMap[field] = String(idx)
-                        break
+                    if (autoMap[field] === undefined) {
+                        const matches = patterns.some(p => {
+                            const pClean = p.toLowerCase().replace(/[^a-z0-9]/g, '')
+                            return rawLower === p ||
+                                cleaned === pClean ||
+                                cleaned.includes(pClean) ||
+                                rawLower.includes(p)
+                        })
+                        if (matches && !Object.values(autoMap).includes(String(idx))) {
+                            autoMap[field] = String(idx)
+                            break
+                        }
                     }
                 }
             })
+
             setColMap(autoMap)
             setImportStep('upload')
         } catch (e: any) {
@@ -657,14 +687,33 @@ export default function StudentsPage() {
         })
     }
 
+    const validateRequiredMappings = (): string | null => {
+        if (!rawExcelRows.length) return 'Please upload an Excel file first.'
+        if (colMap['scholarNo'] === undefined || colMap['scholarNo'] === '') return '⚠️ "Scholar No." column is not selected. Please select which column in your Excel is "Scholar No." in the dropdown.'
+        if (colMap['fullName'] === undefined || colMap['fullName'] === '') return '⚠️ "Student Name" column is not selected. Please select which column in your Excel is "Student Name" in the dropdown.'
+        if (colMap['fatherName'] === undefined || colMap['fatherName'] === '') return '⚠️ "Father Name" column is not selected. Please select which column in your Excel is "Father Name" in the dropdown.'
+        if (colMap['mobileNo'] === undefined || colMap['mobileNo'] === '') return '⚠️ "Mobile No." column is not selected. Please select which column in your Excel is "Mobile No." in the dropdown.'
+        if (colMap['className'] === undefined || colMap['className'] === '') return '⚠️ "Class" column is not selected. Please select which column in your Excel is "Class" in the dropdown.'
+        return null
+    }
+
     const handlePreview = async () => {
-        if (!rawExcelRows.length) return
+        const validationErr = validateRequiredMappings()
+        if (validationErr) {
+            alert(validationErr)
+            return
+        }
+        const activeToken = getActiveToken()
+        if (!activeToken) {
+            alert('Authentication session expired. Please refresh the page and log in.')
+            return
+        }
         setImportLoading(true)
         try {
             const rows = buildStudentRows()
             const res = await fetch('/api/students/bulk-import', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${activeToken}` },
                 body: JSON.stringify({ students: rows })
             })
             const data = await res.json()
@@ -680,15 +729,59 @@ export default function StudentsPage() {
         setImportLoading(false)
     }
 
-    const handleImport = async () => {
-        if (!importPreviews.filter(p => p.willImport).length) return
-        if (!confirm(`Import ${importPreviews.filter(p => p.willImport).length} students? This cannot be undone.`)) return
+    // Direct Import from Step 1 without needing preview
+    const handleDirectImport = async () => {
+        const validationErr = validateRequiredMappings()
+        if (validationErr) {
+            alert(validationErr)
+            return
+        }
+        const activeToken = getActiveToken()
+        if (!activeToken) {
+            alert('Authentication session expired. Please refresh the page and log in.')
+            return
+        }
+        if (!confirm(`Save and import ${rawExcelRows.length} students to database? Existing Scholar Nos. will be automatically skipped.`)) return
         setImportLoading(true)
         try {
             const rows = buildStudentRows()
             const res = await fetch('/api/students/bulk-import', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${activeToken}` },
+                body: JSON.stringify({ students: rows })
+            })
+            const data = await res.json()
+            if (data.success) {
+                setImportResult(data)
+                setImportStep('result')
+                fetchStudents()
+            } else {
+                alert(data.error || 'Import failed')
+            }
+        } catch (e: any) {
+            alert('Error: ' + e.message)
+        }
+        setImportLoading(false)
+    }
+
+    const handleImport = async () => {
+        const willImportCount = importPreviews.filter(p => p.willImport).length
+        if (!willImportCount) {
+            alert('No valid students to import. Please check preview errors.')
+            return
+        }
+        if (!confirm(`Save and import ${willImportCount} students? Existing Scholar Nos. will be skipped.`)) return
+        const activeToken = getActiveToken()
+        if (!activeToken) {
+            alert('Authentication session expired. Please refresh the page and log in.')
+            return
+        }
+        setImportLoading(true)
+        try {
+            const rows = buildStudentRows()
+            const res = await fetch('/api/students/bulk-import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${activeToken}` },
                 body: JSON.stringify({ students: rows })
             })
             const data = await res.json()
@@ -810,17 +903,65 @@ export default function StudentsPage() {
                                     {/* Column mapping — shown after file is loaded */}
                                     {excelHeaders.length > 0 && (
                                         <div>
-                                            <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '14px' }}>🗺️ Column Mapping</h3>
-                                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>Columns auto-detected from your Excel headers. Adjust if needed:</p>
+                                            {/* Action Banner above Column Mapping */}
+                                            <div style={{
+                                                background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(16,185,129,0.12))',
+                                                border: '1px solid rgba(16,185,129,0.35)', borderRadius: '14px',
+                                                padding: '16px 20px', marginBottom: '20px',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                flexWrap: 'wrap', gap: '14px'
+                                            }}>
+                                                <div>
+                                                    <div style={{ fontWeight: '800', fontSize: '15px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span>📊</span> {rawExcelRows.length} Students Detected from Excel
+                                                    </div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                        Columns auto-mapped below. You can check preview or save directly:
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handlePreview}
+                                                        className="btn"
+                                                        style={{
+                                                            background: '#6366f1', color: 'white', border: 'none',
+                                                            fontWeight: '700', fontSize: '13px', padding: '10px 18px', borderRadius: '10px',
+                                                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                                                            boxShadow: '0 2px 8px rgba(99,102,241,0.35)'
+                                                        }}
+                                                    >
+                                                        {importLoading ? '⏳ Checking...' : '👁️ Preview Data (जाँचें)'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleDirectImport}
+                                                        className="btn"
+                                                        style={{
+                                                            background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white', border: 'none',
+                                                            fontWeight: '800', fontSize: '13px', padding: '10px 22px', borderRadius: '10px',
+                                                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                                                            boxShadow: '0 4px 12px rgba(16,185,129,0.4)'
+                                                        }}
+                                                    >
+                                                        {importLoading ? '⏳ Saving...' : '💾 Direct Save All (सीधे सेव करें)'}
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '6px' }}>🗺️ Column Mapping</h3>
+                                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>
+                                                Fields marked with <strong style={{ color: '#ef4444' }}>*</strong> are required (Scholar No, Name, Father Name, Mobile, Class):
+                                            </p>
                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
                                                 {[
-                                                    { field: 'scholarNo', label: '🏷️ Scholar No. *' },
-                                                    { field: 'fullName', label: '👤 Student Name *' },
-                                                    { field: 'fatherName', label: '👨 Father Name *' },
+                                                    { field: 'scholarNo', label: '🏷️ Scholar No. *', req: true },
+                                                    { field: 'fullName', label: '👤 Student Name *', req: true },
+                                                    { field: 'fatherName', label: '👨 Father Name *', req: true },
                                                     { field: 'motherName', label: '👩 Mother Name' },
                                                     { field: 'gender', label: '⚧ Gender' },
                                                     { field: 'dob', label: '🎂 Birth Date (DOB)' },
-                                                    { field: 'mobileNo', label: '📱 Mobile No. *' },
+                                                    { field: 'mobileNo', label: '📱 Mobile No. *', req: true },
                                                     { field: 'parentMobileNo', label: '📱 Parent Mobile No.' },
                                                     { field: 'email', label: '📧 Email / Mail ID' },
                                                     { field: 'caste', label: '🏷️ Caste' },
@@ -830,19 +971,23 @@ export default function StudentsPage() {
                                                     { field: 'penId', label: '🆔 PEN ID' },
                                                     { field: 'aparId', label: '🆔 APAR ID' },
                                                     { field: 'samagraId', label: '🆔 Samagra ID' },
-                                                    { field: 'className', label: '🏫 Class *' },
+                                                    { field: 'className', label: '🏫 Class *', req: true },
                                                     { field: 'section', label: '🏫 Section/Batch' },
                                                     { field: 'firstAdmissionDate', label: '📅 First Admission Date' },
                                                     { field: 'firstAdmissionClass', label: '🏫 First Admission Class' },
                                                     { field: 'bankName', label: '🏦 Bank Name' },
                                                     { field: 'bankAccountNo', label: '🔢 Bank Account No.' },
                                                     { field: 'ifsc', label: '🔢 IFSC Code' },
-                                                ].map(({ field, label }) => (
+                                                ].map(({ field, label, req }) => (
                                                     <div key={field} style={{
-                                                        background: 'var(--surface-hover)', borderRadius: '10px',
+                                                        background: colMap[field] ? 'rgba(16,185,129,0.06)' : 'var(--surface-hover)',
+                                                        borderRadius: '10px', border: colMap[field] ? '1px solid rgba(16,185,129,0.3)' : '1px solid var(--border)',
                                                         padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px'
                                                     }}>
-                                                        <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)' }}>{label}</label>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <label style={{ fontSize: '11px', fontWeight: '700', color: req ? '#f59e0b' : 'var(--text-muted)' }}>{label}</label>
+                                                            {colMap[field] ? <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700' }}>✓ Mapped</span> : (req ? <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: '700' }}>Required</span> : null)}
+                                                        </div>
                                                         <select
                                                             className="input"
                                                             style={{ fontSize: '12px', padding: '6px 10px' }}
@@ -865,20 +1010,37 @@ export default function StudentsPage() {
                             {/* STEP 2: PREVIEW */}
                             {importStep === 'preview' && (
                                 <div>
-                                    <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                                        {[
-                                            { label: 'Will Import', count: importPreviews.filter(p => p.willImport).length, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
-                                            { label: 'Skipped (Duplicate)', count: importPreviews.filter(p => !p.willImport && p.issue?.includes('Duplicate')).length, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-                                            { label: 'Errors', count: importPreviews.filter(p => !p.willImport && !p.issue?.includes('Duplicate')).length, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
-                                        ].map(s => (
-                                            <div key={s.label} style={{
-                                                padding: '10px 20px', borderRadius: '12px', background: s.bg,
-                                                border: `1px solid ${s.color}40`, textAlign: 'center'
-                                            }}>
-                                                <div style={{ fontSize: '24px', fontWeight: '900', color: s.color }}>{s.count}</div>
-                                                <div style={{ fontSize: '11px', color: s.color, fontWeight: '600' }}>{s.label}</div>
-                                            </div>
-                                        ))}
+                                    <div style={{
+                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                        marginBottom: '16px', flexWrap: 'wrap', gap: '12px'
+                                    }}>
+                                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                            {[
+                                                { label: 'Will Import', count: importPreviews.filter(p => p.willImport).length, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+                                                { label: 'Skipped (Duplicate)', count: importPreviews.filter(p => !p.willImport && p.issue?.includes('Duplicate')).length, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+                                                { label: 'Errors', count: importPreviews.filter(p => !p.willImport && !p.issue?.includes('Duplicate')).length, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+                                            ].map(s => (
+                                                <div key={s.label} style={{
+                                                    padding: '10px 18px', borderRadius: '12px', background: s.bg,
+                                                    border: `1px solid ${s.color}40`, textAlign: 'center'
+                                                }}>
+                                                    <div style={{ fontSize: '22px', fontWeight: '900', color: s.color }}>{s.count}</div>
+                                                    <div style={{ fontSize: '11px', color: s.color, fontWeight: '600' }}>{s.label}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleImport}
+                                            style={{
+                                                background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white', border: 'none',
+                                                fontWeight: '800', fontSize: '14px', padding: '12px 24px', borderRadius: '12px',
+                                                cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
+                                                display: 'flex', alignItems: 'center', gap: '8px'
+                                            }}
+                                        >
+                                            {importLoading ? '⏳ Saving...' : `💾 Confirm & Save ${importPreviews.filter(p => p.willImport).length} Students Now`}
+                                        </button>
                                     </div>
                                     <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--border)' }}>
                                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
@@ -958,33 +1120,69 @@ export default function StudentsPage() {
                         {importStep !== 'result' && (
                             <div style={{
                                 padding: '16px 24px', borderTop: '1px solid var(--border)',
-                                display: 'flex', gap: '10px', justifyContent: 'flex-end',
-                                background: 'var(--surface-hover)'
+                                display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center',
+                                background: 'var(--surface-hover)', flexWrap: 'wrap'
                             }}>
-                                {importStep === 'preview' && (
-                                    <button onClick={() => setImportStep('upload')} className="btn btn-secondary" disabled={importLoading}>← Back</button>
-                                )}
-                                <button onClick={closeImportModal} className="btn btn-secondary" disabled={importLoading}>Cancel</button>
-                                {importStep === 'upload' && (
-                                    <button
-                                        onClick={handlePreview}
-                                        className="btn btn-primary"
-                                        disabled={importLoading || !rawExcelRows.length || !colMap['scholarNo'] || !colMap['fullName']}
-                                        style={{ background: 'linear-gradient(135deg,#10b981,#059669)', border: 'none' }}
-                                    >
-                                        {importLoading ? '⏳ Processing...' : '👁️ Preview Data →'}
-                                    </button>
-                                )}
-                                {importStep === 'preview' && (
-                                    <button
-                                        onClick={handleImport}
-                                        className="btn btn-primary"
-                                        disabled={importLoading || !importPreviews.filter(p => p.willImport).length}
-                                        style={{ background: 'linear-gradient(135deg,#10b981,#059669)', border: 'none' }}
-                                    >
-                                        {importLoading ? '⏳ Importing...' : `📥 Import ${importPreviews.filter(p => p.willImport).length} Students`}
-                                    </button>
-                                )}
+                                <div>
+                                    {importStep === 'upload' && rawExcelRows.length > 0 && (
+                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                            📊 <strong>{rawExcelRows.length}</strong> rows loaded from Excel
+                                        </span>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                    {importStep === 'preview' && (
+                                        <button onClick={() => setImportStep('upload')} className="btn btn-secondary" disabled={importLoading}>← Back to Mapping</button>
+                                    )}
+                                    <button onClick={closeImportModal} className="btn btn-secondary" disabled={importLoading}>Cancel</button>
+                                    {importStep === 'upload' && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={handlePreview}
+                                                className="btn"
+                                                disabled={importLoading}
+                                                style={{
+                                                    background: '#6366f1', color: 'white', border: 'none',
+                                                    fontWeight: '700', fontSize: '13px', padding: '10px 18px', borderRadius: '10px',
+                                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                                                }}
+                                            >
+                                                {importLoading ? '⏳ Checking...' : '👁️ Preview Data →'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleDirectImport}
+                                                className="btn"
+                                                disabled={importLoading}
+                                                style={{
+                                                    background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white', border: 'none',
+                                                    fontWeight: '800', fontSize: '13px', padding: '10px 22px', borderRadius: '10px',
+                                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                                                    boxShadow: '0 4px 12px rgba(16,185,129,0.35)'
+                                                }}
+                                            >
+                                                {importLoading ? '⏳ Saving...' : '💾 Save & Import All Students'}
+                                            </button>
+                                        </>
+                                    )}
+                                    {importStep === 'preview' && (
+                                        <button
+                                            type="button"
+                                            onClick={handleImport}
+                                            className="btn"
+                                            disabled={importLoading}
+                                            style={{
+                                                background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white', border: 'none',
+                                                fontWeight: '800', fontSize: '13px', padding: '10px 22px', borderRadius: '10px',
+                                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                                                boxShadow: '0 4px 12px rgba(16,185,129,0.35)'
+                                            }}
+                                        >
+                                            {importLoading ? '⏳ Importing...' : `📥 Confirm & Save ${importPreviews.filter(p => p.willImport).length} Students`}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
