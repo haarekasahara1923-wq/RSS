@@ -689,11 +689,7 @@ export default function StudentsPage() {
 
     const validateRequiredMappings = (): string | null => {
         if (!rawExcelRows.length) return 'Please upload an Excel file first.'
-        if (colMap['scholarNo'] === undefined || colMap['scholarNo'] === '') return '⚠️ "Scholar No." column is not selected. Please select which column in your Excel is "Scholar No." in the dropdown.'
-        if (colMap['fullName'] === undefined || colMap['fullName'] === '') return '⚠️ "Student Name" column is not selected. Please select which column in your Excel is "Student Name" in the dropdown.'
-        if (colMap['fatherName'] === undefined || colMap['fatherName'] === '') return '⚠️ "Father Name" column is not selected. Please select which column in your Excel is "Father Name" in the dropdown.'
-        if (colMap['mobileNo'] === undefined || colMap['mobileNo'] === '') return '⚠️ "Mobile No." column is not selected. Please select which column in your Excel is "Mobile No." in the dropdown.'
-        if (colMap['className'] === undefined || colMap['className'] === '') return '⚠️ "Class" column is not selected. Please select which column in your Excel is "Class" in the dropdown.'
+        if (colMap['scholarNo'] === undefined || colMap['scholarNo'] === '') return '⚠️ "Scholar No." column is mandatory. Please select which column in your Excel is "Scholar No." in the dropdown.'
         return null
     }
 
@@ -951,17 +947,17 @@ export default function StudentsPage() {
 
                                             <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '6px' }}>🗺️ Column Mapping</h3>
                                             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>
-                                                Fields marked with <strong style={{ color: '#ef4444' }}>*</strong> are required (Scholar No, Name, Father Name, Mobile, Class):
+                                                Sirf <strong style={{ color: '#ef4444' }}>Scholar No. *</strong> mandatory hai. Baaki sabhi columns optional hain — jo column nahi hai ya blank hai wo automatically skip ho jayega.
                                             </p>
                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
                                                 {[
-                                                    { field: 'scholarNo', label: '🏷️ Scholar No. *', req: true },
-                                                    { field: 'fullName', label: '👤 Student Name *', req: true },
-                                                    { field: 'fatherName', label: '👨 Father Name *', req: true },
+                                                    { field: 'scholarNo', label: '🏷️ Scholar No. * (Mandatory)', req: true },
+                                                    { field: 'fullName', label: '👤 Student Name' },
+                                                    { field: 'fatherName', label: '👨 Father Name' },
                                                     { field: 'motherName', label: '👩 Mother Name' },
                                                     { field: 'gender', label: '⚧ Gender' },
                                                     { field: 'dob', label: '🎂 Birth Date (DOB)' },
-                                                    { field: 'mobileNo', label: '📱 Mobile No. *', req: true },
+                                                    { field: 'mobileNo', label: '📱 Mobile No.' },
                                                     { field: 'parentMobileNo', label: '📱 Parent Mobile No.' },
                                                     { field: 'email', label: '📧 Email / Mail ID' },
                                                     { field: 'caste', label: '🏷️ Caste' },
@@ -971,7 +967,7 @@ export default function StudentsPage() {
                                                     { field: 'penId', label: '🆔 PEN ID' },
                                                     { field: 'aparId', label: '🆔 APAR ID' },
                                                     { field: 'samagraId', label: '🆔 Samagra ID' },
-                                                    { field: 'className', label: '🏫 Class *', req: true },
+                                                    { field: 'className', label: '🏫 Class' },
                                                     { field: 'section', label: '🏫 Section/Batch' },
                                                     { field: 'firstAdmissionDate', label: '📅 First Admission Date' },
                                                     { field: 'firstAdmissionClass', label: '🏫 First Admission Class' },
@@ -985,8 +981,8 @@ export default function StudentsPage() {
                                                         padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px'
                                                     }}>
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            <label style={{ fontSize: '11px', fontWeight: '700', color: req ? '#f59e0b' : 'var(--text-muted)' }}>{label}</label>
-                                                            {colMap[field] ? <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700' }}>✓ Mapped</span> : (req ? <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: '700' }}>Required</span> : null)}
+                                                            <label style={{ fontSize: '11px', fontWeight: '700', color: req ? '#ef4444' : 'var(--text-muted)' }}>{label}</label>
+                                                            {colMap[field] ? <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700' }}>✓ Mapped</span> : (req ? <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: '700' }}>Mandatory</span> : <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Optional</span>)}
                                                         </div>
                                                         <select
                                                             className="input"

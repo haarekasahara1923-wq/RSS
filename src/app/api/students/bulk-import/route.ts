@@ -121,41 +121,72 @@ export async function POST(req: NextRequest) {
 
         for (const row of students) {
             const scholarNo = row.scholarNo ? String(row.scholarNo).trim() : ''
-            const fullName = row.fullName ? String(row.fullName).trim() : ''
-            const fatherName = row.fatherName ? String(row.fatherName).trim() : ''
-            const mobileNo = row.mobileNo ? String(row.mobileNo).trim() : ''
-            const parentMobileNo = row.parentMobileNo ? String(row.parentMobileNo).trim() : ''
-            const phone = mobileNo
-            const parentPhone = parentMobileNo || mobileNo
-            const classRaw = row.className ? String(row.className).trim() : ''
-            const sectionRaw = row.section ? String(row.section).trim() : ''
 
-            // Optional and new fields
-            const dob = parseDate(row.dob)
-            const gender = parseGender(row.gender)
-            const parsedAdmDate = parseDate(row.firstAdmissionDate) || parseDate(row.admissionDate)
-            const admissionDate = parsedAdmDate || new Date()
-            const firstAdmissionClass = row.firstAdmissionClass ? String(row.firstAdmissionClass).trim() : classRaw
+            // ONLY Scholar No. is mandatory! If row has no scholarNo, skip it silently
+            if (!scholarNo) {
+                continue
+            }
 
-            if (!scholarNo) { results.push({ scholarNo: '?', fullName, status: 'error', reason: 'Scholar No. missing' }); continue }
-            if (!fullName) { results.push({ scholarNo, fullName: '?', status: 'error', reason: 'Student name missing' }); continue }
-            if (!fatherName) { results.push({ scholarNo, fullName, status: 'error', reason: 'Father name missing' }); continue }
-            if (!phone) { results.push({ scholarNo, fullName, status: 'error', reason: 'Mobile No. missing' }); continue }
-            if (!classRaw) { results.push({ scholarNo, fullName, status: 'error', reason: 'Class/Course missing' }); continue }
-
+            // Duplicate check by Scholar No.
             const existingByScholar = await prisma.student.findFirst({
                 where: { tenantId: user!.tenantId, scholarNo: { equals: scholarNo, mode: 'insensitive' } }
             })
             if (existingByScholar) {
-                results.push({ scholarNo, fullName, status: 'skipped', reason: `Already exists (${existingByScholar.fullName})` })
+                results.push({ scholarNo, fullName: existingByScholar.fullName, status: 'skipped', reason: `Already exists (${existingByScholar.fullName})` })
                 continue
             }
 
-            // Course matching with suffix normalization ("10th" -> "10")
-            let matchedCourse = allCourses.find(c => courseMatches(c.name, classRaw))
+            // All other fields are completely OPTIONAL with safe defaults
+            const fullName = row.fullName ? String(row.fullName).trim() : `Student ${scholarNo}`
+            const fatherName = row.fatherName ? String(row.fatherName).trim() : ''
+            const motherName = row.motherName ? String(row.motherName).trim() : ''
+            const mobileNo = row.mobileNo ? String(row.mobileNo).trim() : ''
+            const parentMobileNo = row.parentMobileNo ? String(row.parentMobileNo).trim() : ''
+            const phone = mobileNo || parentMobileNo || '0000000000'
+            const parentPhone = parentMobileNo || mobileNo || phone
+            const classRaw = row.className ? String(row.className).trim() : ''
+            const sectionRaw = row.section ? String(row.section).trim() : ''
+
+            // Optional fields with safe fallbacks
+            const dob = parseDate(row.dob)
+            const gender = parseGender(row.gender)
+            const parsedAdmDate = parseDate(row.firstAdmissionDate) || parseDate(row.admissionDate)
+            const admissionDate = parsedAdmDate || new Date()
+            const firstAdmissionClass = row.firstAdmissionClass ? String(row.firstAdmissionClass).trim() : (classRaw || '')
+
+            // Course resolution: Never reject due to class! Auto-create if not found
+            let matchedCourse: any = classRaw ? allCourses.find(c => courseMatches(c.name, classRaw)) : null
+            if (!matchedCourse && classRaw) {
+                try {
+                    matchedCourse = await prisma.course.create({
+                        data: {
+                            tenantId: user!.tenantId,
+                            name: classRaw,
+                            fees: 0,
+                            subjects: []
+                        },
+                        include: { batches: true }
+                    })
+                    allCourses.push(matchedCourse)
+                } catch (e) {
+                    matchedCourse = allCourses.find(c => c.name.toLowerCase() === classRaw.toLowerCase()) || allCourses[0]
+                }
+            }
             if (!matchedCourse) {
-                results.push({ scholarNo, fullName, status: 'error', reason: `Class "${classRaw}" not found in system` })
-                continue
+                if (allCourses.length > 0) {
+                    matchedCourse = allCourses[0]
+                } else {
+                    matchedCourse = await prisma.course.create({
+                        data: {
+                            tenantId: user!.tenantId,
+                            name: classRaw || 'General',
+                            fees: 0,
+                            subjects: []
+                        },
+                        include: { batches: true }
+                    })
+                    allCourses.push(matchedCourse)
+                }
             }
 
             let matchedBatch: any = null
@@ -178,7 +209,7 @@ export async function POST(req: NextRequest) {
                         scholarNo,
                         fullName,
                         fatherName,
-                        motherName: row.motherName ? String(row.motherName).trim() : '',
+                        motherName,
                         phone,
                         parentPhone,
                         email: row.email ? String(row.email).trim() : '',
@@ -266,7 +297,11 @@ export async function PUT(req: NextRequest) {
 
         for (const row of students) {
             const scholarNo = row.scholarNo ? String(row.scholarNo).trim() : ''
-            const fullName = row.fullName ? String(row.fullName).trim() : ''
+
+            // Only rows with scholarNo are processed
+            if (!scholarNo) continue
+
+            const fullName = row.fullName ? String(row.fullName).trim() : `Student ${scholarNo}`
             const fatherName = row.fatherName ? String(row.fatherName).trim() : ''
             const mobileNo = row.mobileNo ? String(row.mobileNo).trim() : ''
             const classRaw = row.className ? String(row.className).trim() : ''
@@ -280,20 +315,23 @@ export async function PUT(req: NextRequest) {
             let willImport = true
             let matchedClassName = ''
 
-            if (!scholarNo) { issue = 'Scholar No. missing'; willImport = false }
-            else if (!fullName) { issue = 'Student name missing'; willImport = false }
-            else if (!fatherName) { issue = 'Father name missing'; willImport = false }
-            else if (!mobileNo) { issue = 'Mobile No. missing'; willImport = false }
-            else if (!classRaw) { issue = 'Class missing'; willImport = false }
-            else {
-                const dup = await prisma.student.findFirst({
-                    where: { tenantId: user!.tenantId, scholarNo: { equals: scholarNo, mode: 'insensitive' } }
-                })
-                if (dup) { issue = `Duplicate — already exists (${dup.fullName})`; willImport = false }
-                else {
-                    const matchedCourse = allCourses.find(c => courseMatches(c.name, classRaw))
-                    if (!matchedCourse) { issue = `Class "${classRaw}" not found in system`; willImport = false }
-                    else { matchedClassName = matchedCourse.name }
+            // Duplicate check
+            const dup = await prisma.student.findFirst({
+                where: { tenantId: user!.tenantId, scholarNo: { equals: scholarNo, mode: 'insensitive' } }
+            })
+            if (dup) {
+                issue = `Duplicate — already exists (${dup.fullName})`
+                willImport = false
+            } else {
+                const matchedCourse = classRaw ? allCourses.find(c => courseMatches(c.name, classRaw)) : null
+                if (matchedCourse) {
+                    matchedClassName = matchedCourse.name
+                } else if (classRaw) {
+                    matchedClassName = `${classRaw} (Auto-create)`
+                } else if (allCourses.length > 0) {
+                    matchedClassName = `${allCourses[0].name} (Default)`
+                } else {
+                    matchedClassName = 'General (Auto-create)'
                 }
             }
 
