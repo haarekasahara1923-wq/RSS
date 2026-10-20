@@ -89,6 +89,20 @@ export default function StudentsPage() {
     const [siblingActionLoading, setSiblingActionLoading] = useState(false)
     const [siblingFeedback, setSiblingFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
 
+    // Excel Bulk Import state
+    const [showImportModal, setShowImportModal] = useState(false)
+    const [importFile, setImportFile] = useState<File | null>(null)
+    const [importPreviews, setImportPreviews] = useState<any[]>([])
+    const [importLoading, setImportLoading] = useState(false)
+    const [importStep, setImportStep] = useState<'upload' | 'preview' | 'result'>('upload')
+    const [importResult, setImportResult] = useState<any>(null)
+    const importFileRef = useRef<HTMLInputElement>(null)
+
+    // Column mapping state
+    const [colMap, setColMap] = useState<Record<string, string>>({})
+    const [excelHeaders, setExcelHeaders] = useState<string[]>([])
+    const [rawExcelRows, setRawExcelRows] = useState<any[]>([])
+
     const downloadPDF = (elementId: string, title: string) => {
         const original = document.getElementById(elementId)
         if (!original) return
@@ -534,15 +548,447 @@ export default function StudentsPage() {
         return () => document.removeEventListener('mousedown', handler)
     }, [])
 
+    // Parse Excel file using SheetJS (loaded from CDN via Script tag)
+    const handleExcelFile = async (file: File) => {
+        setImportFile(file)
+        try {
+            const arrayBuffer = await file.arrayBuffer()
+            // @ts-ignore
+            const XLSX = window.XLSX
+            if (!XLSX) { alert('Excel library still loading, please try again in a moment.'); return }
+            const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+            const sheet = workbook.Sheets[workbook.SheetNames[0]]
+            const jsonData: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
+            if (jsonData.length < 2) { alert('Excel file is empty or has no data rows.'); return }
+            const headers: string[] = (jsonData[0] as string[]).map((h: string) => String(h).trim())
+            const rows = jsonData.slice(1).filter((r: any[]) => r.some((c: any) => String(c).trim() !== ''))
+            setExcelHeaders(headers)
+            setRawExcelRows(rows)
+
+            // Auto-detect column mapping
+            const autoMap: Record<string, string> = {}
+            const fieldPatterns: { field: string; patterns: string[] }[] = [
+                { field: 'scholarNo', patterns: ['scholar', 'scholar no', 'scholar no.', 'scholarno'] },
+                { field: 'fullName', patterns: ['student name', 'name', 'full name', 'student'] },
+                { field: 'fatherName', patterns: ["father", "father name", "father's name", "fathername"] },
+                { field: 'motherName', patterns: ["mother", "mother name", "mother's name", "mothername"] },
+                { field: 'mobileNo', patterns: ['mobile', 'mobile no', 'mobile no.', 'phone', 'contact'] },
+                { field: 'parentMobileNo', patterns: ['parent mobile', 'parent mobile no', 'parent phone', 'guardian mobile'] },
+                { field: 'email', patterns: ['email', 'mail id', 'mail', 'e-mail'] },
+                { field: 'caste', patterns: ['caste', 'category'] },
+                { field: 'medium', patterns: ['medium'] },
+                { field: 'address', patterns: ['address', 'addr'] },
+                { field: 'aadhaarNo', patterns: ['adhar', 'aadhaar', 'aadhar', 'aadhar no', 'aadhaar no', 'adhar no'] },
+                { field: 'penId', patterns: ['pen id', 'pen', 'penid'] },
+                { field: 'aparId', patterns: ['apar id', 'apar', 'aparid'] },
+                { field: 'samagraId', patterns: ['samagra', 'samagra id', 'samagram'] },
+                { field: 'className', patterns: ['class', 'course', 'class (section', 'class(section'] },
+                { field: 'section', patterns: ['section', 'batch', 'division'] },
+                { field: 'bankName', patterns: ['bank name', 'bank'] },
+                { field: 'bankAccountNo', patterns: ['bank account', 'account no', 'account number', 'bank account no'] },
+                { field: 'ifsc', patterns: ['ifsc', 'ifsc code'] },
+            ]
+            headers.forEach((h, idx) => {
+                const hl = h.toLowerCase()
+                for (const { field, patterns } of fieldPatterns) {
+                    if (patterns.some(p => hl === p || hl.startsWith(p) || hl.includes(p))) {
+                        if (!Object.values(autoMap).includes(String(idx))) autoMap[field] = String(idx)
+                        break
+                    }
+                }
+            })
+            setColMap(autoMap)
+            setImportStep('upload')
+        } catch (e: any) {
+            alert('Error reading file: ' + (e.message || e))
+        }
+    }
+
+    const buildStudentRows = () => {
+        return rawExcelRows.map(row => {
+            const get = (field: string) => {
+                const idx = colMap[field]
+                if (idx === undefined || idx === '') return ''
+                return String(row[Number(idx)] ?? '').trim()
+            }
+            const classRaw = get('className')
+            const sectionRaw = get('section')
+            // If class contains section (e.g. "10-A" or "10 A"), split if no separate section mapped
+            let finalClass = classRaw
+            let finalSection = sectionRaw
+            if (!sectionRaw && classRaw) {
+                const parts = classRaw.split(/[-\s]+/)
+                if (parts.length === 2 && /^[A-Za-z]$/.test(parts[1])) {
+                    finalClass = parts[0]
+                    finalSection = parts[1]
+                }
+            }
+            return {
+                scholarNo: get('scholarNo'),
+                fullName: get('fullName'),
+                fatherName: get('fatherName'),
+                motherName: get('motherName'),
+                mobileNo: get('mobileNo'),
+                parentMobileNo: get('parentMobileNo'),
+                email: get('email'),
+                caste: get('caste'),
+                medium: get('medium'),
+                address: get('address'),
+                aadhaarNo: get('aadhaarNo'),
+                penId: get('penId'),
+                aparId: get('aparId'),
+                samagraId: get('samagraId'),
+                className: finalClass,
+                section: finalSection,
+                bankName: get('bankName'),
+                bankAccountNo: get('bankAccountNo'),
+                ifsc: get('ifsc'),
+            }
+        })
+    }
+
+    const handlePreview = async () => {
+        if (!rawExcelRows.length) return
+        setImportLoading(true)
+        try {
+            const rows = buildStudentRows()
+            const res = await fetch('/api/students/bulk-import', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ students: rows })
+            })
+            const data = await res.json()
+            if (data.success) {
+                setImportPreviews(data.previews)
+                setImportStep('preview')
+            } else {
+                alert(data.error || 'Preview failed')
+            }
+        } catch (e: any) {
+            alert('Error: ' + e.message)
+        }
+        setImportLoading(false)
+    }
+
+    const handleImport = async () => {
+        if (!importPreviews.filter(p => p.willImport).length) return
+        if (!confirm(`Import ${importPreviews.filter(p => p.willImport).length} students? This cannot be undone.`)) return
+        setImportLoading(true)
+        try {
+            const rows = buildStudentRows()
+            const res = await fetch('/api/students/bulk-import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ students: rows })
+            })
+            const data = await res.json()
+            if (data.success) {
+                setImportResult(data)
+                setImportStep('result')
+                fetchStudents()
+            } else {
+                alert(data.error || 'Import failed')
+            }
+        } catch (e: any) {
+            alert('Error: ' + e.message)
+        }
+        setImportLoading(false)
+    }
+
+    const closeImportModal = () => {
+        setShowImportModal(false)
+        setImportFile(null)
+        setImportPreviews([])
+        setImportStep('upload')
+        setImportResult(null)
+        setExcelHeaders([])
+        setRawExcelRows([])
+        setColMap({})
+        if (importFileRef.current) importFileRef.current.value = ''
+    }
+
     return (
         <div>
             <Script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" strategy="lazyOnload" />
+            <Script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" strategy="lazyOnload" />
+
+            {/* ======================== EXCEL IMPORT MODAL ======================== */}
+            {showImportModal && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 9999,
+                    background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+                }}>
+                    <div style={{
+                        background: 'var(--surface)', borderRadius: '20px', width: '100%', maxWidth: '900px',
+                        maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column',
+                        boxShadow: '0 25px 60px rgba(0,0,0,0.4)', border: '1px solid var(--border)'
+                    }}>
+                        {/* Modal Header */}
+                        <div style={{
+                            padding: '20px 24px', borderBottom: '1px solid var(--border)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(168,85,247,0.08))'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{
+                                    width: '44px', height: '44px', borderRadius: '12px',
+                                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '22px', boxShadow: '0 4px 12px rgba(16,185,129,0.35)'
+                                }}>📥</div>
+                                <div>
+                                    <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>Excel Bulk Import</h2>
+                                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>
+                                        {importStep === 'upload' && 'Upload your Excel file with student data'}
+                                        {importStep === 'preview' && `Preview — ${importPreviews.filter(p => p.willImport).length} will import, ${importPreviews.filter(p => !p.willImport).length} skipped/error`}
+                                        {importStep === 'result' && '✅ Import complete!'}
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={closeImportModal} style={{
+                                background: 'rgba(239,68,68,0.12)', border: 'none', color: '#ef4444',
+                                width: '36px', height: '36px', borderRadius: '10px', cursor: 'pointer',
+                                fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700'
+                            }}>✕</button>
+                        </div>
+
+                        {/* Steps indicator */}
+                        <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            {[{ id: 'upload', label: '1. Upload' }, { id: 'preview', label: '2. Preview' }, { id: 'result', label: '3. Done' }].map((s, i) => (
+                                <React.Fragment key={s.id}>
+                                    <div style={{
+                                        padding: '4px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '700',
+                                        background: importStep === s.id ? 'linear-gradient(135deg,#6366f1,#4f46e5)' : 'var(--surface-hover)',
+                                        color: importStep === s.id ? 'white' : 'var(--text-muted)'
+                                    }}>{s.label}</div>
+                                    {i < 2 && <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>›</span>}
+                                </React.Fragment>
+                            ))}
+                        </div>
+
+                        {/* Modal Body */}
+                        <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+
+                            {/* STEP 1: UPLOAD */}
+                            {importStep === 'upload' && (
+                                <div>
+                                    {/* File drop zone */}
+                                    <div
+                                        onClick={() => importFileRef.current?.click()}
+                                        style={{
+                                            border: '2px dashed var(--border)', borderRadius: '16px',
+                                            padding: '40px', textAlign: 'center', cursor: 'pointer',
+                                            transition: 'all 0.2s', marginBottom: '20px',
+                                            background: importFile ? 'rgba(16,185,129,0.06)' : 'var(--surface-hover)',
+                                            borderColor: importFile ? '#10b981' : 'var(--border)'
+                                        }}
+                                        onDragOver={e => e.preventDefault()}
+                                        onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleExcelFile(f) }}
+                                    >
+                                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>{importFile ? '✅' : '📊'}</div>
+                                        <div style={{ fontWeight: '700', fontSize: '16px', color: 'var(--text-primary)', marginBottom: '6px' }}>
+                                            {importFile ? importFile.name : 'Click to upload or drag & drop'}
+                                        </div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                            {importFile ? `${rawExcelRows.length} data rows found` : 'Supports .xlsx, .xls, .csv files'}
+                                        </div>
+                                        <input ref={importFileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }}
+                                            onChange={e => { const f = e.target.files?.[0]; if (f) handleExcelFile(f) }} />
+                                    </div>
+
+                                    {/* Column mapping — shown after file is loaded */}
+                                    {excelHeaders.length > 0 && (
+                                        <div>
+                                            <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '14px' }}>🗺️ Column Mapping</h3>
+                                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>Columns auto-detected from your Excel headers. Adjust if needed:</p>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
+                                                {[
+                                                    { field: 'scholarNo', label: '🏷️ Scholar No. *' },
+                                                    { field: 'fullName', label: '👤 Student Name *' },
+                                                    { field: 'fatherName', label: '👨 Father Name *' },
+                                                    { field: 'motherName', label: '👩 Mother Name' },
+                                                    { field: 'mobileNo', label: '📱 Mobile No. *' },
+                                                    { field: 'parentMobileNo', label: '📱 Parent Mobile No.' },
+                                                    { field: 'email', label: '📧 Email / Mail ID' },
+                                                    { field: 'caste', label: '🏷️ Caste' },
+                                                    { field: 'medium', label: '📚 Medium' },
+                                                    { field: 'address', label: '🏠 Address' },
+                                                    { field: 'aadhaarNo', label: '🪪 Aadhaar No.' },
+                                                    { field: 'penId', label: '🆔 PEN ID' },
+                                                    { field: 'aparId', label: '🆔 APAR ID' },
+                                                    { field: 'samagraId', label: '🆔 Samagra ID' },
+                                                    { field: 'className', label: '🏫 Class *' },
+                                                    { field: 'section', label: '🏫 Section/Batch' },
+                                                    { field: 'bankName', label: '🏦 Bank Name' },
+                                                    { field: 'bankAccountNo', label: '🔢 Bank Account No.' },
+                                                    { field: 'ifsc', label: '🔢 IFSC Code' },
+                                                ].map(({ field, label }) => (
+                                                    <div key={field} style={{
+                                                        background: 'var(--surface-hover)', borderRadius: '10px',
+                                                        padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px'
+                                                    }}>
+                                                        <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)' }}>{label}</label>
+                                                        <select
+                                                            className="input"
+                                                            style={{ fontSize: '12px', padding: '6px 10px' }}
+                                                            value={colMap[field] ?? ''}
+                                                            onChange={e => setColMap(prev => ({ ...prev, [field]: e.target.value }))}
+                                                        >
+                                                            <option value="">-- Not mapped --</option>
+                                                            {excelHeaders.map((h, i) => (
+                                                                <option key={i} value={String(i)}>{h}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* STEP 2: PREVIEW */}
+                            {importStep === 'preview' && (
+                                <div>
+                                    <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                                        {[
+                                            { label: 'Will Import', count: importPreviews.filter(p => p.willImport).length, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+                                            { label: 'Skipped (Duplicate)', count: importPreviews.filter(p => !p.willImport && p.issue?.includes('Duplicate')).length, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+                                            { label: 'Errors', count: importPreviews.filter(p => !p.willImport && !p.issue?.includes('Duplicate')).length, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+                                        ].map(s => (
+                                            <div key={s.label} style={{
+                                                padding: '10px 20px', borderRadius: '12px', background: s.bg,
+                                                border: `1px solid ${s.color}40`, textAlign: 'center'
+                                            }}>
+                                                <div style={{ fontSize: '24px', fontWeight: '900', color: s.color }}>{s.count}</div>
+                                                <div style={{ fontSize: '11px', color: s.color, fontWeight: '600' }}>{s.label}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                                            <thead>
+                                                <tr style={{ background: 'var(--surface-hover)' }}>
+                                                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Status</th>
+                                                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Scholar No.</th>
+                                                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Student Name</th>
+                                                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Father Name</th>
+                                                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Mobile</th>
+                                                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Class → Matched</th>
+                                                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Issue</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {importPreviews.map((p, i) => (
+                                                    <tr key={i} style={{
+                                                        borderTop: '1px solid var(--border)',
+                                                        background: p.willImport ? 'rgba(16,185,129,0.04)' : (p.issue?.includes('Duplicate') ? 'rgba(245,158,11,0.04)' : 'rgba(239,68,68,0.04)')
+                                                    }}>
+                                                        <td style={{ padding: '8px 12px' }}>
+                                                            <span style={{
+                                                                padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700',
+                                                                background: p.willImport ? 'rgba(16,185,129,0.15)' : (p.issue?.includes('Duplicate') ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)'),
+                                                                color: p.willImport ? '#10b981' : (p.issue?.includes('Duplicate') ? '#f59e0b' : '#ef4444')
+                                                            }}>
+                                                                {p.willImport ? '✓ Import' : (p.issue?.includes('Duplicate') ? '⏭ Skip' : '✗ Error')}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: '8px 12px', fontWeight: '600' }}>{p.scholarNo || '—'}</td>
+                                                        <td style={{ padding: '8px 12px' }}>{p.fullName || '—'}</td>
+                                                        <td style={{ padding: '8px 12px' }}>{p.fatherName || '—'}</td>
+                                                        <td style={{ padding: '8px 12px' }}>{p.mobileNo || '—'}</td>
+                                                        <td style={{ padding: '8px 12px' }}>
+                                                            {p.className}{p.section ? ` / ${p.section}` : ''}
+                                                            {p.matchedClass && <span style={{ color: '#10b981', marginLeft: '4px' }}>→ {p.matchedClass}</span>}
+                                                        </td>
+                                                        <td style={{ padding: '8px 12px', color: '#ef4444', fontSize: '11px' }}>{p.issue || ''}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* STEP 3: RESULT */}
+                            {importStep === 'result' && importResult && (
+                                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                                    <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎉</div>
+                                    <h3 style={{ fontSize: '22px', fontWeight: '900', color: 'var(--text-primary)', marginBottom: '20px' }}>Import Complete!</h3>
+                                    <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginBottom: '24px', flexWrap: 'wrap' }}>
+                                        <div style={{ padding: '16px 28px', borderRadius: '14px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)' }}>
+                                            <div style={{ fontSize: '32px', fontWeight: '900', color: '#10b981' }}>{importResult.summary.imported}</div>
+                                            <div style={{ fontSize: '12px', color: '#10b981', fontWeight: '700' }}>Imported</div>
+                                        </div>
+                                        <div style={{ padding: '16px 28px', borderRadius: '14px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
+                                            <div style={{ fontSize: '32px', fontWeight: '900', color: '#f59e0b' }}>{importResult.summary.skipped}</div>
+                                            <div style={{ fontSize: '12px', color: '#f59e0b', fontWeight: '700' }}>Skipped</div>
+                                        </div>
+                                        <div style={{ padding: '16px 28px', borderRadius: '14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                                            <div style={{ fontSize: '32px', fontWeight: '900', color: '#ef4444' }}>{importResult.summary.errors}</div>
+                                            <div style={{ fontSize: '12px', color: '#ef4444', fontWeight: '700' }}>Errors</div>
+                                        </div>
+                                    </div>
+                                    <button onClick={closeImportModal} className="btn btn-primary" style={{ fontSize: '14px', padding: '12px 32px' }}>Done — View Students</button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        {importStep !== 'result' && (
+                            <div style={{
+                                padding: '16px 24px', borderTop: '1px solid var(--border)',
+                                display: 'flex', gap: '10px', justifyContent: 'flex-end',
+                                background: 'var(--surface-hover)'
+                            }}>
+                                {importStep === 'preview' && (
+                                    <button onClick={() => setImportStep('upload')} className="btn btn-secondary" disabled={importLoading}>← Back</button>
+                                )}
+                                <button onClick={closeImportModal} className="btn btn-secondary" disabled={importLoading}>Cancel</button>
+                                {importStep === 'upload' && (
+                                    <button
+                                        onClick={handlePreview}
+                                        className="btn btn-primary"
+                                        disabled={importLoading || !rawExcelRows.length || !colMap['scholarNo'] || !colMap['fullName']}
+                                        style={{ background: 'linear-gradient(135deg,#10b981,#059669)', border: 'none' }}
+                                    >
+                                        {importLoading ? '⏳ Processing...' : '👁️ Preview Data →'}
+                                    </button>
+                                )}
+                                {importStep === 'preview' && (
+                                    <button
+                                        onClick={handleImport}
+                                        className="btn btn-primary"
+                                        disabled={importLoading || !importPreviews.filter(p => p.willImport).length}
+                                        style={{ background: 'linear-gradient(135deg,#10b981,#059669)', border: 'none' }}
+                                    >
+                                        {importLoading ? '⏳ Importing...' : `📥 Import ${importPreviews.filter(p => p.willImport).length} Students`}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+            {/* ===================================================================== */}
+
             <div className="page-header">
                 <div>
                     <h1 className="page-title">👨‍🎓 Students</h1>
                     <p className="page-subtitle">{students.length} students registered</p>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                        onClick={() => setShowImportModal(true)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '10px 18px', borderRadius: '10px', cursor: 'pointer',
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            color: 'white', border: 'none', fontWeight: '700', fontSize: '14px',
+                            boxShadow: '0 2px 8px rgba(16,185,129,0.35)'
+                        }}
+                    >📥 Import from Excel</button>
                     <Link href="/dashboard/students/add" className="btn btn-primary">➕ Add Student</Link>
                 </div>
             </div>
