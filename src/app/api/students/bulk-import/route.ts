@@ -1,7 +1,97 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { requireAuth } from '@/app/api/middleware'
 import { prisma } from '@/lib/prisma'
+
+// Normalize class name: removes "th", "st", "nd", "rd" suffixes, "class", "std", Roman numerals, etc.
+// e.g. "10th " -> "10", "10th Class" -> "10", "Class 10" -> "10", "Class X" -> "10", "1st" -> "1"
+function normalizeClassName(raw: string): string {
+    if (!raw) return ''
+    let cleaned = raw
+        .trim()
+        .toLowerCase()
+        .replace(/\b(class|std|standard|grade|kaksha|कक्षा)\b/gi, '')
+        .replace(/(\d+)(st|nd|rd|th)\b/gi, '$1') // "10th" -> "10"
+        .replace(/\s+/g, ' ')
+        .trim()
+
+    // Roman numeral mapping
+    const romanMap: Record<string, string> = {
+        'i': '1', 'ii': '2', 'iii': '3', 'iv': '4', 'v': '5',
+        'vi': '6', 'vii': '7', 'viii': '8', 'ix': '9', 'x': '10',
+        'xi': '11', 'xii': '12'
+    }
+    const words = cleaned.split(' ').map(w => romanMap[w] || w)
+    return words.join(' ').trim()
+}
+
+function courseMatches(courseName: string, classRaw: string): boolean {
+    const normCourse = normalizeClassName(courseName)
+    const normClass = normalizeClassName(classRaw)
+    if (!normCourse || !normClass) return false
+    if (normCourse === normClass) return true
+
+    const courseTokens = normCourse.split(/[\s\-_/]+/)
+    const classTokens = normClass.split(/[\s\-_/]+/)
+
+    // Primary token matching (e.g. "10" matches "10th", "Class 10", "10 A")
+    if (courseTokens[0] && classTokens[0] && courseTokens[0] === classTokens[0]) {
+        return true
+    }
+
+    // Word boundary regex check
+    const escapedClass = normClass.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    if (new RegExp(`(^|\\b|\\s)${escapedClass}(\\b|\\s|$)`, 'i').test(normCourse)) return true
+
+    const escapedCourse = normCourse.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    if (new RegExp(`(^|\\b|\\s)${escapedCourse}(\\b|\\s|$)`, 'i').test(normClass)) return true
+
+    return false
+}
+
+// Parse a date string from Excel (supports DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, serial numbers)
+function parseDate(val: any): Date | undefined {
+    if (!val) return undefined
+    if (val instanceof Date && !isNaN(val.getTime())) return val
+    const s = String(val).trim()
+    if (!s) return undefined
+
+    // Excel serial number (e.g. 44562)
+    if (/^\d{4,5}$/.test(s)) {
+        const excelEpoch = new Date(1899, 11, 30)
+        const d = new Date(excelEpoch.getTime() + Number(s) * 86400000)
+        return isNaN(d.getTime()) ? undefined : d
+    }
+
+    // DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+    const dmyMatch = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/)
+    if (dmyMatch) {
+        const [, d, m, y] = dmyMatch
+        const year = y.length === 2 ? (Number(y) > 50 ? 1900 + Number(y) : 2000 + Number(y)) : Number(y)
+        const date = new Date(year, Number(m) - 1, Number(d))
+        return isNaN(date.getTime()) ? undefined : date
+    }
+
+    // YYYY/MM/DD or YYYY-MM-DD
+    const ymdMatch = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/)
+    if (ymdMatch) {
+        const [, y, m, d] = ymdMatch
+        const date = new Date(Number(y), Number(m) - 1, Number(d))
+        return isNaN(date.getTime()) ? undefined : date
+    }
+
+    const d = new Date(s)
+    return isNaN(d.getTime()) ? undefined : d
+}
+
+// Normalize gender
+function parseGender(val: any): 'MALE' | 'FEMALE' | 'OTHER' {
+    if (!val) return 'MALE'
+    const g = String(val).trim().toLowerCase()
+    if (g === 'f' || g === 'female' || g === 'girl' || g === 'महिला' || g === 'स्त्री' || g === 'लड़की') return 'FEMALE'
+    if (g === 'other' || g === 'o' || g === 'others' || g === 'अन्य') return 'OTHER'
+    return 'MALE'
+}
 
 export async function POST(req: NextRequest) {
     const { error, user } = requireAuth(req)
@@ -40,6 +130,13 @@ export async function POST(req: NextRequest) {
             const classRaw = row.className ? String(row.className).trim() : ''
             const sectionRaw = row.section ? String(row.section).trim() : ''
 
+            // Optional and new fields
+            const dob = parseDate(row.dob)
+            const gender = parseGender(row.gender)
+            const parsedAdmDate = parseDate(row.firstAdmissionDate) || parseDate(row.admissionDate)
+            const admissionDate = parsedAdmDate || new Date()
+            const firstAdmissionClass = row.firstAdmissionClass ? String(row.firstAdmissionClass).trim() : classRaw
+
             if (!scholarNo) { results.push({ scholarNo: '?', fullName, status: 'error', reason: 'Scholar No. missing' }); continue }
             if (!fullName) { results.push({ scholarNo, fullName: '?', status: 'error', reason: 'Student name missing' }); continue }
             if (!fatherName) { results.push({ scholarNo, fullName, status: 'error', reason: 'Father name missing' }); continue }
@@ -54,13 +151,8 @@ export async function POST(req: NextRequest) {
                 continue
             }
 
-            let matchedCourse = allCourses.find(c => c.name.toLowerCase() === classRaw.toLowerCase())
-            if (!matchedCourse) {
-                matchedCourse = allCourses.find(c =>
-                    classRaw.toLowerCase().includes(c.name.toLowerCase()) ||
-                    c.name.toLowerCase().includes(classRaw.toLowerCase())
-                )
-            }
+            // Course matching with suffix normalization ("10th" -> "10")
+            let matchedCourse = allCourses.find(c => courseMatches(c.name, classRaw))
             if (!matchedCourse) {
                 results.push({ scholarNo, fullName, status: 'error', reason: `Class "${classRaw}" not found in system` })
                 continue
@@ -100,11 +192,14 @@ export async function POST(req: NextRequest) {
                         bankName: row.bankName ? String(row.bankName).trim() : '',
                         bankAccountNo: row.bankAccountNo ? String(row.bankAccountNo).trim() : '',
                         ifsc: row.ifsc ? String(row.ifsc).trim() : '',
-                        gender: 'MALE',
+                        gender,
+                        dob: dob || undefined,
+                        firstAdmissionDate: admissionDate,
+                        firstAdmissionClass: firstAdmissionClass || undefined,
+                        admissionDate: admissionDate,
                         status: 'ACTIVE',
                         totalFee: matchedCourse.fees || 0,
                         paidFee: 0,
-                        admissionDate: new Date(),
                         notes: '',
                         dobInWords: '',
                         subjectGroup: '',
@@ -114,7 +209,7 @@ export async function POST(req: NextRequest) {
                 })
 
                 for (let i = 0; i < 6; i++) {
-                    const dueDate = new Date()
+                    const dueDate = new Date(admissionDate)
                     dueDate.setMonth(dueDate.getMonth() + i)
                     await prisma.fee.create({
                         data: {
@@ -176,6 +271,10 @@ export async function PUT(req: NextRequest) {
             const mobileNo = row.mobileNo ? String(row.mobileNo).trim() : ''
             const classRaw = row.className ? String(row.className).trim() : ''
             const sectionRaw = row.section ? String(row.section).trim() : ''
+            const gender = parseGender(row.gender)
+            const dob = parseDate(row.dob)
+            const parsedAdmDate = parseDate(row.firstAdmissionDate) || parseDate(row.admissionDate)
+            const firstAdmissionClass = row.firstAdmissionClass ? String(row.firstAdmissionClass).trim() : classRaw
 
             let issue = ''
             let willImport = true
@@ -192,11 +291,7 @@ export async function PUT(req: NextRequest) {
                 })
                 if (dup) { issue = `Duplicate — already exists (${dup.fullName})`; willImport = false }
                 else {
-                    let matchedCourse = allCourses.find(c => c.name.toLowerCase() === classRaw.toLowerCase())
-                    if (!matchedCourse) matchedCourse = allCourses.find(c =>
-                        classRaw.toLowerCase().includes(c.name.toLowerCase()) ||
-                        c.name.toLowerCase().includes(classRaw.toLowerCase())
-                    )
+                    const matchedCourse = allCourses.find(c => courseMatches(c.name, classRaw))
                     if (!matchedCourse) { issue = `Class "${classRaw}" not found in system`; willImport = false }
                     else { matchedClassName = matchedCourse.name }
                 }
@@ -210,6 +305,10 @@ export async function PUT(req: NextRequest) {
                 className: classRaw,
                 matchedClass: matchedClassName,
                 section: sectionRaw,
+                gender,
+                dob: dob ? dob.toLocaleDateString('en-IN') : '',
+                firstAdmissionDate: parsedAdmDate ? parsedAdmDate.toLocaleDateString('en-IN') : '',
+                firstAdmissionClass,
                 willImport,
                 issue
             })

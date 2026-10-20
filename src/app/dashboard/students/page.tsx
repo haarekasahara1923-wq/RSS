@@ -572,6 +572,8 @@ export default function StudentsPage() {
                 { field: 'fullName', patterns: ['student name', 'name', 'full name', 'student'] },
                 { field: 'fatherName', patterns: ["father", "father name", "father's name", "fathername"] },
                 { field: 'motherName', patterns: ["mother", "mother name", "mother's name", "mothername"] },
+                { field: 'gender', patterns: ['gender', 'sex', 'ling', 'लिंग'] },
+                { field: 'dob', patterns: ['birth date', 'dob', 'date of birth', 'd.o.b', 'birthdate', 'birth', 'd.o.b.', 'janm tithi', 'जन्म तारीख', 'जन्म दिनांक'] },
                 { field: 'mobileNo', patterns: ['mobile', 'mobile no', 'mobile no.', 'phone', 'contact'] },
                 { field: 'parentMobileNo', patterns: ['parent mobile', 'parent mobile no', 'parent phone', 'guardian mobile'] },
                 { field: 'email', patterns: ['email', 'mail id', 'mail', 'e-mail'] },
@@ -582,8 +584,10 @@ export default function StudentsPage() {
                 { field: 'penId', patterns: ['pen id', 'pen', 'penid'] },
                 { field: 'aparId', patterns: ['apar id', 'apar', 'aparid'] },
                 { field: 'samagraId', patterns: ['samagra', 'samagra id', 'samagram'] },
-                { field: 'className', patterns: ['class', 'course', 'class (section', 'class(section'] },
-                { field: 'section', patterns: ['section', 'batch', 'division'] },
+                { field: 'className', patterns: ['class', 'course', 'class (section', 'class(section', 'kaksha', 'कक्षा'] },
+                { field: 'section', patterns: ['section', 'batch', 'division', 'sec'] },
+                { field: 'firstAdmissionDate', patterns: ['first admission date', 'admission date', 'adm date', 'adm. date', 'admission dt', 'date of admission', 'pravesh dinank', 'प्रवेश दिनांक'] },
+                { field: 'firstAdmissionClass', patterns: ['first admission class', 'first class', 'admission class', 'pravesh kaksha', 'प्रवेश कक्षा'] },
                 { field: 'bankName', patterns: ['bank name', 'bank'] },
                 { field: 'bankAccountNo', patterns: ['bank account', 'account no', 'account number', 'bank account no'] },
                 { field: 'ifsc', patterns: ['ifsc', 'ifsc code'] },
@@ -613,21 +617,25 @@ export default function StudentsPage() {
             }
             const classRaw = get('className')
             const sectionRaw = get('section')
-            // If class contains section (e.g. "10-A" or "10 A"), split if no separate section mapped
+            // If class contains section (e.g. "10-A", "10 A", "10th A", "10th-A"), split if no separate section mapped
             let finalClass = classRaw
             let finalSection = sectionRaw
             if (!sectionRaw && classRaw) {
-                const parts = classRaw.split(/[-\s]+/)
-                if (parts.length === 2 && /^[A-Za-z]$/.test(parts[1])) {
-                    finalClass = parts[0]
-                    finalSection = parts[1]
+                const match = classRaw.trim().match(/^(.*?)[-\s]+([A-Za-z])$/)
+                if (match) {
+                    finalClass = match[1].trim()
+                    finalSection = match[2].toUpperCase().trim()
                 }
             }
+            const firstAdmClass = get('firstAdmissionClass') || finalClass
+
             return {
                 scholarNo: get('scholarNo'),
                 fullName: get('fullName'),
                 fatherName: get('fatherName'),
                 motherName: get('motherName'),
+                gender: get('gender'),
+                dob: get('dob'),
                 mobileNo: get('mobileNo'),
                 parentMobileNo: get('parentMobileNo'),
                 email: get('email'),
@@ -640,6 +648,8 @@ export default function StudentsPage() {
                 samagraId: get('samagraId'),
                 className: finalClass,
                 section: finalSection,
+                firstAdmissionDate: get('firstAdmissionDate'),
+                firstAdmissionClass: firstAdmClass,
                 bankName: get('bankName'),
                 bankAccountNo: get('bankAccountNo'),
                 ifsc: get('ifsc'),
@@ -808,6 +818,8 @@ export default function StudentsPage() {
                                                     { field: 'fullName', label: '👤 Student Name *' },
                                                     { field: 'fatherName', label: '👨 Father Name *' },
                                                     { field: 'motherName', label: '👩 Mother Name' },
+                                                    { field: 'gender', label: '⚧ Gender' },
+                                                    { field: 'dob', label: '🎂 Birth Date (DOB)' },
                                                     { field: 'mobileNo', label: '📱 Mobile No. *' },
                                                     { field: 'parentMobileNo', label: '📱 Parent Mobile No.' },
                                                     { field: 'email', label: '📧 Email / Mail ID' },
@@ -820,6 +832,8 @@ export default function StudentsPage() {
                                                     { field: 'samagraId', label: '🆔 Samagra ID' },
                                                     { field: 'className', label: '🏫 Class *' },
                                                     { field: 'section', label: '🏫 Section/Batch' },
+                                                    { field: 'firstAdmissionDate', label: '📅 First Admission Date' },
+                                                    { field: 'firstAdmissionClass', label: '🏫 First Admission Class' },
                                                     { field: 'bankName', label: '🏦 Bank Name' },
                                                     { field: 'bankAccountNo', label: '🔢 Bank Account No.' },
                                                     { field: 'ifsc', label: '🔢 IFSC Code' },
@@ -874,6 +888,7 @@ export default function StudentsPage() {
                                                     <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Scholar No.</th>
                                                     <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Student Name</th>
                                                     <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Father Name</th>
+                                                    <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Gender / DOB</th>
                                                     <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Mobile</th>
                                                     <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Class → Matched</th>
                                                     <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700' }}>Issue</th>
@@ -897,6 +912,10 @@ export default function StudentsPage() {
                                                         <td style={{ padding: '8px 12px', fontWeight: '600' }}>{p.scholarNo || '—'}</td>
                                                         <td style={{ padding: '8px 12px' }}>{p.fullName || '—'}</td>
                                                         <td style={{ padding: '8px 12px' }}>{p.fatherName || '—'}</td>
+                                                        <td style={{ padding: '8px 12px', fontSize: '11px' }}>
+                                                            <span style={{ fontWeight: '600', color: p.gender === 'FEMALE' ? '#ec4899' : '#3b82f6' }}>{p.gender || '—'}</span>
+                                                            {p.dob && <div style={{ color: 'var(--text-muted)' }}>{p.dob}</div>}
+                                                        </td>
                                                         <td style={{ padding: '8px 12px' }}>{p.mobileNo || '—'}</td>
                                                         <td style={{ padding: '8px 12px' }}>
                                                             {p.className}{p.section ? ` / ${p.section}` : ''}
