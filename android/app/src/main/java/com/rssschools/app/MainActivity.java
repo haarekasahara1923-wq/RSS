@@ -1,4 +1,4 @@
-package com.rsspublicschool.app;
+package com.rssschools.app;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
