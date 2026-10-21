@@ -68,8 +68,8 @@ function PortalShell({ children }: { children: React.ReactNode }) {
     ],
     PARENT: [
       { href: '/portal/parent', icon: '🏠', label: 'Home' },
+      { href: '/portal/parent/fees', icon: '💳', label: 'Fees' },
       { href: '/portal/parent/homework', icon: '📚', label: 'Homework' },
-      { href: '/portal/parent/admit-cards', icon: '🎫', label: 'Admit Cards' },
       { href: '/portal/parent/exams', icon: '📑', label: 'Marks' },
       { href: '/portal/parent/children', icon: '👶', label: 'Children' },
       { href: '/portal/parent/notices', icon: '📢', label: 'Notices' },

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { BirthdayCertificateModal } from '@/components/BirthdayCertificateModal'
 import { StudentIdCard } from '@/components/StudentIdCard'
 
+
 export default function ParentHome() {
   const { user, token, tenant } = useAuth()
   const [profile, setProfile] = useState<any>(null)
@@ -12,6 +13,7 @@ export default function ParentHome() {
   const [loading, setLoading] = useState(true)
   const [birthdayChild, setBirthdayChild] = useState<any>(null)
   const [idCardChild, setIdCardChild] = useState<any>(null)
+  const [feeSummary, setFeeSummary] = useState<{ dueAmount: number } | null>(null)
 
   useEffect(() => {
     if (!token) return
@@ -19,10 +21,14 @@ export default function ParentHome() {
     Promise.all([
       fetch('/api/parent', { headers: h }).then(r => r.json()),
       fetch('/api/notices', { headers: h }).then(r => r.json()),
-    ]).then(([p, n]) => {
+      fetch('/api/parent/fee-ledger', { headers: h }).then(r => r.json()).catch(() => null),
+    ]).then(([p, n, feeData]) => {
       const prof = p.profile;
       setProfile(prof)
       setNotices(n.notices?.slice(0, 3) || [])
+      if (feeData?.success) {
+        setFeeSummary({ dueAmount: feeData.summary?.dueAmount || 0 })
+      }
       
       if (prof?.children?.length > 0) {
         const today = new Date();
@@ -86,6 +92,15 @@ export default function ParentHome() {
             <div style={{ fontSize: '18px', fontWeight: '800', color: '#10b981', marginTop: '2px' }}>View</div>
           </div>
         </Link>
+        <Link href="/portal/parent/fees" style={{ textDecoration: 'none' }}>
+          <div style={{ background: feeSummary && feeSummary.dueAmount > 0 ? 'rgba(239,68,68,0.1)' : '#1e293b', border: `1px solid ${feeSummary && feeSummary.dueAmount > 0 ? 'rgba(239,68,68,0.4)' : '#334155'}`, borderRadius: '14px', padding: '14px 8px', textAlign: 'center' }}>
+            <div style={{ fontSize: '26px', marginBottom: '6px' }}>💳</div>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: 'white' }}>Fee Ledger</div>
+            <div style={{ fontSize: '14px', fontWeight: '800', color: feeSummary && feeSummary.dueAmount > 0 ? '#f87171' : '#10b981', marginTop: '2px' }}>
+              {feeSummary ? (feeSummary.dueAmount > 0 ? `₹${feeSummary.dueAmount.toLocaleString('en-IN')} Due` : 'Clear ✓') : 'View'}
+            </div>
+          </div>
+        </Link>
       </div>
 
       {children.length > 0 && (
@@ -110,12 +125,15 @@ export default function ParentHome() {
                     <div style={{ fontSize: '18px' }}>{presentToday ? '✅' : '❓'}</div>
                     <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>Today's Att.</div>
                   </div>
-                  <div style={{ flex: 1, background: '#0f172a', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '18px', fontWeight: '800', color: pendingFeeAmount > 0 ? '#f59e0b' : '#10b981' }}>
+                  <Link href="/portal/parent/fees" style={{ flex: 1, textDecoration: 'none' }}>
+                    <div style={{ background: pendingFeeAmount > 0 ? 'rgba(239,68,68,0.15)' : '#0f172a', border: pendingFeeAmount > 0 ? '1px solid rgba(239,68,68,0.3)' : '1px solid transparent', borderRadius: '10px', padding: '10px', textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ fontSize: '15px', fontWeight: '800', color: pendingFeeAmount > 0 ? '#f87171' : '#10b981' }}>
                         ₹{pendingFeeAmount.toLocaleString('en-IN')}
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>Due Fees</div>
+                      <div style={{ fontSize: '9px', color: '#6366f1', marginTop: '2px', fontWeight: '600' }}>View Ledger →</div>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>Pending Fees</div>
-                  </div>
+                  </Link>
                 </div>
 
                 {child.examResults && child.examResults.length > 0 && (
