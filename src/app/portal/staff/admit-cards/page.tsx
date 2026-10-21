@@ -133,7 +133,27 @@ export default function StaffAdmitCards() {
 
     return (
         <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white' }}>🎫 Admit Cards Generation</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', margin: 0 }}>🎫 Admit Cards Generation</h2>
+                <a
+                    href="/portal/staff/exam-timetable"
+                    style={{
+                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                        color: 'white',
+                        padding: '10px 16px',
+                        borderRadius: '10px',
+                        textDecoration: 'none',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 4px 12px rgba(99,102,241,0.3)'
+                    }}
+                >
+                    <span>📝</span> Generate Exam Time Table
+                </a>
+            </div>
 
             <div style={{ background: '#1e293b', padding: '20px', borderRadius: '16px', border: '1px solid #334155' }}>
                 <h3 style={{ fontSize: '16px', color: 'white', marginBottom: '16px' }}>Generate New Admit Cards</h3>
@@ -230,14 +250,14 @@ export default function StaffAdmitCards() {
 
             {viewEvent && eventDetails && (
                 <div style={{ position: 'fixed', inset: 0, background: '#0f172a', zIndex: 100, overflowY: 'auto', padding: '20px', paddingBottom: '80px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
                         <button onClick={() => setViewEvent(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '16px', cursor: 'pointer' }}>← Back</button>
-                        <div style={{ display: 'flex', gap: '10px' }}>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                             <button onClick={() => {
                                 const html = `<!DOCTYPE html>
                                 <html>
                                 <head>
-                                    <title>Exam Time Table</title>
+                                    <title>Exam Time Table - ${eventDetails.examName}</title>
                                     <style>
                                         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #333; }
                                         .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2c3e50; padding-bottom: 20px; }
@@ -285,16 +305,162 @@ export default function StaffAdmitCards() {
                                     win.document.close();
                                 }
                             }} style={{ background: '#3b82f6', color: 'white', padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>📄 Download Time Table</button>
+
+                            <button onClick={() => {
+                                const schoolName = tenant?.name || 'RSS Public School';
+                                const schoolLogo = tenant?.logo || '';
+                                const schoolAddress = tenant?.address || '';
+                                const cardsHtml = eventDetails.admitCards.map((card: any) => `
+                                    <div class="admit-card-page">
+                                        <div class="card-border">
+                                            <div class="header">
+                                                <div class="logo-box">${schoolLogo ? `<img src="${schoolLogo}" />` : '🏫'}</div>
+                                                <div class="header-text">
+                                                    <h2 style="margin:0;font-size:18px;text-transform:uppercase;color:#1a237e;">${schoolName}</h2>
+                                                    ${schoolAddress ? `<p style="margin:2px 0;font-size:11px;color:#666;">${schoolAddress}</p>` : ''}
+                                                    <div style="font-size:14px;font-weight:bold;color:#b45309;margin-top:4px;">HALL TICKET / ADMIT CARD</div>
+                                                </div>
+                                            </div>
+                                            <div class="exam-banner">
+                                                ${eventDetails.examName} (${eventDetails.course.name} - ${eventDetails.batch.name})
+                                            </div>
+                                            <div class="student-info">
+                                                <div class="student-details">
+                                                    <div><strong>Student Name:</strong> ${card.student.fullName}</div>
+                                                    <div><strong>Scholar / Roll No:</strong> ${card.student.scholarNo || 'N/A'}</div>
+                                                    <div><strong>Father's Name:</strong> ${card.student.fatherName || 'N/A'}</div>
+                                                    <div><strong>Class & Batch:</strong> ${eventDetails.course.name} - ${eventDetails.batch.name}</div>
+                                                    <div><strong>Date of Birth:</strong> ${card.student.dob ? new Date(card.student.dob).toLocaleDateString('en-IN') : 'N/A'}</div>
+                                                </div>
+                                                <div class="photo-box">
+                                                    ${card.student.photo ? `<img src="${card.student.photo}" style="width:100%;height:100%;object-fit:cover;" />` : '<div style="font-size:32px;">👤</div>'}
+                                                </div>
+                                            </div>
+                                            <div class="section-title">EXAMINATION TIME TABLE</div>
+                                            <table class="timetable-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Date</th>
+                                                        <th>Subject</th>
+                                                        <th>Time</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${(eventDetails.timeTable || []).map((t: any) => `
+                                                        <tr>
+                                                            <td>${new Date(t.date).toLocaleDateString('en-IN')}</td>
+                                                            <td>${t.subject}</td>
+                                                            <td>${t.startTime} - ${t.endTime}</td>
+                                                        </tr>
+                                                    `).join('')}
+                                                </tbody>
+                                            </table>
+                                            <div class="instructions">
+                                                <strong>IMPORTANT INSTRUCTIONS:</strong>
+                                                <ol style="margin:4px 0 0;padding-left:18px;">
+                                                    <li>Candidate must carry this Admit Card to the examination hall.</li>
+                                                    <li>Report 30 minutes before exam commences.</li>
+                                                    <li>Mobile phones and unfair means are strictly prohibited.</li>
+                                                </ol>
+                                            </div>
+                                            <div class="signatures">
+                                                <div class="sig-col">
+                                                    <div class="sig-line"></div>
+                                                    <span>Student Signature</span>
+                                                </div>
+                                                <div class="sig-col">
+                                                    <div class="sig-line"></div>
+                                                    <span>Principal / Controller of Exams</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('');
+
+                                const html = `<!DOCTYPE html>
+                                <html>
+                                <head>
+                                    <title>Admit Cards - ${eventDetails.examName}</title>
+                                    <style>
+                                        @page { size: A4 portrait; margin: 10mm; }
+                                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background: #fff; color: #1e293b; }
+                                        .admit-card-page { page-break-after: always; padding: 10px; }
+                                        .card-border { border: 2px solid #1a237e; border-radius: 8px; padding: 18px; }
+                                        .header { display: flex; align-items: center; gap: 14px; border-bottom: 2px solid #1a237e; padding-bottom: 12px; }
+                                        .logo-box { width: 60px; height: 60px; border-radius: 8px; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+                                        .logo-box img { width: 100%; height: 100%; object-fit: contain; }
+                                        .header-text { flex: 1; }
+                                        .exam-banner { background: #fbbf24; color: #1a237e; font-weight: bold; text-align: center; padding: 6px; margin: 12px 0; border-radius: 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+                                        .student-info { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 14px; }
+                                        .student-details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; flex: 1; }
+                                        .photo-box { width: 90px; height: 110px; border: 1px solid #94a3b8; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc; }
+                                        .section-title { font-size: 11px; font-weight: bold; color: #1a237e; text-transform: uppercase; margin-top: 10px; margin-bottom: 6px; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; }
+                                        .timetable-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; }
+                                        .timetable-table th, .timetable-table td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; }
+                                        .timetable-table th { background: #f1f5f9; color: #1e293b; font-weight: bold; }
+                                        .instructions { background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 12px; font-size: 10px; color: #92400e; margin-bottom: 16px; }
+                                        .signatures { display: flex; justify-content: space-between; margin-top: 24px; }
+                                        .sig-col { text-align: center; font-size: 11px; color: #475569; }
+                                        .sig-line { width: 140px; border-bottom: 1px solid #1e293b; margin-bottom: 4px; }
+                                    </style>
+                                </head>
+                                <body>
+                                    ${cardsHtml}
+                                    <script>window.onload = () => window.print();</script>
+                                </body>
+                                </html>`;
+                                const win = window.open('', '_blank');
+                                if (win) {
+                                    win.document.open();
+                                    win.document.write(html);
+                                    win.document.close();
+                                }
+                            }} style={{ background: '#8b5cf6', color: 'white', padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>🖨️ Print All Cards</button>
+
                             <button onClick={publishAllEligible} style={{ background: '#10b981', color: 'white', padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>🚀 Publish All</button>
                         </div>
                     </div>
 
-                    <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', marginBottom: '8px' }}>{eventDetails.examName}</h2>
-                    <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '20px' }}>{eventDetails.course.name} - {eventDetails.batch.name}</p>
+                    <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', marginBottom: '4px' }}>{eventDetails.examName}</h2>
+                    <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '16px' }}>{eventDetails.course.name} - {eventDetails.batch.name}</p>
+
+                    {/* Attached Exam Time Table preview */}
+                    {eventDetails.timeTable && eventDetails.timeTable.length > 0 && (
+                        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    📋 Attached Exam Time Table (Shown below each admit card)
+                                </div>
+                                <span style={{ fontSize: '11px', color: '#94a3b8' }}>{eventDetails.timeTable.length} Subjects</span>
+                            </div>
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', color: 'white' }}>
+                                    <thead>
+                                        <tr style={{ background: '#0f172a' }}>
+                                            <th style={{ padding: '8px 10px', textAlign: 'left', color: '#94a3b8' }}>Date</th>
+                                            <th style={{ padding: '8px 10px', textAlign: 'left', color: '#94a3b8' }}>Subject</th>
+                                            <th style={{ padding: '8px 10px', textAlign: 'left', color: '#94a3b8' }}>Start Time</th>
+                                            <th style={{ padding: '8px 10px', textAlign: 'left', color: '#94a3b8' }}>End Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {eventDetails.timeTable.map((t: any, idx: number) => (
+                                            <tr key={idx} style={{ borderBottom: '1px solid #334155' }}>
+                                                <td style={{ padding: '8px 10px', fontWeight: '600' }}>{new Date(t.date).toLocaleDateString('en-IN')}</td>
+                                                <td style={{ padding: '8px 10px' }}>{t.subject}</td>
+                                                <td style={{ padding: '8px 10px', color: '#94a3b8' }}>{t.startTime}</td>
+                                                <td style={{ padding: '8px 10px', color: '#94a3b8' }}>{t.endTime}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {eventDetails.admitCards.map((card: any) => (
-                            <div key={card.id} style={{ background: '#1e293b', border: '1px solid #334155', padding: '16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div key={card.id} style={{ background: '#1e293b', border: '1px solid #334155', padding: '16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#334155', overflow: 'hidden' }}>
                                         {card.student.photo ? <img src={card.student.photo} alt={card.student.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>{card.student.fullName.charAt(0)}</div>}
@@ -304,7 +470,119 @@ export default function StaffAdmitCards() {
                                         <div style={{ fontSize: '11px', color: '#94a3b8' }}>ID: {card.student.scholarNo || 'N/A'}</div>
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                    {/* Print individual admit card */}
+                                    <button
+                                        onClick={() => {
+                                            const schoolName = tenant?.name || 'RSS Public School';
+                                            const schoolLogo = tenant?.logo || '';
+                                            const schoolAddress = tenant?.address || '';
+                                            const html = `<!DOCTYPE html>
+                                            <html>
+                                            <head>
+                                                <title>Admit Card - ${card.student.fullName}</title>
+                                                <style>
+                                                    @page { size: A4 portrait; margin: 10mm; }
+                                                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #fff; color: #1e293b; }
+                                                    .card-border { border: 2px solid #1a237e; border-radius: 8px; padding: 24px; }
+                                                    .header { display: flex; align-items: center; gap: 16px; border-bottom: 2px solid #1a237e; padding-bottom: 14px; }
+                                                    .logo-box { width: 64px; height: 64px; border-radius: 8px; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+                                                    .logo-box img { width: 100%; height: 100%; object-fit: contain; }
+                                                    .header-text { flex: 1; }
+                                                    .exam-banner { background: #fbbf24; color: #1a237e; font-weight: bold; text-align: center; padding: 8px; margin: 14px 0; border-radius: 4px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+                                                    .student-info { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 16px; }
+                                                    .student-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; flex: 1; }
+                                                    .photo-box { width: 100px; height: 120px; border: 1px solid #94a3b8; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8fafc; }
+                                                    .section-title { font-size: 12px; font-weight: bold; color: #1a237e; text-transform: uppercase; margin-top: 14px; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
+                                                    .timetable-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 16px; }
+                                                    .timetable-table th, .timetable-table td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: left; }
+                                                    .timetable-table th { background: #f1f5f9; color: #1e293b; font-weight: bold; }
+                                                    .instructions { background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 10px 14px; font-size: 11px; color: #92400e; margin-bottom: 20px; }
+                                                    .signatures { display: flex; justify-content: space-between; margin-top: 36px; }
+                                                    .sig-col { text-align: center; font-size: 11px; color: #475569; }
+                                                    .sig-line { width: 160px; border-bottom: 1px solid #1e293b; margin-bottom: 6px; }
+                                                </style>
+                                            </head>
+                                            <body>
+                                                <div class="card-border">
+                                                    <div class="header">
+                                                        <div class="logo-box">${schoolLogo ? `<img src="${schoolLogo}" />` : '🏫'}</div>
+                                                        <div class="header-text">
+                                                            <h2 style="margin:0;font-size:20px;text-transform:uppercase;color:#1a237e;">${schoolName}</h2>
+                                                            ${schoolAddress ? `<p style="margin:2px 0;font-size:12px;color:#666;">${schoolAddress}</p>` : ''}
+                                                            <div style="font-size:15px;font-weight:bold;color:#b45309;margin-top:4px;">HALL TICKET / ADMIT CARD</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="exam-banner">
+                                                        ${eventDetails.examName} (${eventDetails.course.name} - ${eventDetails.batch.name})
+                                                    </div>
+                                                    <div class="student-info">
+                                                        <div class="student-details">
+                                                            <div><strong>Student Name:</strong> ${card.student.fullName}</div>
+                                                            <div><strong>Scholar / Roll No:</strong> ${card.student.scholarNo || 'N/A'}</div>
+                                                            <div><strong>Father's Name:</strong> ${card.student.fatherName || 'N/A'}</div>
+                                                            <div><strong>Class & Batch:</strong> ${eventDetails.course.name} - ${eventDetails.batch.name}</div>
+                                                            <div><strong>Date of Birth:</strong> ${card.student.dob ? new Date(card.student.dob).toLocaleDateString('en-IN') : 'N/A'}</div>
+                                                        </div>
+                                                        <div class="photo-box">
+                                                            ${card.student.photo ? `<img src="${card.student.photo}" style="width:100%;height:100%;object-fit:cover;" />` : '<div style="font-size:32px;">👤</div>'}
+                                                        </div>
+                                                    </div>
+                                                    <div class="section-title">EXAMINATION TIME TABLE</div>
+                                                    <table class="timetable-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Date</th>
+                                                                <th>Subject</th>
+                                                                <th>Start Time</th>
+                                                                <th>End Time</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            ${(eventDetails.timeTable || []).map((t: any) => `
+                                                                <tr>
+                                                                    <td>${new Date(t.date).toLocaleDateString('en-IN')}</td>
+                                                                    <td>${t.subject}</td>
+                                                                    <td>${t.startTime}</td>
+                                                                    <td>${t.endTime}</td>
+                                                                </tr>
+                                                            `).join('')}
+                                                        </tbody>
+                                                    </table>
+                                                    <div class="instructions">
+                                                        <strong>IMPORTANT INSTRUCTIONS:</strong>
+                                                        <ol style="margin:4px 0 0;padding-left:18px;">
+                                                            <li>Candidate must carry this Admit Card to the examination hall.</li>
+                                                            <li>Report 30 minutes before exam commences.</li>
+                                                            <li>Mobile phones and unfair means are strictly prohibited.</li>
+                                                        </ol>
+                                                    </div>
+                                                    <div class="signatures">
+                                                        <div class="sig-col">
+                                                            <div class="sig-line"></div>
+                                                            <span>Student Signature</span>
+                                                        </div>
+                                                        <div class="sig-col">
+                                                            <div class="sig-line"></div>
+                                                            <span>Principal / Controller of Exams</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <script>window.onload = () => window.print();</script>
+                                            </body>
+                                            </html>`;
+                                            const win = window.open('', '_blank');
+                                            if (win) {
+                                                win.document.open();
+                                                win.document.write(html);
+                                                win.document.close();
+                                            }
+                                        }}
+                                        style={{ background: '#3b82f6', color: 'white', padding: '5px 10px', borderRadius: '6px', border: 'none', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
+                                    >
+                                        👁️ Admit Card
+                                    </button>
+
                                     {card.isPublished ? (
                                         <span style={{ fontSize: '12px', color: '#10b981', fontWeight: 'bold' }}>Published</span>
                                     ) : card.isBlocked && !card.superAdminApproved ? (
@@ -325,7 +603,7 @@ export default function StaffAdmitCards() {
                                         </label>
                                     )}
                                     {(!card.isPublished && card.isBlocked && card.superAdminApproved) || (!card.isPublished && !card.isBlocked) ? (
-                                        <button onClick={() => handleAction('publish', card.studentId)} style={{ background: '#6366f1', color: 'white', padding: '4px 8px', borderRadius: '6px', border: 'none', fontSize: '11px', cursor: 'pointer' }}>Publish</button>
+                                        <button onClick={() => handleAction('publish', card.studentId)} style={{ background: '#6366f1', color: 'white', padding: '5px 10px', borderRadius: '6px', border: 'none', fontSize: '11px', cursor: 'pointer' }}>Publish</button>
                                     ) : null}
                                 </div>
                             </div>
