@@ -125,7 +125,7 @@ const getNavForRole = (role: string) => {
 
 function DashboardSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
     const pathname = usePathname()
-    const { user, tenant, logout } = useAuth()
+    const { user, tenant, token, logout } = useAuth()
     const isSuperAdmin = user?.role === 'SUPER_ADMIN'
     const allNavItems = getNavForRole(user?.role || 'COACHING_ADMIN')
 
@@ -181,6 +181,13 @@ function DashboardSidebar({ open, onClose }: { open: boolean; onClose: () => voi
                     </button>
                 </div>
 
+                {/* Mobile Drawer Branch Switcher for Super Admin */}
+                {isSuperAdmin && token && (
+                    <div className="hide-desktop" style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', background: 'rgba(139,92,246,0.06)' }}>
+                        <SuperAdminSwitcher token={token} isDrawer={true} onSwitched={onClose} />
+                    </div>
+                )}
+
                 {/* Nav */}
                 <nav className="sidebar-nav" style={{ paddingBottom: '20px' }}>
                     {allNavItems.map((group: any) => (
@@ -223,7 +230,7 @@ function DashboardSidebar({ open, onClose }: { open: boolean; onClose: () => voi
     )
 }
 
-function SuperAdminSwitcher({ token }: { token: string }) {
+function SuperAdminSwitcher({ token, isDrawer = false, onSwitched }: { token: string; isDrawer?: boolean; onSwitched?: () => void }) {
     const { user } = useAuth()
     const router = useRouter()
     const [open, setOpen] = useState(false)
@@ -267,6 +274,7 @@ function SuperAdminSwitcher({ token }: { token: string }) {
                 localStorage.setItem('scalevo_tenant', JSON.stringify(data.tenant))
                 localStorage.setItem('scalevo_subscription', JSON.stringify(data.subscription))
                 localStorage.setItem('scalevo_refresh', data.refreshToken)
+                if (onSwitched) onSwitched()
                 window.location.href = '/dashboard'
             }
         } catch {}
@@ -277,45 +285,110 @@ function SuperAdminSwitcher({ token }: { token: string }) {
     if (superAdmins.length === 0) return null
 
     const currentAdmin = superAdmins.find(a => a.id === user?.id)
-    const otherAdmin = superAdmins.find(a => a.id !== user?.id)
+    const currentBranchName = currentAdmin?.tenant?.name?.replace(/^(RSS Public School|School)\s*[-:]?\s*/i, '') || currentAdmin?.tenant?.name || currentAdmin?.name || 'Branch'
 
+    // If rendered as drawer card inside sidebar
+    if (isDrawer) {
+        return (
+            <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#a78bfa', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                        🏫 Switch Branch / Tenant
+                    </div>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{superAdmins.length} Branches</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {superAdmins.map(admin => {
+                        const isCurrent = admin.id === user?.id
+                        const isLoading = switching === admin.id
+                        return (
+                            <button
+                                key={admin.id}
+                                onClick={() => handleSwitch(admin.id)}
+                                style={{
+                                    width: '100%',
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                    padding: '8px 10px',
+                                    borderRadius: '10px',
+                                    border: isCurrent ? '1px solid rgba(139,92,246,0.45)' : '1px solid rgba(255,255,255,0.08)',
+                                    background: isCurrent ? 'rgba(139,92,246,0.18)' : 'rgba(255,255,255,0.03)',
+                                    cursor: isCurrent ? 'default' : 'pointer',
+                                    textAlign: 'left',
+                                    color: 'white',
+                                }}
+                            >
+                                <span style={{ fontSize: '16px' }}>🏫</span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '12px', fontWeight: '700', color: isCurrent ? '#a78bfa' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {admin.tenant?.name || 'School Branch'}
+                                    </div>
+                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {admin.name}
+                                    </div>
+                                </div>
+                                {isCurrent ? (
+                                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '2px 8px', borderRadius: '12px' }}>Active</span>
+                                ) : (
+                                    <span style={{ fontSize: '11px', color: '#a78bfa', fontWeight: '600' }}>
+                                        {isLoading ? '...' : 'Switch →'}
+                                    </span>
+                                )}
+                            </button>
+                        )
+                    })}
+                </div>
+            </div>
+        )
+    }
+
+    // Top Header Dropdown (Visible on both Laptop/Desktop and Mobile)
     return (
         <div ref={dropdownRef} style={{ position: 'relative' }}>
             <button
                 onClick={() => setOpen(!open)}
+                title="Switch School Branch / Tenant"
+                aria-label="Switch School Branch / Tenant"
                 style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    padding: '7px 12px',
-                    background: open ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.1)',
-                    border: '1px solid rgba(139,92,246,0.35)',
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 10px',
+                    background: open ? 'rgba(139,92,246,0.25)' : 'rgba(139,92,246,0.14)',
+                    border: '1px solid rgba(139,92,246,0.45)',
                     borderRadius: '10px',
                     cursor: 'pointer',
                     color: 'white',
-                    fontSize: '13px',
-                    fontWeight: '600',
+                    fontSize: '12px',
+                    fontWeight: '700',
                     transition: 'all 0.2s',
                     whiteSpace: 'nowrap',
+                    maxWidth: '180px',
                 }}
             >
-                <span style={{ fontSize: '16px' }}>👑</span>
-                <span className="hide-mobile" style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {currentAdmin?.name || user?.name || 'Super Admin'}
+                <span style={{ fontSize: '14px', flexShrink: 0 }}>👑</span>
+                <span style={{ maxWidth: '95px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {currentBranchName}
                 </span>
-                <span style={{ fontSize: '11px', opacity: 0.7 }}>{open ? '▲' : '▼'}</span>
+                <span style={{ fontSize: '9px', opacity: 0.7, flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
             </button>
 
             {open && (
                 <div style={{
                     position: 'absolute', top: 'calc(100% + 8px)', right: 0,
                     background: 'var(--surface)',
-                    border: '1px solid rgba(139,92,246,0.25)',
+                    border: '1px solid rgba(139,92,246,0.3)',
                     borderRadius: '14px',
-                    padding: '8px',
-                    minWidth: '280px',
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-                    zIndex: 9999,
+                    padding: '10px',
+                    width: 'max-content',
+                    minWidth: '270px',
+                    maxWidth: 'min(330px, calc(100vw - 20px))',
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+                    zIndex: 99999,
                 }}>
-                    <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase', padding: '6px 10px 10px' }}>Switch Super Admin Account</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px 10px', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#a78bfa', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                            🏫 Switch Branch / Tenant
+                        </div>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{superAdmins.length} Branches</span>
+                    </div>
 
                     {superAdmins.map(admin => {
                         const isCurrent = admin.id === user?.id
@@ -326,11 +399,11 @@ function SuperAdminSwitcher({ token }: { token: string }) {
                                 onClick={() => handleSwitch(admin.id)}
                                 style={{
                                     width: '100%',
-                                    display: 'flex', alignItems: 'center', gap: '12px',
-                                    padding: '10px 12px',
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                    padding: '9px 10px',
                                     borderRadius: '10px',
-                                    border: isCurrent ? '1px solid rgba(139,92,246,0.35)' : '1px solid transparent',
-                                    background: isCurrent ? 'rgba(139,92,246,0.12)' : 'transparent',
+                                    border: isCurrent ? '1px solid rgba(139,92,246,0.4)' : '1px solid transparent',
+                                    background: isCurrent ? 'rgba(139,92,246,0.14)' : 'transparent',
                                     cursor: isCurrent ? 'default' : 'pointer',
                                     marginBottom: '4px',
                                     transition: 'all 0.2s',
@@ -340,32 +413,36 @@ function SuperAdminSwitcher({ token }: { token: string }) {
                                 onMouseLeave={e => { if (!isCurrent) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                             >
                                 <div style={{
-                                    width: '36px', height: '36px', borderRadius: '50%',
-                                    background: isCurrent ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'rgba(255,255,255,0.1)',
+                                    width: '32px', height: '32px', borderRadius: '50%',
+                                    background: isCurrent ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'rgba(255,255,255,0.08)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: '16px', flexShrink: 0,
+                                    fontSize: '14px', flexShrink: 0,
                                     boxShadow: isCurrent ? '0 4px 12px rgba(139,92,246,0.35)' : 'none',
                                 }}>👑</div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{admin.name}</div>
-                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{admin.tenant?.name || 'School'}</div>
+                                    <div style={{ fontSize: '13px', fontWeight: '700', color: isCurrent ? '#a78bfa' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {admin.tenant?.name || 'School Branch'}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {admin.name}
+                                    </div>
                                 </div>
                                 {isCurrent && (
-                                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#a78bfa', background: 'rgba(139,92,246,0.15)', padding: '2px 8px', borderRadius: '20px', whiteSpace: 'nowrap' }}>Active</span>
+                                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '2px 8px', borderRadius: '20px', whiteSpace: 'nowrap' }}>Active</span>
                                 )}
                                 {!isCurrent && isLoading && (
                                     <div style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#a78bfa', borderRadius: '50%', animation: 'spin 0.6s linear infinite', flexShrink: 0 }} />
                                 )}
                                 {!isCurrent && !isLoading && (
-                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Switch →</span>
+                                    <span style={{ fontSize: '11px', color: '#a78bfa', fontWeight: '600' }}>Switch →</span>
                                 )}
                             </button>
                         )
                     })}
 
-                    <div style={{ borderTop: '1px solid var(--border)', marginTop: '6px', paddingTop: '8px', padding: '10px 12px 4px' }}>
-                        <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', lineHeight: '1.5', margin: 0 }}>
-                            🔒 Yeh feature sirf Super Admin panel mein available hai.
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '6px', paddingTop: '8px', padding: '6px 8px 2px' }}>
+                        <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', lineHeight: '1.4', margin: 0 }}>
+                            ⚡ Real-time branch switch for Super Admin.
                         </p>
                     </div>
                 </div>
@@ -498,11 +575,9 @@ function DashboardHeader({ onMenuClick, onAiOpen }: { onMenuClick: () => void; o
                     Live
                 </div>
 
-                {/* Super Admin Switcher — only visible on desktop */}
+                {/* Super Admin Switcher — visible on BOTH desktop & mobile */}
                 {user?.role === 'SUPER_ADMIN' && token && (
-                    <div className="hide-mobile">
-                        <SuperAdminSwitcher token={token} />
-                    </div>
+                    <SuperAdminSwitcher token={token} />
                 )}
 
                 <Link href="/dashboard/notices" style={{ position: 'relative', textDecoration: 'none' }}>
