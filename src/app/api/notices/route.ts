@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
     }
 
     const childIds = children.map(c => c.id)
+    const courseIds = children.map(c => c.courseId).filter(Boolean) as string[]
     const batchIds = children.map(c => c.batchId).filter(Boolean) as string[]
 
     const notices = await prisma.notification.findMany({
@@ -64,6 +65,8 @@ export async function GET(req: NextRequest) {
             ],
             targetId: ''
           },
+          // Notice for this child's class/course
+          ...(courseIds.length > 0 ? [{ targetId: { in: courseIds } }] : []),
           // Notice for this child's batch
           ...(batchIds.length > 0 ? [{ targetId: { in: batchIds } }] : []),
           // Targeted specifically to child or parent userId
@@ -149,7 +152,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { title, message, targetRole, targetType, targetBatchId, targetStudentId } = body
+  const { title, message, targetRole, targetType, targetBatchId, targetCourseId, targetStudentId } = body
 
   if (!title || !message) {
     return NextResponse.json({ error: 'Title and message are required' }, { status: 400 })
@@ -170,7 +173,7 @@ export async function POST(req: NextRequest) {
     finalTitle = `📌 To ${student.fullName}'s Parent: ${title}`
     finalTargetRole = 'PARENT'
     finalTargetId = student.id
-  } else if (targetType === 'BATCH' || targetBatchId) {
+  } else if (targetType === 'BATCH' && targetBatchId) {
     const batch = await prisma.batch.findUnique({
       where: { id: targetBatchId, tenantId: user!.tenantId },
       include: { course: true }
@@ -179,6 +182,13 @@ export async function POST(req: NextRequest) {
     finalTitle = `🏫 [${className}${batch?.name || 'Class'}] ${title}`
     finalTargetRole = 'PARENT'
     finalTargetId = targetBatchId
+  } else if (targetType === 'COURSE' || targetCourseId) {
+    const course = await prisma.course.findUnique({
+      where: { id: targetCourseId, tenantId: user!.tenantId }
+    })
+    finalTitle = `🏫 [Class: ${course?.name || 'All'}] ${title}`
+    finalTargetRole = 'PARENT'
+    finalTargetId = targetCourseId
   }
 
   const notice = await prisma.notification.create({

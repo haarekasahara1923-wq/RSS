@@ -45,14 +45,17 @@ export default function StaffNotices() {
   }, [token])
 
   useEffect(() => {
-    if (!selectedBatch || !token) {
+    if (!selectedCourse || !token) {
       setStudents([])
       return
     }
-    fetch(`/api/students?batchId=${selectedBatch}`, { headers: h })
+    const url = selectedBatch
+      ? `/api/students?courseId=${selectedCourse}&batchId=${selectedBatch}`
+      : `/api/students?courseId=${selectedCourse}`
+    fetch(url, { headers: h })
       .then(r => r.json())
       .then(d => setStudents(d.data || []))
-  }, [selectedBatch, token])
+  }, [selectedCourse, selectedBatch, token])
 
   const sendNotice = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,8 +64,8 @@ export default function StaffNotices() {
       return
     }
 
-    if (targetType === 'BATCH' && !selectedBatch) {
-      setMsg({ text: 'Please select a Class and Section', type: 'error' })
+    if (targetType === 'BATCH' && !selectedCourse) {
+      setMsg({ text: 'Please select a Class', type: 'error' })
       return
     }
 
@@ -84,8 +87,13 @@ export default function StaffNotices() {
       payload.targetType = 'STUDENT_PARENT'
       payload.targetStudentId = selectedStudent
     } else if (targetType === 'BATCH') {
-      payload.targetType = 'BATCH'
-      payload.targetBatchId = selectedBatch
+      if (selectedBatch) {
+        payload.targetType = 'BATCH'
+        payload.targetBatchId = selectedBatch
+      } else {
+        payload.targetType = 'COURSE'
+        payload.targetCourseId = selectedCourse
+      }
     } else {
       payload.targetRole = 'PARENT'
     }
@@ -235,7 +243,7 @@ export default function StaffNotices() {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', display: 'block' }}>2. Select Section / Batch *</label>
+                <label style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', display: 'block' }}>2. Section / Batch (Optional)</label>
                 <select
                   value={selectedBatch}
                   onChange={e => {
@@ -244,9 +252,8 @@ export default function StaffNotices() {
                   }}
                   disabled={!selectedCourse}
                   style={{ ...inputStyle, opacity: !selectedCourse ? 0.5 : 1 }}
-                  required
                 >
-                  <option value="">-- Choose Section --</option>
+                  <option value="">{filteredBatches.length > 0 ? '-- All Sections / Whole Class --' : '-- Whole Class (No Sections) --'}</option>
                   {filteredBatches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               </div>
@@ -256,18 +263,20 @@ export default function StaffNotices() {
           {/* Specific Student selector */}
           {targetType === 'STUDENT' && (
             <div>
-              <label style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', display: 'block' }}>3. Select Student *</label>
+              <label style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', display: 'block' }}>
+                3. Select Student * {selectedCourse && `(${students.length} found)`}
+              </label>
               <select
                 value={selectedStudent}
                 onChange={e => setSelectedStudent(e.target.value)}
-                disabled={!selectedBatch}
-                style={{ ...inputStyle, opacity: !selectedBatch ? 0.5 : 1 }}
+                disabled={!selectedCourse}
+                style={{ ...inputStyle, opacity: !selectedCourse ? 0.5 : 1 }}
                 required
               >
                 <option value="">-- Choose Student --</option>
                 {students.map((s: any) => (
                   <option key={s.id} value={s.id}>
-                    {s.fullName} {s.studentId ? `(${s.studentId})` : ''} {s.parentPhone ? `• Parent: ${s.parentPhone}` : ''}
+                    {s.fullName} {s.scholarNo ? `[Scholar: ${s.scholarNo}]` : s.studentId ? `[ID: ${s.studentId}]` : ''} {s.parentPhone ? `• Parent: ${s.parentPhone}` : ''}
                   </option>
                 ))}
               </select>

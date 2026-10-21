@@ -7,8 +7,28 @@ export async function GET(req: NextRequest) {
     const { error, user } = requireAuth(req)
     if (error) return error
     try {
+        const { searchParams } = new URL(req.url)
+        const courseId = searchParams.get('courseId')
+
+        const where: any = { tenantId: user!.tenantId, isActive: true }
+        if (courseId) {
+            where.courseId = courseId
+            // Check if course has any batches; if not, create default Section A
+            const exists = await prisma.batch.findFirst({ where: { tenantId: user!.tenantId, courseId, isActive: true } })
+            if (!exists) {
+                await prisma.batch.create({
+                    data: {
+                        tenantId: user!.tenantId,
+                        courseId,
+                        name: 'Section A',
+                        isActive: true
+                    }
+                }).catch(() => {})
+            }
+        }
+
         const batches = await prisma.batch.findMany({
-            where: { tenantId: user!.tenantId, isActive: true },
+            where,
             include: {
                 course: { select: { name: true } },
                 _count: { select: { students: true } }
@@ -17,7 +37,7 @@ export async function GET(req: NextRequest) {
         })
         const data = batches.map(b => ({
             ...b,
-            courseName: b.course.name,
+            courseName: b.course?.name || '',
             studentCount: b._count.students,
         }))
         return NextResponse.json({ success: true, data })

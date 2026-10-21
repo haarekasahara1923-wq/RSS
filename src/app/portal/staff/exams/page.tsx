@@ -42,13 +42,14 @@ export default function ExamsPage() {
     // Step 1 → Step 2: load students
     const handleLoadStudents = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!form.courseId || !form.batchId) {
-            setToast({ msg: 'Please select Class and Section first.', type: 'error' })
+        if (!form.courseId) {
+            setToast({ msg: 'Please select Class first.', type: 'error' })
             return
         }
         setLoadingStudents(true)
+        const batchParam = form.batchId ? `&batch=${form.batchId}` : ''
         const res = await fetch(
-            `/api/students?course=${form.courseId}&batch=${form.batchId}`,
+            `/api/students?course=${form.courseId}${batchParam}`,
             { headers: { Authorization: 'Bearer ' + token } }
         )
         const data = await res.json()
@@ -61,7 +62,7 @@ export default function ExamsPage() {
             setMarks(init)
             setStep(2)
         } else {
-            setToast({ msg: 'No students found in this class/section.', type: 'error' })
+            setToast({ msg: 'No active students found in this class.', type: 'error' })
         }
     }
 
@@ -348,15 +349,14 @@ export default function ExamsPage() {
                             </select>
                         </div>
                         <div>
-                            <label className="label">Section *</label>
+                            <label className="label">Section (Optional)</label>
                             <select
                                 className="input"
                                 value={form.batchId}
                                 onChange={e => setForm({ ...form, batchId: e.target.value })}
-                                required
                                 disabled={!form.courseId}
                             >
-                                <option value="">Select Section</option>
+                                <option value="">{filteredBatches.length > 0 ? '-- All Sections / Whole Class --' : '-- Whole Class (No Sections) --'}</option>
                                 {filteredBatches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                             </select>
                         </div>

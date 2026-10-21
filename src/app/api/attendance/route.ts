@@ -8,10 +8,15 @@ export async function GET(req: NextRequest) {
     if (error) return error
 
     try {
-        const { batchId, date } = Object.fromEntries(new URL(req.url).searchParams.entries())
+        const { batchId, courseId, date } = Object.fromEntries(new URL(req.url).searchParams.entries())
         
         const where: any = { tenantId: user!.tenantId }
-        if (batchId) where.batchId = batchId
+        if (batchId && batchId !== 'all') {
+            where.batchId = batchId
+        } else if (courseId) {
+            where.student = { courseId }
+        }
+
         if (date) {
             const startDate = new Date(date)
             startDate.setHours(0, 0, 0, 0)
@@ -22,7 +27,7 @@ export async function GET(req: NextRequest) {
 
         const attendances = await prisma.attendance.findMany({
             where,
-            include: { student: { select: { fullName: true } } },
+            include: { student: { select: { fullName: true, courseId: true } } },
             orderBy: { createdAt: 'desc' }
         })
 
@@ -50,21 +55,48 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid record format' }, { status: 400 })
         }
 
-        const created = await prisma.$transaction(
-            records.map((r: any) => 
-                prisma.attendance.create({
+        const results = []
+        for (const r of records) {
+            const recDate = new Date(r.date)
+            const startDate = new Date(recDate)
+            startDate.setHours(0, 0, 0, 0)
+            const endDate = new Date(recDate)
+            endDate.setHours(23, 59, 59, 999)
+
+            const existing = await prisma.attendance.findFirst({
+                where: {
+                    tenantId: user!.tenantId,
+                    studentId: r.studentId,
+                    date: { gte: startDate, lte: endDate }
+                }
+            })
+
+            let saved
+            if (existing) {
+                saved = await prisma.attendance.update({
+                    where: { id: existing.id },
+                    data: {
+                        status: (r.status || 'PRESENT') as any,
+                        batchId: r.batchId || existing.batchId || null,
+                        markedBy: user!.userId,
+                        notes: r.notes !== undefined ? r.notes : existing.notes
+                    }
+                })
+            } else {
+                saved = await prisma.attendance.create({
                     data: {
                         tenantId: user!.tenantId,
                         studentId: r.studentId,
-                        batchId: r.batchId,
-                        date: new Date(r.date),
+                        batchId: r.batchId || null,
+                        date: recDate,
                         status: (r.status || 'PRESENT') as any,
                         markedBy: user!.userId,
                         notes: r.notes || '',
                     }
                 })
-            )
-        )
+            }
+            results.push(saved)
+        }
 
         // Asynchronously notify parents
         for (const r of records) {
@@ -99,7 +131,7 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        return NextResponse.json({ success: true, data: created }, { status: 201 })
+        return NextResponse.json({ success: true, data: results }, { status: 201 })
     } catch (err) {
         console.error('Create attendance error:', err)
         return NextResponse.json({ error: 'Failed to create attendance' }, { status: 500 })

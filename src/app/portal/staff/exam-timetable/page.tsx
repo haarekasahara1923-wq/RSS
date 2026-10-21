@@ -314,9 +314,14 @@ export default function StaffExamTimetable() {
                 </select>
               </div>
               <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Section / Batch</label>
-                <select value={selectedBatch} onChange={e => setSelectedBatch(e.target.value)} style={inputStyle} required>
-                  <option value="">Select Batch</option>
+                <label style={labelStyle}>Section / Batch (Optional)</label>
+                <select
+                  value={selectedBatch}
+                  onChange={e => setSelectedBatch(e.target.value)}
+                  style={{ ...inputStyle, opacity: !selectedCourse ? 0.5 : 1 }}
+                  disabled={!selectedCourse}
+                >
+                  <option value="">{batches.length > 0 ? '-- All Sections / Whole Class --' : '-- Whole Class (No Sections) --'}</option>
                   {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               </div>

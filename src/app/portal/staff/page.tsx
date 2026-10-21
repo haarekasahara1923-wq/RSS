@@ -29,7 +29,8 @@ export default function StaffHome() {
     { href: '/portal/staff/homework', icon: '📚', label: 'Assign Homework', color: '#6366f1' },
     { href: '/portal/staff/homework/submissions', icon: '📋', label: 'View Submissions', color: '#8b5cf6' },
     { href: '/portal/staff/notices', icon: '📢', label: 'Notices', color: '#ec4899' },
-    { href: '/portal/staff/exam-timetable', icon: '📝', label: 'Exam Time Table', color: '#f59e0b' },
+    { href: '/portal/staff/exams', icon: '📝', label: 'Exams & Marks', color: '#06b6d4' },
+    { href: '/portal/staff/exam-timetable', icon: '🗓️', label: 'Exam Time Table', color: '#f59e0b' },
     { href: '/portal/staff/admit-cards', icon: '🎫', label: 'Admit Cards', color: '#f43f5e' },
   ]
 

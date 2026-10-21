@@ -20,6 +20,7 @@ export default function StaffAdmitCards() {
     const [loading, setLoading] = useState(false)
     const [viewEvent, setViewEvent] = useState<any>(null)
     const [eventDetails, setEventDetails] = useState<any>(null)
+    const [classStudentCount, setClassStudentCount] = useState<number | null>(null)
 
     useEffect(() => {
         if (!token) return
@@ -37,6 +38,24 @@ export default function StaffAdmitCards() {
         const res = await fetch(`/api/batches?courseId=${courseId}`, { headers: { Authorization: `Bearer ${token}` } })
         const data = await res.json()
         if (data.success) setBatches(data.data || [])
+    }
+
+    const handleCourseChange = async (courseId: string) => {
+        setSelectedCourse(courseId)
+        setSelectedBatch('')
+        if (!courseId) {
+            setBatches([])
+            setClassStudentCount(null)
+            return
+        }
+        fetchBatches(courseId)
+        try {
+            const res = await fetch(`/api/students?courseId=${courseId}`, { headers: { Authorization: `Bearer ${token}` } })
+            const data = await res.json()
+            if (data.success) setClassStudentCount(data.data?.length || 0)
+        } catch {
+            setClassStudentCount(null)
+        }
     }
 
     const fetchData = async () => {
@@ -160,21 +179,27 @@ export default function StaffAdmitCards() {
                 <form onSubmit={handleGenerate} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <select
                         value={selectedCourse}
-                        onChange={e => { setSelectedCourse(e.target.value); fetchBatches(e.target.value) }}
+                        onChange={e => handleCourseChange(e.target.value)}
                         style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#0f172a', border: '1px solid #334155', color: 'white' }}
                         required
                     >
-                        <option value="">Select Class / Course</option>
+                        <option value="">Select Class / Course *</option>
                         {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
+
+                    {classStudentCount !== null && (
+                        <div style={{ fontSize: '13px', color: classStudentCount > 0 ? '#10b981' : '#ef4444', fontWeight: '600', padding: '4px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px' }}>
+                            {classStudentCount > 0 ? `👥 ${classStudentCount} Students enrolled in this class` : '⚠️ No active students found in this class'}
+                        </div>
+                    )}
 
                     <select
                         value={selectedBatch}
                         onChange={e => setSelectedBatch(e.target.value)}
-                        style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#0f172a', border: '1px solid #334155', color: 'white' }}
-                        required
+                        disabled={!selectedCourse}
+                        style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#0f172a', border: '1px solid #334155', color: 'white', opacity: !selectedCourse ? 0.5 : 1 }}
                     >
-                        <option value="">Select Batch</option>
+                        <option value="">{batches.length > 0 ? '-- All Sections / Whole Class --' : '-- Whole Class (No Sections) --'}</option>
                         {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
 

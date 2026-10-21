@@ -59,17 +59,42 @@ export default function StaffHomework() {
     })
   }, [token])
 
-  // Count students when batch changes
+  const handleCourseChange = (courseId: string) => {
+    setSelectedCourse(courseId)
+    setSelectedBatch('')
+    if (courseId) {
+      fetch(`/api/batches?courseId=${courseId}`, { headers: h })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success && d.data?.length > 0) {
+            setBatches(prev => {
+              const existingIds = new Set(prev.map(b => b.id))
+              const newBatches = d.data.filter((b: any) => !existingIds.has(b.id))
+              return [...prev, ...newBatches]
+            })
+            // If only 1 batch exists, select it automatically
+            if (d.data.length === 1) {
+              setSelectedBatch(d.data[0].id)
+            }
+          }
+        })
+    }
+  }
+
+  // Count students when course or batch changes
   useEffect(() => {
-    if (!selectedBatch || !token) {
+    if (!selectedCourse || !token) {
       setBatchStudentsCount(null)
       return
     }
-    fetch(`/api/students?batchId=${selectedBatch}`, { headers: h })
+    const url = selectedBatch
+      ? `/api/students?courseId=${selectedCourse}&batchId=${selectedBatch}`
+      : `/api/students?courseId=${selectedCourse}`
+    fetch(url, { headers: h })
       .then(r => r.json())
       .then(d => setBatchStudentsCount(d.data?.length || 0))
       .catch(() => setBatchStudentsCount(null))
-  }, [selectedBatch, token])
+  }, [selectedCourse, selectedBatch, token])
 
   // Load Submissions when selectedHomeworkId changes
   const loadSubmissions = (hwId: string) => {
@@ -313,10 +338,7 @@ export default function StaffHomework() {
               </label>
               <select
                 value={selectedCourse}
-                onChange={e => {
-                  setSelectedCourse(e.target.value)
-                  setSelectedBatch('')
-                }}
+                onChange={e => handleCourseChange(e.target.value)}
                 style={inputStyle}
                 required
               >

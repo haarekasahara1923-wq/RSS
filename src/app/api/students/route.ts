@@ -16,7 +16,19 @@ export async function GET(req: NextRequest) {
         const resolvedCourseId = course || courseId
         const resolvedBatchId = batch || batchId
         if (resolvedCourseId) where.courseId = resolvedCourseId
-        if (resolvedBatchId) where.batchId = resolvedBatchId
+        if (resolvedBatchId && resolvedBatchId !== 'all') {
+            const batchStudentCount = await prisma.student.count({
+                where: { tenantId: user!.tenantId, batchId: resolvedBatchId, status: status ? (status as any) : undefined }
+            })
+            if (batchStudentCount > 0) {
+                where.batchId = resolvedBatchId
+            } else if (resolvedCourseId) {
+                // Students enrolled in this course with batchId: null or matching
+                where.courseId = resolvedCourseId
+            } else {
+                where.batchId = resolvedBatchId
+            }
+        }
         if (status) where.status = status
         if (search) {
             where.OR = [
