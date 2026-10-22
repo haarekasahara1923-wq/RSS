@@ -11,39 +11,50 @@ export async function POST(req: NextRequest) {
         }
 
         const whereClause: any = { isActive: true }
-        // Let user log in with email or phone
+
+        // Let user log in with email or phone (email field can hold phone number too)
         whereClause.OR = [
             { email: email.toLowerCase() },
-            { phone: email } // 'email' field holds the input (can be phone too)
+            { phone: email },
+            { email: email }, // preserve original casing too (in case stored differently)
         ]
 
-        // Role check removed so users can login regardless of which tab they clicked
-        // The frontend will redirect them properly based on the role in the response
-
-        // For SUPER_ADMIN and platform-level admins — find by email/phone across all tenants
-        // For tenant-scoped roles — use provided tenantId
-        const ADMIN_ROLES = ['SUPER_ADMIN', 'COACHING_ADMIN', 'ADMIN_OPERATION', 'ADMIN_LIBRARY', 'ADMIN_SPORTS', 'ADMIN_TRANSPORT']
-
-        // If tenantId is explicitly provided (e.g., from a school-specific login page), use it.
-        // Otherwise, allow global search across all tenants by email/phone.
+        // If tenantId is explicitly provided (e.g., from a school-specific login page), scope to it.
         if (tenantId) {
             whereClause.tenantId = tenantId
         }
 
-        const user = await prisma.user.findFirst({
+        // ── CRITICAL FIX: Use findMany instead of findFirst ──────────────────────
+        // Multiple tenants can have admins with the SAME phone number.
+        // findFirst would always return only the first DB match, making other
+        // tenant admins unable to log in via phone.
+        // Solution: Fetch ALL matching active users → verify password against each one.
+        const candidates = await prisma.user.findMany({
             where: whereClause,
             include: {
                 studentProfile: true,
                 teacherProfile: true,
                 parentProfile: true
-            }
+            },
+            // Order consistently: prioritize exact email match, then by creation order
+            orderBy: { createdAt: 'asc' },
         })
-        if (!user) {
+
+        if (candidates.length === 0) {
             return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
         }
 
-        const isValid = await comparePassword(password, user.password)
-        if (!isValid) {
+        // Try password against each candidate — first match wins
+        let user: typeof candidates[0] | null = null
+        for (const candidate of candidates) {
+            const isValid = await comparePassword(password, candidate.password)
+            if (isValid) {
+                user = candidate
+                break
+            }
+        }
+
+        if (!user) {
             return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
         }
 
