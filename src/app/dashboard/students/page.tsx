@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import Script from 'next/script'
@@ -65,6 +65,49 @@ export default function StudentsPage() {
     const [editForm, setEditForm] = useState<any>({})
     const [actionLoading, setActionLoading] = useState(false)
 
+    // Sort order & field state (Switcher Filter)
+    const [sortField, setSortField] = useState<'fullName' | 'scholarNo' | 'admissionDate' | 'studentId' | 'totalFee'>('fullName')
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+
+    const toggleSortOrder = () => {
+        setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))
+    }
+
+    const handleHeaderSort = (field: 'fullName' | 'scholarNo' | 'admissionDate' | 'studentId' | 'totalFee') => {
+        if (sortField === field) {
+            toggleSortOrder()
+        } else {
+            setSortField(field)
+            setSortOrder('asc')
+        }
+    }
+
+    const sortStudentList = (list: Student[]) => {
+        return [...list].sort((a, b) => {
+            let res = 0
+            if (sortField === 'fullName') {
+                const nameA = (a.fullName || '').trim().toLowerCase()
+                const nameB = (b.fullName || '').trim().toLowerCase()
+                res = nameA.localeCompare(nameB, undefined, { sensitivity: 'base' })
+            } else if (sortField === 'scholarNo') {
+                const sA = (a.scholarNo || '').trim()
+                const sB = (b.scholarNo || '').trim()
+                res = sA.localeCompare(sB, undefined, { numeric: true, sensitivity: 'base' })
+            } else if (sortField === 'admissionDate') {
+                const dateA = a.admissionDate ? new Date(a.admissionDate).getTime() : 0
+                const dateB = b.admissionDate ? new Date(b.admissionDate).getTime() : 0
+                res = dateA - dateB
+            } else if (sortField === 'studentId') {
+                const idA = (a.studentId || '').trim()
+                const idB = (b.studentId || '').trim()
+                res = idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' })
+            } else if (sortField === 'totalFee') {
+                res = (a.totalFee || 0) - (b.totalFee || 0)
+            }
+            return sortOrder === 'asc' ? res : -res
+        })
+    }
+
     // Selection mode (name | scholar | classwise)
     const [selectionMode, setSelectionMode] = useState<'name' | 'scholar' | 'classwise'>('name')
     const [showModeDropdown, setShowModeDropdown] = useState(false)
@@ -78,6 +121,9 @@ export default function StudentsPage() {
     const [classwiseStudents, setClasswiseStudents] = useState<Student[]>([])
     const [classwiseLoading, setClasswiseLoading] = useState(false)
     const [classwiseFetched, setClasswiseFetched] = useState(false)
+
+    const sortedStudents = useMemo(() => sortStudentList(students), [students, sortField, sortOrder])
+    const sortedClasswiseStudents = useMemo(() => sortStudentList(classwiseStudents), [classwiseStudents, sortField, sortOrder])
 
     // Sibling management state
     const [siblingList, setSiblingList] = useState<any[]>([])
@@ -1369,6 +1415,112 @@ export default function StudentsPage() {
 
                     <button className="btn btn-secondary" onClick={() => { setSearch(''); if (selectionMode === 'classwise') { setClasswiseStudents([]); setClasswiseFetched(false); setSelectedCourseId(''); setSelectedBatchId(''); } else { setTimeout(fetchStudents, 0); } }} style={{ whiteSpace: 'nowrap', alignSelf: 'flex-end' }}>🔄 Refresh</button>
                 </div>
+
+                {/* Sort Filter & Switcher Button Bar */}
+                <div style={{
+                    marginTop: '14px',
+                    paddingTop: '12px',
+                    borderTop: '1px solid var(--border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <span>⚡</span> Sort Filter:
+                        </span>
+                        <select
+                            className="input"
+                            value={sortField}
+                            onChange={e => setSortField(e.target.value as any)}
+                            style={{ padding: '6px 12px', fontSize: '13px', width: 'auto', minWidth: '150px', height: '38px', borderRadius: '8px' }}
+                        >
+                            <option value="fullName">👤 Student Name</option>
+                            <option value="scholarNo">🏷️ Scholar No.</option>
+                            <option value="admissionDate">📅 Admission Date</option>
+                            <option value="studentId">🆔 Student ID / Roll</option>
+                            <option value="totalFee">💰 Total Fee</option>
+                        </select>
+                    </div>
+
+                    {/* Switcher Toggle Button */}
+                    <button
+                        type="button"
+                        id="student-sort-order-switcher-btn"
+                        onClick={toggleSortOrder}
+                        title={`Click to switch to ${sortOrder === 'asc' ? 'Descending (Z to A)' : 'Ascending (A to Z)'} order`}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '6px 16px',
+                            borderRadius: '30px',
+                            border: sortOrder === 'asc' ? '1.5px solid #10b981' : '1.5px solid #6366f1',
+                            background: sortOrder === 'asc' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(99, 102, 241, 0.08)',
+                            color: sortOrder === 'asc' ? '#059669' : '#4f46e5',
+                            fontWeight: '700',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            transition: 'all 0.25s ease',
+                            userSelect: 'none',
+                            boxShadow: sortOrder === 'asc' ? '0 2px 8px rgba(16,185,129,0.2)' : '0 2px 8px rgba(99,102,241,0.2)'
+                        }}
+                    >
+                        {/* Switcher Track & Slider Thumb */}
+                        <span style={{
+                            width: '44px',
+                            height: '24px',
+                            borderRadius: '12px',
+                            background: sortOrder === 'asc' ? '#10b981' : '#6366f1',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '2px',
+                            transition: 'background 0.25s ease',
+                            flexShrink: 0,
+                            position: 'relative'
+                        }}>
+                            <span style={{
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                background: '#ffffff',
+                                boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
+                                transform: sortOrder === 'asc' ? 'translateX(0px)' : 'translateX(20px)',
+                                transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '10px',
+                                color: sortOrder === 'asc' ? '#10b981' : '#6366f1',
+                                fontWeight: '900'
+                            }}>
+                                {sortOrder === 'asc' ? '▲' : '▼'}
+                            </span>
+                        </span>
+                        <div style={{ textAlign: 'left', lineHeight: 1.2 }}>
+                            <div style={{ fontWeight: '800', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>{sortOrder === 'asc' ? '⬆️ Ascending Order' : '⬇️ Descending Order'}</span>
+                                <span style={{
+                                    fontSize: '10px',
+                                    padding: '1px 6px',
+                                    borderRadius: '6px',
+                                    background: sortOrder === 'asc' ? 'rgba(16,185,129,0.2)' : 'rgba(99,102,241,0.2)',
+                                    color: sortOrder === 'asc' ? '#047857' : '#4338ca',
+                                    fontWeight: '800'
+                                }}>
+                                    {sortOrder.toUpperCase()}
+                                </span>
+                            </div>
+                            <div style={{ fontSize: '11px', opacity: 0.8, fontWeight: '600', marginTop: '1px' }}>
+                                {sortField === 'fullName'
+                                    ? (sortOrder === 'asc' ? 'A → Z (Click to switch Descending)' : 'Z → A (Click to switch Ascending)')
+                                    : (sortOrder === 'asc' ? 'Lowest → Highest (Click to switch Descending)' : 'Highest → Lowest (Click to switch Ascending)')}
+                            </div>
+                        </div>
+                    </button>
+                </div>
             </div>
 
             {/* Classwise Student List */}
@@ -1389,25 +1541,25 @@ export default function StudentsPage() {
                             </div>
                         </div>
                         {/* Download Buttons */}
-                        {classwiseStudents.length > 0 && (
+                        {sortedClasswiseStudents.length > 0 && (
                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                 <button
                                     className="btn btn-secondary btn-sm"
-                                    onClick={() => downloadCSV(classwiseStudents, `${courses.find(c => c.id === selectedCourseId)?.name || 'Class'}${selectedBatchId ? '_' + (batches.find(b => b.id === selectedBatchId)?.name || '') : ''}_Students`)}
+                                    onClick={() => downloadCSV(sortedClasswiseStudents, `${courses.find(c => c.id === selectedCourseId)?.name || 'Class'}${selectedBatchId ? '_' + (batches.find(b => b.id === selectedBatchId)?.name || '') : ''}_Students`)}
                                     style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', fontWeight: '700', fontSize: '12px' }}
                                 >
                                     📥 Download CSV
                                 </button>
                                 <button
                                     className="btn btn-secondary btn-sm"
-                                    onClick={() => downloadExcel(classwiseStudents, `${courses.find(c => c.id === selectedCourseId)?.name || 'Class'}${selectedBatchId ? '_' + (batches.find(b => b.id === selectedBatchId)?.name || '') : ''}_Students`)}
+                                    onClick={() => downloadExcel(sortedClasswiseStudents, `${courses.find(c => c.id === selectedCourseId)?.name || 'Class'}${selectedBatchId ? '_' + (batches.find(b => b.id === selectedBatchId)?.name || '') : ''}_Students`)}
                                     style={{ background: 'rgba(34,197,94,0.1)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.3)', fontWeight: '700', fontSize: '12px' }}
                                 >
                                     📊 Download Excel
                                 </button>
                                 <button
                                     className="btn btn-secondary btn-sm"
-                                    onClick={() => downloadClasswisePDF(classwiseStudents, courses.find(c => c.id === selectedCourseId)?.name || '', batches.find(b => b.id === selectedBatchId)?.name || '')}
+                                    onClick={() => downloadClasswisePDF(sortedClasswiseStudents, courses.find(c => c.id === selectedCourseId)?.name || '', batches.find(b => b.id === selectedBatchId)?.name || '')}
                                     style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', fontWeight: '700', fontSize: '12px' }}
                                 >
                                     📄 Download PDF
@@ -1420,7 +1572,7 @@ export default function StudentsPage() {
                             <div className="spinner" style={{ margin: '0 auto 12px', width: '32px', height: '32px' }} />
                             <p style={{ color: 'var(--text-muted)' }}>Loading students...</p>
                         </div>
-                    ) : classwiseStudents.length === 0 ? (
+                    ) : sortedClasswiseStudents.length === 0 ? (
                         <div style={{ padding: '40px', textAlign: 'center' }}>
                             <div style={{ fontSize: '40px', marginBottom: '12px' }}>📭</div>
                             <p style={{ color: 'var(--text-muted)' }}>No students found for this class{selectedBatchId ? '/batch' : ''}.</p>
@@ -1431,19 +1583,27 @@ export default function StudentsPage() {
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>Scholar No.</th>
-                                        <th>Student</th>
+                                        <th onClick={() => handleHeaderSort('scholarNo')} style={{ cursor: 'pointer', userSelect: 'none' }} title="Click to sort by Scholar No">
+                                            Scholar No. {sortField === 'scholarNo' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                                        </th>
+                                        <th onClick={() => handleHeaderSort('fullName')} style={{ cursor: 'pointer', userSelect: 'none' }} title="Click to sort by Student Name">
+                                            Student {sortField === 'fullName' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                                        </th>
                                         <th>Father Name</th>
                                         <th>Gender</th>
                                         <th>Phone</th>
                                         <th>Status</th>
-                                        <th>Fee Status</th>
-                                        <th>Admission</th>
+                                        <th onClick={() => handleHeaderSort('totalFee')} style={{ cursor: 'pointer', userSelect: 'none' }} title="Click to sort by Fee">
+                                            Fee Status {sortField === 'totalFee' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                                        </th>
+                                        <th onClick={() => handleHeaderSort('admissionDate')} style={{ cursor: 'pointer', userSelect: 'none' }} title="Click to sort by Admission Date">
+                                            Admission {sortField === 'admissionDate' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                                        </th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {classwiseStudents.map((s, idx) => {
+                                    {sortedClasswiseStudents.map((s, idx) => {
                                         const owing = s.totalFee - s.paidFee
                                         const pct = s.totalFee > 0 ? Math.round((s.paidFee / s.totalFee) * 100) : 0
                                         return (
@@ -1511,7 +1671,7 @@ export default function StudentsPage() {
                                 <button
                                     type="button"
                                     className="btn btn-secondary"
-                                    onClick={() => downloadClasswisePDF(classwiseStudents, courses.find(c => c.id === selectedCourseId)?.name || '', batches.find(b => b.id === selectedBatchId)?.name || '')}
+                                    onClick={() => downloadClasswisePDF(sortedClasswiseStudents, courses.find(c => c.id === selectedCourseId)?.name || '', batches.find(b => b.id === selectedBatchId)?.name || '')}
                                     style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px' }}
                                 >
                                     📄 Download in PDF
@@ -1519,7 +1679,7 @@ export default function StudentsPage() {
                                 <button
                                     type="button"
                                     className="btn btn-secondary"
-                                    onClick={() => downloadExcel(classwiseStudents, `${courses.find(c => c.id === selectedCourseId)?.name || 'Class'}${selectedBatchId ? '_' + (batches.find(b => b.id === selectedBatchId)?.name || '') : ''}_Students`)}
+                                    onClick={() => downloadExcel(sortedClasswiseStudents, `${courses.find(c => c.id === selectedCourseId)?.name || 'Class'}${selectedBatchId ? '_' + (batches.find(b => b.id === selectedBatchId)?.name || '') : ''}_Students`)}
                                     style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.3)', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px' }}
                                 >
                                     📊 Download in Excel
@@ -1527,7 +1687,7 @@ export default function StudentsPage() {
                                 <button
                                     type="button"
                                     className="btn btn-secondary"
-                                    onClick={() => downloadCSV(classwiseStudents, `${courses.find(c => c.id === selectedCourseId)?.name || 'Class'}${selectedBatchId ? '_' + (batches.find(b => b.id === selectedBatchId)?.name || '') : ''}_Students`)}
+                                    onClick={() => downloadCSV(sortedClasswiseStudents, `${courses.find(c => c.id === selectedCourseId)?.name || 'Class'}${selectedBatchId ? '_' + (batches.find(b => b.id === selectedBatchId)?.name || '') : ''}_Students`)}
                                     style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px' }}
                                 >
                                     📥 Download in CSV
@@ -1555,13 +1715,110 @@ export default function StudentsPage() {
 
             {/* Table */}
             <div className="card" style={{ padding: 0 }}>
+                {/* Table Header Toolbar with Switcher & Quick Export */}
+                <div style={{
+                    padding: '14px 20px',
+                    borderBottom: '1px solid var(--border)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: '800', fontSize: '15px' }}>👥 All Students Data</span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--surface-2)', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>
+                            {sortedStudents.length} {sortedStudents.length === 1 ? 'student' : 'students'}
+                        </span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                            • Sorted by: <strong style={{ color: 'var(--text-primary)' }}>{sortField === 'fullName' ? 'Name' : sortField === 'scholarNo' ? 'Scholar No' : sortField === 'admissionDate' ? 'Admission Date' : sortField === 'studentId' ? 'Student ID' : 'Fee'}</strong> ({sortOrder === 'asc' ? 'Ascending ⬆️' : 'Descending ⬇️'})
+                        </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        {/* Switcher button in table header */}
+                        <button
+                            type="button"
+                            onClick={toggleSortOrder}
+                            title={`Click to switch to ${sortOrder === 'asc' ? 'Descending' : 'Ascending'} order`}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '5px 12px',
+                                borderRadius: '20px',
+                                border: sortOrder === 'asc' ? '1.5px solid #10b981' : '1.5px solid #6366f1',
+                                background: sortOrder === 'asc' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(99, 102, 241, 0.08)',
+                                color: sortOrder === 'asc' ? '#059669' : '#4f46e5',
+                                fontWeight: '700',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                userSelect: 'none'
+                            }}
+                        >
+                            <span style={{
+                                width: '32px',
+                                height: '18px',
+                                borderRadius: '10px',
+                                background: sortOrder === 'asc' ? '#10b981' : '#6366f1',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '2px',
+                                transition: 'background 0.2s ease'
+                            }}>
+                                <span style={{
+                                    width: '14px',
+                                    height: '14px',
+                                    borderRadius: '50%',
+                                    background: '#ffffff',
+                                    transform: sortOrder === 'asc' ? 'translateX(0px)' : 'translateX(14px)',
+                                    transition: 'transform 0.2s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '8px',
+                                    color: sortOrder === 'asc' ? '#10b981' : '#6366f1',
+                                    fontWeight: '900'
+                                }}>
+                                    {sortOrder === 'asc' ? '▲' : '▼'}
+                                </span>
+                            </span>
+                            <span>{sortOrder === 'asc' ? 'Ascending (A→Z)' : 'Descending (Z→A)'}</span>
+                        </button>
+
+                        {sortedStudents.length > 0 && (
+                            <>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary btn-sm"
+                                    onClick={() => downloadCSV(sortedStudents, `All_Students_${sortField}_${sortOrder}`)}
+                                    style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', fontWeight: '700', fontSize: '11px', padding: '5px 10px' }}
+                                    title="Export sorted students as CSV"
+                                >
+                                    📥 CSV
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary btn-sm"
+                                    onClick={() => downloadExcel(sortedStudents, `All_Students_${sortField}_${sortOrder}`)}
+                                    style={{ background: 'rgba(34,197,94,0.1)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.3)', fontWeight: '700', fontSize: '11px', padding: '5px 10px' }}
+                                    title="Export sorted students as Excel"
+                                >
+                                    📊 Excel
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+
                 <div className="table-container">
                     {loading ? (
                         <div style={{ padding: '40px', textAlign: 'center' }}>
                             <div className="spinner" style={{ margin: '0 auto 12px', width: '32px', height: '32px' }} />
                             <p style={{ color: 'var(--text-muted)' }}>Loading students...</p>
                         </div>
-                    ) : students.length === 0 ? (
+                    ) : sortedStudents.length === 0 ? (
                         <div style={{ padding: '60px', textAlign: 'center' }}>
                             <div style={{ fontSize: '48px', marginBottom: '16px' }}>👨‍🎓</div>
                             <p style={{ color: 'var(--text-secondary)', fontSize: '16px', marginBottom: '16px' }}>No students found</p>
@@ -1571,19 +1828,27 @@ export default function StudentsPage() {
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Scholar No.</th>
-                                    <th>Student</th>
+                                    <th onClick={() => handleHeaderSort('scholarNo')} style={{ cursor: 'pointer', userSelect: 'none' }} title="Click to sort by Scholar No">
+                                        Scholar No. {sortField === 'scholarNo' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                                    </th>
+                                    <th onClick={() => handleHeaderSort('fullName')} style={{ cursor: 'pointer', userSelect: 'none' }} title="Click to sort by Student Name">
+                                        Student {sortField === 'fullName' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                                    </th>
                                     <th>Class / Section</th>
                                     <th>Phone</th>
                                     <th>Parent Login</th>
-                                    <th>Fee Status</th>
+                                    <th onClick={() => handleHeaderSort('totalFee')} style={{ cursor: 'pointer', userSelect: 'none' }} title="Click to sort by Fee">
+                                        Fee Status {sortField === 'totalFee' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                                    </th>
                                     <th>Status</th>
-                                    <th>Admission</th>
+                                    <th onClick={() => handleHeaderSort('admissionDate')} style={{ cursor: 'pointer', userSelect: 'none' }} title="Click to sort by Admission Date">
+                                        Admission {sortField === 'admissionDate' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                                    </th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {students.map(s => {
+                                {sortedStudents.map(s => {
                                     const owing = s.totalFee - s.paidFee
                                     const pct = s.totalFee > 0 ? Math.round((s.paidFee / s.totalFee) * 100) : 0
                                     return (
