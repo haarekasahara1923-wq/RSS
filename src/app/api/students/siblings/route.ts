@@ -296,7 +296,10 @@ export async function POST(req: NextRequest) {
         where: {
           id: { in: combinedUniqueIds },
           tenantId: user!.tenantId,
-          parentPhone: { in: ['', null as any] },
+          OR: [
+            { parentPhone: null },
+            { parentPhone: '' },
+          ],
         },
         data: {
           parentPhone: sharedParentPhone,
