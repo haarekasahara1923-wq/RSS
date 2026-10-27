@@ -29,6 +29,8 @@ interface LedgerData {
     totalCredit: number
     totalDebit: number
     closingBalance: number
+    totalPreviousDue?: number
+    totalCurrentOutstanding?: number
     entries: LedgerEntry[]
     daily: DailySummary[]
 }
@@ -170,6 +172,7 @@ export default function SchoolLedgerPage() {
                 { label: 'Total Credit', value: inr(data.totalCredit), subtext: 'Receipts', color: '#10b981' },
                 { label: 'Total Debit', value: inr(data.totalDebit), subtext: 'Payments', color: '#ef4444' },
                 { label: 'Closing Balance', value: inr(data.closingBalance), color: '#f59e0b' },
+                ...(data.totalPreviousDue ? [{ label: 'Prev. Year Due (B/F)', value: inr(data.totalPreviousDue), color: '#f59e0b', subtext: 'Student Dues B/F' }] : []),
             ],
             tables,
             notes: 'Credit = money received (fee collection & other income). Debit = money paid out (expenses). Balance = Opening + Credit − Debit.',
@@ -225,6 +228,13 @@ export default function SchoolLedgerPage() {
                         <div className="acc-stat-value" style={{ color: data.closingBalance >= 0 ? '#fbbf24' : '#f87171' }}>{inr(data.closingBalance)}</div>
                         <div className="acc-stat-sub">as on {prettyDay(data.to)}</div>
                     </div>
+                    {data.totalPreviousDue !== undefined && data.totalPreviousDue > 0 && (
+                        <div className="acc-stat" style={{ ['--acc-color' as any]: '#f59e0b' }}>
+                            <div className="acc-stat-label">Prev. Year Due (B/F)</div>
+                            <div className="acc-stat-value" style={{ color: '#fbbf24' }}>{inr(data.totalPreviousDue)}</div>
+                            <div className="acc-stat-sub">Total Unpaid: {inr(data.totalCurrentOutstanding || 0)}</div>
+                        </div>
+                    )}
                     {today && (
                         <div className="acc-stat" style={{ ['--acc-color' as any]: '#06b6d4' }}>
                             <div className="acc-stat-label">Today ({prettyDay(today.date)})</div>

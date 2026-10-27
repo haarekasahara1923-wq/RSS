@@ -211,6 +211,17 @@ export async function buildLedger(tenantId: string, fromDay: string, toDay: stri
         guard++
     }
 
+    const studentFeeAgg = await prisma.student.aggregate({
+        where: { tenantId, status: 'ACTIVE' },
+        _sum: {
+            previousDueFee: true,
+            totalFee: true,
+            paidFee: true,
+        }
+    })
+    const totalPreviousDue = Number(studentFeeAgg._sum.previousDueFee || 0)
+    const totalCurrentOutstanding = Math.max(0, Number(studentFeeAgg._sum.totalFee || 0) - Number(studentFeeAgg._sum.paidFee || 0))
+
     return {
         schoolName: tenant?.name || '',
         from: fromDay,
@@ -221,6 +232,8 @@ export async function buildLedger(tenantId: string, fromDay: string, toDay: stri
         totalCredit: round2(totalCredit),
         totalDebit: round2(totalDebit),
         closingBalance: round2(opening + totalCredit - totalDebit),
+        totalPreviousDue: round2(totalPreviousDue),
+        totalCurrentOutstanding: round2(totalCurrentOutstanding),
         entries,
         daily,
     }

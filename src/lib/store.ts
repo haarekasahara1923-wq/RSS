@@ -48,6 +48,7 @@ export interface Student {
     feePlan?: string
     totalFee: number
     paidFee: number
+    previousDueFee?: number
     status: string
     notes?: string
     createdAt: Date

@@ -72,10 +72,10 @@ export default function FeeLedgerPage() {
       ['Generated on:', new Date().toLocaleDateString('en-IN')],
       [],
       ['Sr#', 'Student ID', 'Name', 'Father Name', 'Class', 'Section', 'Phone', 'Parent Phone',
-       'Total Fee', 'Total Paid', 'Outstanding', 'Status', 'Has Siblings'],
+       'Previous Due', 'Total Fee', 'Total Paid', 'Outstanding', 'Status', 'Has Siblings'],
       ...students.map((s, i) => [
         i + 1, s.studentId, s.fullName, s.fatherName, s.class, s.section,
-        s.phone, s.parentPhone, s.totalFee, s.totalPaid, s.outstanding, s.status,
+        s.phone, s.parentPhone, s.previousDueFee || 0, s.totalFee, s.totalPaid, s.outstanding, s.status,
         s.hasSiblings ? 'YES' : 'NO',
       ]),
     ]
@@ -196,9 +196,10 @@ export default function FeeLedgerPage() {
 
       {/* Summary Cards */}
       {summary && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '10px' }}>
           {[
             { label: 'Students', value: summary.totalStudents, color: '#6366f1', icon: '👨‍🎓' },
+            { label: 'Prev Year Due', value: fmt(summary.totalPreviousDue || 0), color: '#f59e0b', icon: '⏪' },
             { label: 'Total Billed', value: fmt(summary.totalBilled), color: '#3b82f6', icon: '📋' },
             { label: 'Collected', value: fmt(summary.totalCollected), color: '#10b981', icon: '✅' },
             { label: 'Outstanding', value: fmt(summary.totalOutstanding), color: '#ef4444', icon: '⏳' },
@@ -445,7 +446,10 @@ function StudentLedgerCard({ student, expanded, onToggle, onPrintStudent, onSibl
           <div style={{ height: '5px', background: '#334155', borderRadius: '3px', overflow: 'hidden' }}>
             <div style={{ width: `${pct}%`, height: '100%', background: pct >= 100 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444', borderRadius: '3px' }} />
           </div>
-          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>of {fmt(student.totalFee)}</div>
+          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>
+            of {fmt(student.totalFee)}
+            {student.previousDueFee > 0 && <span style={{ color: '#f59e0b', display: 'block', fontWeight: '700' }}>Incl. Prev: {fmt(student.previousDueFee)}</span>}
+          </div>
         </div>
 
         {/* Outstanding */}
@@ -541,7 +545,7 @@ function buildPrintHTML(students: any[], summary: any) {
         </div>
       </div>
       <div style="display:flex;justify-content:space-between;padding:10px 16px;background:#f8fafc;font-size:12px;">
-        <span>Total Fee: <strong>₹${s.totalFee.toLocaleString('en-IN')}</strong></span>
+        <span>Total Fee: <strong>₹${s.totalFee.toLocaleString('en-IN')}</strong>${s.previousDueFee > 0 ? ` <span style="color:#d97706;font-size:11px;">(Incl. Prev Due: ₹${s.previousDueFee.toLocaleString('en-IN')})</span>` : ''}</span>
         <span>Paid: <strong style="color:#059669;">₹${s.totalPaid.toLocaleString('en-IN')}</strong></span>
         <span>Outstanding: <strong style="color:${s.outstanding > 0 ? '#dc2626' : '#059669'};">₹${s.outstanding.toLocaleString('en-IN')}</strong></span>
         <span>Status: <strong style="color:${s.outstanding <= 0 ? '#059669' : '#dc2626'}">${s.status}</strong></span>

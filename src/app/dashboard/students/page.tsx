@@ -16,6 +16,7 @@ interface Student {
     batchName: string
     totalFee: number
     paidFee: number
+    previousDueFee?: number
     status: string
     admissionDate: string
     fatherName: string
@@ -1629,6 +1630,11 @@ export default function StudentsPage() {
                                                     <div style={{ fontSize: '11px', color: owing > 0 ? '#f59e0b' : '#10b981', fontWeight: '600' }}>
                                                         {pct}% {owing > 0 ? `• Due: ${formatCurrency(owing)}` : '✓'}
                                                     </div>
+                                                    {s.previousDueFee && s.previousDueFee > 0 ? (
+                                                        <div style={{ fontSize: '10px', color: '#ef4444', fontWeight: '700' }}>
+                                                            Prev: {formatCurrency(s.previousDueFee)}
+                                                        </div>
+                                                    ) : null}
                                                 </td>
                                                 <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{s.admissionDate ? formatDate(s.admissionDate) : '-'}</td>
                                                 <td>
@@ -1919,6 +1925,11 @@ export default function StudentsPage() {
                                                 <div style={{ fontSize: '11px', color: owing > 0 ? '#f59e0b' : '#10b981', fontWeight: '600' }}>
                                                     {pct}% paid {owing > 0 ? `• Due: ${formatCurrency(owing)}` : '✓'}
                                                 </div>
+                                                {s.previousDueFee && s.previousDueFee > 0 ? (
+                                                    <div style={{ fontSize: '10px', color: '#ef4444', fontWeight: '700' }}>
+                                                        Prev Due: {formatCurrency(s.previousDueFee)}
+                                                    </div>
+                                                ) : null}
                                             </td>
                                             <td>
                                                 <span className={`badge ${statusColors[s.status] || 'badge-gray'}`}>{s.status}</span>
@@ -2004,6 +2015,7 @@ export default function StudentsPage() {
                                     <div><label className="label">Samagra ID</label><input className="input" value={editForm.samagraId || ''} onChange={e => setEditForm({...editForm, samagraId: e.target.value})} /></div>
                                     <div><label className="label">PEN ID</label><input className="input" value={editForm.penId || ''} onChange={e => setEditForm({...editForm, penId: e.target.value})} /></div>
                                     <div><label className="label">APAR ID</label><input className="input" value={editForm.aparId || ''} onChange={e => setEditForm({...editForm, aparId: e.target.value})} /></div>
+                                    <div><label className="label">Previous Year Due Fee (₹)</label><input type="number" className="input" value={editForm.previousDueFee ?? ''} onChange={e => setEditForm({...editForm, previousDueFee: e.target.value})} /></div>
                                     <div><label className="label">Total Fee</label><input type="number" className="input" value={editForm.totalFee || ''} onChange={e => setEditForm({...editForm, totalFee: e.target.value})} /></div>
                                     <div>
                                         <label className="label">Status</label>
@@ -2174,6 +2186,7 @@ export default function StudentsPage() {
                                             ['📞 Parent Phone', selectedStudent.parentPhone || 'N/A'],
                                             ['📚 Class', selectedStudent.courseName],
                                             ['🕐 Section', selectedStudent.batchName],
+                                            ['⏪ Previous Year Due Fee', formatCurrency(selectedStudent.previousDueFee || 0)],
                                             ['💰 Total Fee', formatCurrency(selectedStudent.totalFee)],
                                             ['✅ Paid', formatCurrency(selectedStudent.paidFee)],
                                             ['⚠️ Pending', formatCurrency(selectedStudent.totalFee - selectedStudent.paidFee)],

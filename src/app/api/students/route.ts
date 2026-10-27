@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
         const body = await req.json()
         const { 
             fullName, phone, courseId, batchId, fatherName, motherName, parentPhone, email, address, gender, dob, 
-            admissionDate, feePlan, totalFee, notes, aadhaarNo, penId, aparId, samagraId,
+            admissionDate, feePlan, totalFee, previousDueFee, notes, aadhaarNo, penId, aparId, samagraId,
             scholarNo, caste, dobInWords, medium, firstAdmissionClass, firstAdmissionDate, scholarshipScheme, 
             bankName, bankAccountNo, ifsc, subjectGroup, photo,
             aadhaarFront, aadhaarBack, samagraIdDoc, aparIdDoc, penIdDoc, bankPassbook
@@ -198,7 +198,10 @@ export async function POST(req: NextRequest) {
                 dob: dob ? new Date(dob) : undefined,
                 admissionDate: admissionDate ? new Date(admissionDate) : new Date(),
                 feePlan: feePlan || '',
-                totalFee: totalFee && !isNaN(parseFloat(totalFee)) ? parseFloat(totalFee) : (course.fees || 0),
+                previousDueFee: previousDueFee && !isNaN(parseFloat(previousDueFee)) ? parseFloat(previousDueFee) : 0,
+                totalFee: totalFee && !isNaN(parseFloat(totalFee)) 
+                    ? parseFloat(totalFee) 
+                    : ((course.fees || 0) + (previousDueFee && !isNaN(parseFloat(previousDueFee)) ? parseFloat(previousDueFee) : 0)),
                 paidFee: 0,
                 status: 'ACTIVE',
                 notes: notes || '',
@@ -261,7 +264,7 @@ export async function PATCH(req: NextRequest) {
         const body = await req.json()
         const { 
             id, fullName, phone, courseId, batchId, status, fatherName, motherName, parentPhone, email, 
-            totalFee, admissionDate, notes, scholarNo, dob, dobInWords, gender, caste, medium, 
+            totalFee, previousDueFee, admissionDate, notes, scholarNo, dob, dobInWords, gender, caste, medium, 
             aadhaarNo, samagraId, penId, aparId, bankName, bankAccountNo, ifsc, subjectGroup, photo,
             aadhaarFront, aadhaarBack, samagraIdDoc, aparIdDoc, penIdDoc, bankPassbook
         } = body
@@ -301,6 +304,7 @@ export async function PATCH(req: NextRequest) {
                 parentPhone,
                 email,
                 totalFee: totalFee !== undefined ? parseFloat(totalFee) : undefined,
+                previousDueFee: previousDueFee !== undefined ? (parseFloat(previousDueFee) || 0) : undefined,
                 admissionDate: admissionDate ? new Date(admissionDate) : undefined,
                 notes,
                 scholarNo: scholarNo !== undefined ? (scholarNo ? String(scholarNo).trim() : '') : undefined,

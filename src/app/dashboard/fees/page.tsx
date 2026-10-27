@@ -12,6 +12,7 @@ interface Student {
     courseName: string
     totalFee: number
     paidFee: number
+    previousDueFee?: number
     status: string
     fatherName?: string
     studentId?: string
@@ -360,12 +361,12 @@ export default function FeesPage() {
             ['Total Outstanding Dues', formatCurrency(totalDue)],
             ['Total Collected', formatCurrency(totalCollected)],
             [],
-            ['Scholar No.', 'Student Name', 'Phone', 'Parent Phone', 'Course', 'Total Fee (INR)', 'Paid Fee (INR)', 'Pending Due (INR)', 'Payment %', 'Status']
+            ['Scholar No.', 'Student Name', 'Phone', 'Parent Phone', 'Course', 'Prev Due (INR)', 'Total Fee (INR)', 'Paid Fee (INR)', 'Pending Due (INR)', 'Payment %', 'Status']
         ]
         list.forEach(s => {
             const pending = s.totalFee - s.paidFee
             const pct = s.totalFee > 0 ? Math.round((s.paidFee / s.totalFee) * 100) : 0
-            rows.push([s.scholarNo || s.studentId || '-', s.fullName, s.phone || '-', s.parentPhone || '-', s.courseName || '-', s.totalFee, s.paidFee, Math.max(0, pending), `${pct}%`, s.status])
+            rows.push([s.scholarNo || s.studentId || '-', s.fullName, s.phone || '-', s.parentPhone || '-', s.courseName || '-', s.previousDueFee || 0, s.totalFee, s.paidFee, Math.max(0, pending), `${pct}%`, s.status])
         })
         downloadCSV(`fees-${activeTab}-${timestamp}.csv`, rows)
     }
@@ -386,11 +387,11 @@ export default function FeesPage() {
             ],
             tables: [{
                 title: `Fee Accounts (${list.length} Students)`,
-                headers: ['Scholar No.', 'Student Name', 'Phone', 'Course', 'Total Fee', 'Paid', 'Pending Due', 'Payment %'],
+                headers: ['Scholar No.', 'Student Name', 'Phone', 'Course', 'Prev Due', 'Total Fee', 'Paid', 'Pending Due', 'Payment %'],
                 rows: list.map(s => {
                     const pending = s.totalFee - s.paidFee
                     const pct = s.totalFee > 0 ? Math.round((s.paidFee / s.totalFee) * 100) : 0
-                    return [s.scholarNo || s.studentId || '-', s.fullName, s.parentPhone || s.phone || '-', s.courseName, formatCurrency(s.totalFee), formatCurrency(s.paidFee), pending > 0 ? formatCurrency(pending) : '✅ Clear', `${pct}%`]
+                    return [s.scholarNo || s.studentId || '-', s.fullName, s.parentPhone || s.phone || '-', s.courseName, formatCurrency(s.previousDueFee || 0), formatCurrency(s.totalFee), formatCurrency(s.paidFee), pending > 0 ? formatCurrency(pending) : '✅ Clear', `${pct}%`]
                 })
             }]
         })
@@ -552,7 +553,14 @@ export default function FeesPage() {
                                                     </div>
                                                 </td>
                                                 <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{s.courseName}</td>
-                                                <td style={{ fontWeight: '600', fontSize: '14px' }}>{formatCurrency(s.totalFee)}</td>
+                                                <td style={{ fontWeight: '600', fontSize: '14px' }}>
+                                                    <div>{formatCurrency(s.totalFee)}</div>
+                                                    {s.previousDueFee && s.previousDueFee > 0 ? (
+                                                        <div style={{ fontSize: '11px', color: '#f59e0b', fontWeight: '700', marginTop: '2px' }} title="Previous Year Due included">
+                                                            Incl. Prev: {formatCurrency(s.previousDueFee)}
+                                                        </div>
+                                                    ) : null}
+                                                </td>
                                                 <td style={{ color: '#10b981', fontWeight: '700' }}>{formatCurrency(s.paidFee)}</td>
                                                 <td style={{ color: pending > 0 ? '#ef4444' : '#10b981', fontWeight: '700' }}>
                                                     {pending > 0 ? formatCurrency(pending) : '✅ Clear'}
@@ -637,19 +645,41 @@ export default function FeesPage() {
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     {/* Summary bar */}
-                                    <div style={{ padding: '12px 16px', background: 'var(--surface-2)', borderRadius: '12px' }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                            <div>
-                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800' }}>Total Fee</div>
-                                                <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--primary)' }}>{formatCurrency(selectedStudentForFees.totalFee)}</div>
+                                    <div style={{ padding: '14px 16px', background: 'var(--surface-2)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: selectedStudentForFees.previousDueFee && selectedStudentForFees.previousDueFee > 0 ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: '10px', textAlign: 'center' }}>
+                                            {selectedStudentForFees.previousDueFee && selectedStudentForFees.previousDueFee > 0 ? (
+                                                <>
+                                                    <div style={{ padding: '8px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800' }}>Current Session</div>
+                                                        <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>{formatCurrency(Math.max(0, selectedStudentForFees.totalFee - (selectedStudentForFees.previousDueFee || 0)))}</div>
+                                                    </div>
+                                                    <div style={{ padding: '8px', background: 'rgba(245,158,11,0.08)', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.25)' }}>
+                                                        <div style={{ fontSize: '10px', color: '#f59e0b', textTransform: 'uppercase', fontWeight: '800' }}>Previous Due</div>
+                                                        <div style={{ fontSize: '14px', fontWeight: '800', color: '#f59e0b' }}>{formatCurrency(selectedStudentForFees.previousDueFee)}</div>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div style={{ padding: '8px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800' }}>Total Fee</div>
+                                                    <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--primary)' }}>{formatCurrency(selectedStudentForFees.totalFee)}</div>
+                                                </div>
+                                            )}
+                                            <div style={{ padding: '8px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800' }}>Paid So Far</div>
+                                                <div style={{ fontSize: '14px', fontWeight: '800', color: '#10b981' }}>{formatCurrency(selectedStudentForFees.paidFee)}</div>
                                             </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800' }}>Remaining</div>
-                                                <div style={{ fontSize: '18px', fontWeight: '800', color: '#ef4444' }}>{formatCurrency(selectedStudentForFees.totalFee - selectedStudentForFees.paidFee)}</div>
+                                            <div style={{ padding: '8px', background: 'rgba(239,68,68,0.08)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.25)' }}>
+                                                <div style={{ fontSize: '10px', color: '#ef4444', textTransform: 'uppercase', fontWeight: '800' }}>Remaining</div>
+                                                <div style={{ fontSize: '14px', fontWeight: '800', color: '#ef4444' }}>{formatCurrency(Math.max(0, selectedStudentForFees.totalFee - selectedStudentForFees.paidFee))}</div>
                                             </div>
                                         </div>
+                                        {selectedStudentForFees.previousDueFee && selectedStudentForFees.previousDueFee > 0 ? (
+                                            <div style={{ marginTop: '10px', fontSize: '11px', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '6px 12px', borderRadius: '6px', fontWeight: '600' }}>
+                                                ⚠️ Previous session due fee of {formatCurrency(selectedStudentForFees.previousDueFee)} is merged into total payable balance ({formatCurrency(selectedStudentForFees.totalFee)}). Any installment deposit clears this overall balance.
+                                            </div>
+                                        ) : null}
                                         <div className="progress-bar" style={{ marginTop: '12px', height: '6px' }}>
-                                            <div className="progress-fill" style={{ width: `${(selectedStudentForFees.paidFee / selectedStudentForFees.totalFee) * 100}%`, background: 'var(--primary)' }} />
+                                            <div className="progress-fill" style={{ width: `${Math.min(100, (selectedStudentForFees.paidFee / (selectedStudentForFees.totalFee || 1)) * 100)}%`, background: 'var(--primary)' }} />
                                         </div>
                                     </div>
 

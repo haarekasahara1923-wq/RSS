@@ -342,6 +342,7 @@ model Student {
   feePlan             String?
   totalFee            Float         @default(0)
   paidFee             Float         @default(0)
+  previousDueFee      Float         @default(0)
   status              StudentStatus @default(ACTIVE)
   notes               String?
   scholarNo           String?

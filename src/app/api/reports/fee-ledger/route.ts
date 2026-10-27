@@ -199,15 +199,31 @@ export async function GET(req: NextRequest) {
     const enrichedStudents = students.map(student => {
       const ledgerEntries: any[] = []
 
-      // Opening debit entry
-      if (student.totalFee > 0) {
+      // Opening debit entries
+      if (student.previousDueFee && student.previousDueFee > 0) {
         ledgerEntries.push({
           date: student.admissionDate,
           type: 'DEBIT',
-          particulars: 'Annual Fee / Tuition Fee (Opening)',
-          debit: student.totalFee,
+          particulars: 'Previous Year Due Fee (B/F)',
+          debit: student.previousDueFee,
           credit: 0,
-          balance: student.totalFee,
+          balance: student.previousDueFee,
+          receiptNo: null,
+          mode: null,
+        })
+      }
+
+      const currentSessionFee = Math.max(0, student.totalFee - (student.previousDueFee || 0))
+      if (currentSessionFee > 0) {
+        ledgerEntries.push({
+          date: student.admissionDate,
+          type: 'DEBIT',
+          particulars: (student.previousDueFee && student.previousDueFee > 0)
+            ? 'Current Session Fee (After Waiver)'
+            : 'Annual Fee / Tuition Fee (Opening)',
+          debit: currentSessionFee,
+          credit: 0,
+          balance: currentSessionFee,
           receiptNo: null,
           mode: null,
         })
@@ -285,6 +301,7 @@ export async function GET(req: NextRequest) {
         courseId: student.courseId,
         batchId: student.batchId,
         siblingGroupId: student.siblingGroupId,
+        previousDueFee: student.previousDueFee || 0,
         totalFee: student.totalFee,
         totalPaid,
         outstanding,
@@ -301,11 +318,12 @@ export async function GET(req: NextRequest) {
     const totalBilled = enrichedStudents.reduce((s, x) => s + x.totalFee, 0)
     const totalCollected = enrichedStudents.reduce((s, x) => s + x.totalPaid, 0)
     const totalOutstanding = enrichedStudents.reduce((s, x) => s + x.outstanding, 0)
+    const totalPreviousDue = enrichedStudents.reduce((s, x) => s + (x.previousDueFee || 0), 0)
 
     return NextResponse.json({
       success: true,
       students: enrichedStudents,
-      summary: { totalStudents, totalBilled, totalCollected, totalOutstanding },
+      summary: { totalStudents, totalBilled, totalCollected, totalOutstanding, totalPreviousDue },
     })
   } catch (err: any) {
     console.error('Fee ledger error:', err)

@@ -83,7 +83,7 @@ export default function AddStudentPage() {
         courseId: '', batchId: '',
         admissionDate: new Date().toISOString().split('T')[0],
         firstAdmissionClass: '', firstAdmissionDate: '', scholarshipScheme: '',
-        feePlan: 'Annual', totalFee: '', feeWaiver: '', notes: '',
+        feePlan: 'Annual', totalFee: '', feeWaiver: '', previousDueFee: '', notes: '',
         aadhaarNo: '', penId: '', aparId: '', samagraId: '',
         bankName: '', bankAccountNo: '', ifsc: '', subjectGroup: '', photo: '',
         aadhaarFront: '', aadhaarBack: '', samagraIdDoc: '', aparIdDoc: '', penIdDoc: '', bankPassbook: ''
@@ -514,12 +514,14 @@ export default function AddStudentPage() {
                                         waiver = classFee;
                                         newFeeWaiver = classFee.toString();
                                     }
+                                    const prevDue = parseFloat(form.previousDueFee) || 0;
+                                    const netCourseFee = Math.max(0, classFee - waiver);
                                     setForm({ 
                                         ...form, 
                                         courseId, 
                                         batchId: '', 
                                         feeWaiver: newFeeWaiver,
-                                        totalFee: selectedCourse ? Math.max(0, classFee - waiver).toString() : '' 
+                                        totalFee: selectedCourse ? (netCourseFee + prevDue).toString() : '' 
                                     });
                                 }} 
                                 required 
@@ -552,10 +554,11 @@ export default function AddStudentPage() {
                         <Field label="Scholarship Scheme">
                             <input className="input" placeholder="e.g. RT" value={form.scholarshipScheme} onChange={e => {
                                 const val = e.target.value;
+                                const prevDue = parseFloat(form.previousDueFee) || 0;
                                 if (val.toUpperCase() === 'RT') {
                                      const selectedCourse = courses.find(c => c.id === form.courseId);
                                      const classFee = selectedCourse ? selectedCourse.fees : 0;
-                                     setForm({...form, scholarshipScheme: val, feeWaiver: classFee.toString(), totalFee: '0' });
+                                     setForm({...form, scholarshipScheme: val, feeWaiver: classFee.toString(), totalFee: prevDue.toString() });
                                 } else {
                                      setForm({...form, scholarshipScheme: val});
                                 }
@@ -574,13 +577,39 @@ export default function AddStudentPage() {
                                 const waiverStr = e.target.value;
                                 const waiver = parseFloat(waiverStr) || 0;
                                 const selectedCourse = courses.find(c => c.id === form.courseId);
-                                const classFee = selectedCourse ? selectedCourse.fees : (parseFloat(form.totalFee) + (parseFloat(form.feeWaiver) || 0));
+                                const classFee = selectedCourse ? selectedCourse.fees : 0;
+                                const prevDue = parseFloat(form.previousDueFee) || 0;
+                                const netCourseFee = Math.max(0, classFee - waiver);
                                 setForm({ 
                                     ...form, 
                                     feeWaiver: waiverStr,
-                                    totalFee: selectedCourse ? Math.max(0, classFee - waiver).toString() : form.totalFee
+                                    totalFee: selectedCourse ? (netCourseFee + prevDue).toString() : form.totalFee
                                 });
                             }} />
+                        </Field>
+                        <Field label="Previous Year Due Fee (₹) [B/F]">
+                            <input 
+                                className="input" 
+                                type="number" 
+                                placeholder="0" 
+                                value={form.previousDueFee} 
+                                onChange={e => {
+                                    const prevDueStr = e.target.value;
+                                    const prevDue = parseFloat(prevDueStr) || 0;
+                                    const selectedCourse = courses.find(c => c.id === form.courseId);
+                                    const classFee = selectedCourse ? selectedCourse.fees : 0;
+                                    const waiver = parseFloat(form.feeWaiver) || 0;
+                                    const netCourseFee = Math.max(0, classFee - waiver);
+                                    setForm({
+                                        ...form,
+                                        previousDueFee: prevDueStr,
+                                        totalFee: selectedCourse ? (netCourseFee + prevDue).toString() : form.totalFee
+                                    });
+                                }} 
+                            />
+                            <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '4px', fontWeight: '600' }}>
+                                ⚠️ Any previous session due fee entered here will be added to total student fee.
+                            </div>
                         </Field>
                         <Field label="Subject Group">
                             {(() => {
@@ -603,8 +632,13 @@ export default function AddStudentPage() {
                                 );
                             })()}
                         </Field>
-                        <Field label="Total Course Fee (₹) [After Waiver]">
+                        <Field label="Total Fee (₹) [After Waiver + Previous Due]">
                             <input className="input" type="number" placeholder="45000" value={form.totalFee} onChange={e => setForm({ ...form, totalFee: e.target.value })} />
+                            {form.courseId && (
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                    Base: ₹{courses.find(c => c.id === form.courseId)?.fees || 0} − Waiver: ₹{parseFloat(form.feeWaiver) || 0} + Prev Due: ₹{parseFloat(form.previousDueFee) || 0}
+                                </div>
+                            )}
                         </Field>
                     </div>
                 </div>
@@ -778,6 +812,12 @@ export default function AddStudentPage() {
                                     <td style={{ padding: '8px', border: '1px solid #ccc' }} colSpan={3}>{form.subjectGroup}</td>
                                 </tr>
                             )}
+                            <tr>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Previous Year Due Fee</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc' }}>₹{parseFloat(form.previousDueFee) || 0}</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Total Fee Payable</td>
+                                <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold', color: '#1a5c38' }}>₹{parseFloat(form.totalFee) || 0}</td>
+                            </tr>
                         </tbody>
                     </table>
 
