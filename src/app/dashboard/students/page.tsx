@@ -66,6 +66,20 @@ export default function StudentsPage() {
     const [editForm, setEditForm] = useState<any>({})
     const [actionLoading, setActionLoading] = useState(false)
 
+    const startEditStudent = (s: Student) => {
+        setSelectedStudent(s)
+        const prevDue = Number(s.previousDueFee) || 0
+        const total = Number(s.totalFee) || 0
+        const base = Math.max(0, total - prevDue)
+        setEditForm({
+            ...s,
+            baseFee: base,
+            previousDueFee: prevDue > 0 ? prevDue : '',
+            totalFee: total,
+        })
+        setIsEditing(true)
+    }
+
     // Sort order & field state (Switcher Filter)
     const [sortField, setSortField] = useState<'fullName' | 'scholarNo' | 'admissionDate' | 'studentId' | 'totalFee'>('fullName')
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
@@ -1641,7 +1655,7 @@ export default function StudentsPage() {
                                                     <div style={{ display: 'flex', gap: '6px' }}>
                                                         <button onClick={() => setSelectedStudent(s)} className="btn btn-secondary btn-sm" title="View">👁️</button>
                                                         {canEditOrDelete && (
-                                                            <button onClick={() => { setSelectedStudent(s); setEditForm(s); setIsEditing(true); }} className="btn btn-secondary btn-sm" title="Edit">✏️</button>
+                                                            <button onClick={() => startEditStudent(s)} className="btn btn-secondary btn-sm" title="Edit">✏️</button>
                                                         )}
                                                     </div>
                                                 </td>
@@ -1942,7 +1956,7 @@ export default function StudentsPage() {
                                                     <button onClick={() => setSelectedStudent(s)} className="btn btn-secondary btn-sm" title="View">👁️</button>
                                                     {canEditOrDelete && (
                                                         <>
-                                                            <button onClick={() => { setSelectedStudent(s); setEditForm(s); setIsEditing(true); }} className="btn btn-secondary btn-sm" title="Edit">✏️</button>
+                                                            <button onClick={() => startEditStudent(s)} className="btn btn-secondary btn-sm" title="Edit">✏️</button>
                                                             <button onClick={() => toggleBlock(s)} className={`btn btn-sm ${s.status === 'ACTIVE' ? 'btn-secondary' : 'btn-success'}`} title={s.status === 'ACTIVE' ? 'Block' : 'Unblock'}>
                                                                 {s.status === 'ACTIVE' ? '🚫' : '✅'}
                                                             </button>
@@ -2015,8 +2029,79 @@ export default function StudentsPage() {
                                     <div><label className="label">Samagra ID</label><input className="input" value={editForm.samagraId || ''} onChange={e => setEditForm({...editForm, samagraId: e.target.value})} /></div>
                                     <div><label className="label">PEN ID</label><input className="input" value={editForm.penId || ''} onChange={e => setEditForm({...editForm, penId: e.target.value})} /></div>
                                     <div><label className="label">APAR ID</label><input className="input" value={editForm.aparId || ''} onChange={e => setEditForm({...editForm, aparId: e.target.value})} /></div>
-                                    <div><label className="label">Previous Year Due Fee (₹)</label><input type="number" className="input" value={editForm.previousDueFee ?? ''} onChange={e => setEditForm({...editForm, previousDueFee: e.target.value})} /></div>
-                                    <div><label className="label">Total Fee</label><input type="number" className="input" value={editForm.totalFee || ''} onChange={e => setEditForm({...editForm, totalFee: e.target.value})} /></div>
+                                    <div>
+                                        <label className="label">Current Session Fee (₹)</label>
+                                        <input 
+                                            type="number" 
+                                            className="input" 
+                                            value={editForm.baseFee ?? ''} 
+                                            onChange={e => {
+                                                const val = e.target.value
+                                                const baseNum = val === '' ? 0 : (parseFloat(val) || 0)
+                                                const prevNum = parseFloat(editForm.previousDueFee) || 0
+                                                setEditForm({
+                                                    ...editForm,
+                                                    baseFee: val,
+                                                    totalFee: baseNum + prevNum
+                                                })
+                                            }} 
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="label" style={{ fontWeight: 700, color: '#f59e0b' }}>
+                                            ⏪ Previous Year Due Fee (₹) [B/F]
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            className="input" 
+                                            placeholder="Enter previous due fee..."
+                                            style={{ borderColor: '#f59e0b', fontWeight: 600 }}
+                                            value={editForm.previousDueFee ?? ''} 
+                                            onChange={e => {
+                                                const val = e.target.value
+                                                const prevNum = val === '' ? 0 : (parseFloat(val) || 0)
+                                                const baseNum = parseFloat(editForm.baseFee) || 0
+                                                setEditForm({
+                                                    ...editForm,
+                                                    previousDueFee: val,
+                                                    totalFee: baseNum + prevNum
+                                                })
+                                            }} 
+                                        />
+                                    </div>
+                                    <div className="col-span-2" style={{ padding: '12px 16px', background: 'var(--surface-2)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                                            <div>
+                                                <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)' }}>
+                                                    💰 Total Payable Fee (Current Session + Previous Due)
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                    Auto-calculated: Session ₹{Number(editForm.baseFee || 0).toLocaleString('en-IN')} + Prev Due ₹{Number(editForm.previousDueFee || 0).toLocaleString('en-IN')} = ₹{Number(editForm.totalFee || 0).toLocaleString('en-IN')}
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--primary)' }}>
+                                                    ₹{Number(editForm.totalFee || 0).toLocaleString('en-IN')}
+                                                </span>
+                                                <input 
+                                                    type="number" 
+                                                    className="input" 
+                                                    style={{ width: '130px', fontWeight: 700 }}
+                                                    value={editForm.totalFee ?? ''} 
+                                                    onChange={e => {
+                                                        const val = e.target.value
+                                                        const totNum = val === '' ? 0 : (parseFloat(val) || 0)
+                                                        const prevNum = parseFloat(editForm.previousDueFee) || 0
+                                                        setEditForm({
+                                                            ...editForm,
+                                                            totalFee: val,
+                                                            baseFee: Math.max(0, totNum - prevNum)
+                                                        })
+                                                    }} 
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
                                     <div>
                                         <label className="label">Status</label>
                                         <select className="input" value={editForm.status || 'ACTIVE'} onChange={e => setEditForm({...editForm, status: e.target.value})}>
@@ -2324,7 +2409,7 @@ export default function StudentsPage() {
                         {!isEditing && (
                             <div className="modal-footer">
                                 {canEditOrDelete && (
-                                    <button onClick={() => { setEditForm(selectedStudent); setIsEditing(true); }} className="btn btn-secondary">✏️ Edit Details</button>
+                                    <button onClick={() => startEditStudent(selectedStudent)} className="btn btn-secondary">✏️ Edit Details</button>
                                 )}
                                 <button onClick={() => downloadPDF('admission-form-content', `${selectedStudent.fullName}_Admission_Form`)} className="btn btn-primary">📄 Admission Form</button>
                                 <a href={`https://wa.me/${(selectedStudent.parentPhone || selectedStudent.phone)?.replace(/\D/g, '')}?text=Dear Parent, This is regarding ${selectedStudent.fullName} from our school.`} target="_blank" className="btn btn-success">💬 WhatsApp Parent</a>

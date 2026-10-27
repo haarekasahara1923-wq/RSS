@@ -271,6 +271,32 @@ export async function PATCH(req: NextRequest) {
 
         if (!id) return NextResponse.json({ error: 'Student ID is required' }, { status: 400 })
 
+        const existingStudent = await prisma.student.findUnique({
+            where: { id, tenantId: user!.tenantId }
+        })
+        if (!existingStudent) {
+            return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+        }
+
+        let updatedPreviousDueFee: number | undefined = undefined
+        if (previousDueFee !== undefined) {
+            updatedPreviousDueFee = previousDueFee === '' ? 0 : (parseFloat(previousDueFee) || 0)
+        }
+
+        let updatedTotalFee: number | undefined = undefined
+        const { baseFee } = body
+        if (baseFee !== undefined && previousDueFee !== undefined) {
+            const b = baseFee === '' ? 0 : (parseFloat(baseFee) || 0)
+            const p = previousDueFee === '' ? 0 : (parseFloat(previousDueFee) || 0)
+            updatedTotalFee = b + p
+        } else if (totalFee !== undefined) {
+            updatedTotalFee = parseFloat(totalFee) || 0
+        } else if (updatedPreviousDueFee !== undefined) {
+            const oldPrev = existingStudent.previousDueFee || 0
+            const currentBase = Math.max(0, (existingStudent.totalFee || 0) - oldPrev)
+            updatedTotalFee = currentBase + updatedPreviousDueFee
+        }
+
         if (scholarNo !== undefined) {
             const trimmedScholar = scholarNo ? String(scholarNo).trim() : ''
             if (trimmedScholar) {
@@ -303,8 +329,8 @@ export async function PATCH(req: NextRequest) {
                 motherName,
                 parentPhone,
                 email,
-                totalFee: totalFee !== undefined ? parseFloat(totalFee) : undefined,
-                previousDueFee: previousDueFee !== undefined ? (parseFloat(previousDueFee) || 0) : undefined,
+                totalFee: updatedTotalFee !== undefined ? updatedTotalFee : undefined,
+                previousDueFee: updatedPreviousDueFee !== undefined ? updatedPreviousDueFee : undefined,
                 admissionDate: admissionDate ? new Date(admissionDate) : undefined,
                 notes,
                 scholarNo: scholarNo !== undefined ? (scholarNo ? String(scholarNo).trim() : '') : undefined,
