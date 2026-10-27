@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import Script from 'next/script'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { formatDate, formatCurrency, convertDateToWords, cleanGovtId } from '@/lib/utils'
 
 interface Student {
     id: string
@@ -71,8 +71,14 @@ export default function StudentsPage() {
         const prevDue = Number(s.previousDueFee) || 0
         const total = Number(s.totalFee) || 0
         const base = Math.max(0, total - prevDue)
+        const autoDobWords = s.dobInWords || (s.dob ? convertDateToWords(s.dob) : '')
         setEditForm({
             ...s,
+            dobInWords: autoDobWords,
+            aadhaarNo: cleanGovtId(s.aadhaarNo),
+            samagraId: cleanGovtId(s.samagraId),
+            penId: cleanGovtId(s.penId),
+            aparId: cleanGovtId(s.aparId),
             baseFee: base,
             previousDueFee: prevDue > 0 ? prevDue : '',
             totalFee: total,
@@ -2271,16 +2277,18 @@ export default function StudentsPage() {
                                             ['📞 Parent Phone', selectedStudent.parentPhone || 'N/A'],
                                             ['📚 Class', selectedStudent.courseName],
                                             ['🕐 Section', selectedStudent.batchName],
+                                            ['🎂 Date of Birth', selectedStudent.dob ? formatDate(selectedStudent.dob) : 'N/A'],
+                                            ['📝 DOB in Words', selectedStudent.dobInWords || (selectedStudent.dob ? convertDateToWords(selectedStudent.dob) : 'N/A')],
                                             ['⏪ Previous Year Due Fee', formatCurrency(selectedStudent.previousDueFee || 0)],
                                             ['💰 Total Fee', formatCurrency(selectedStudent.totalFee)],
                                             ['✅ Paid', formatCurrency(selectedStudent.paidFee)],
                                             ['⚠️ Pending', formatCurrency(selectedStudent.totalFee - selectedStudent.paidFee)],
                                             ['📅 Admission', selectedStudent.admissionDate ? formatDate(selectedStudent.admissionDate) : 'N/A'],
                                             ['🚩 Status', selectedStudent.status],
-                                            ['🪪 Aadhaar No.', selectedStudent.aadhaarNo || 'N/A'],
-                                            ['🆔 PEN ID', selectedStudent.penId || 'N/A'],
-                                            ['🆔 APAR ID', selectedStudent.aparId || 'N/A'],
-                                            ['🆔 Samagra ID', selectedStudent.samagraId || 'N/A'],
+                                            ['🪪 Aadhaar No.', cleanGovtId(selectedStudent.aadhaarNo) || 'N/A'],
+                                            ['🆔 PEN ID', cleanGovtId(selectedStudent.penId) || 'N/A'],
+                                            ['🆔 APAR ID', cleanGovtId(selectedStudent.aparId) || 'N/A'],
+                                            ['🆔 Samagra ID', cleanGovtId(selectedStudent.samagraId) || 'N/A'],
                                         ].map(([label, value]) => (
                                             <div key={label} style={{ padding: '10px', background: 'var(--surface-2)', borderRadius: '8px' }}>
                                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</div>
@@ -2448,7 +2456,7 @@ export default function StudentsPage() {
                                     <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Date of Birth</td>
                                     <td style={{ border: '1px solid #000', padding: '8px' }}>{selectedStudent.dob ? formatDate(selectedStudent.dob) : '-'}</td>
                                     <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>DOB (In Words)</td>
-                                    <td style={{ border: '1px solid #000', padding: '8px' }}>{selectedStudent.dobInWords || '-'}</td>
+                                    <td style={{ border: '1px solid #000', padding: '8px' }}>{selectedStudent.dobInWords || (selectedStudent.dob ? convertDateToWords(selectedStudent.dob) : '-')}</td>
                                 </tr>
                                 <tr>
                                     <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Gender</td>
@@ -2472,7 +2480,7 @@ export default function StudentsPage() {
                                     <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Parent Phone</td>
                                     <td style={{ border: '1px solid #000', padding: '8px' }}>{selectedStudent.parentPhone || '-'}</td>
                                     <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Aadhaar / Samagra</td>
-                                    <td style={{ border: '1px solid #000', padding: '8px' }}>{(selectedStudent.aadhaarNo || '-') + ' / ' + (selectedStudent.samagraId || '-')}</td>
+                                    <td style={{ border: '1px solid #000', padding: '8px' }}>{(cleanGovtId(selectedStudent.aadhaarNo) || '-') + ' / ' + (cleanGovtId(selectedStudent.samagraId) || '-')}</td>
                                 </tr>
                                 <tr>
                                     <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Bank Name</td>

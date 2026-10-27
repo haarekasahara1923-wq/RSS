@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { requireAuth, requireWriteAccess, checkPlanLimit } from '@/app/api/middleware'
 import { prisma } from '@/lib/prisma'
+import { cleanGovtId, convertDateToWords } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
     const { error, user } = requireAuth(req)
@@ -72,6 +73,11 @@ export async function GET(req: NextRequest) {
                 courseName: s.course?.name || '',
                 courseSubjects: s.course?.subjects || [],
                 batchName: s.batch?.name || '',
+                dobInWords: s.dobInWords || (s.dob ? convertDateToWords(s.dob) : ''),
+                aadhaarNo: cleanGovtId(s.aadhaarNo),
+                penId: cleanGovtId(s.penId),
+                aparId: cleanGovtId(s.aparId),
+                samagraId: cleanGovtId(s.samagraId),
                 parentEmail: s.parentLinks?.[0]?.user?.email || null,
                 parentPassword: s.parentLinks?.[0]?.user?.plainPassword || null,
                 hasSiblings,
@@ -205,13 +211,13 @@ export async function POST(req: NextRequest) {
                 paidFee: 0,
                 status: 'ACTIVE',
                 notes: notes || '',
-                aadhaarNo: aadhaarNo || '',
-                penId: penId || '',
-                aparId: aparId || '',
-                samagraId: samagraId || '',
+                aadhaarNo: cleanGovtId(aadhaarNo),
+                penId: cleanGovtId(penId),
+                aparId: cleanGovtId(aparId),
+                samagraId: cleanGovtId(samagraId),
                 scholarNo: trimmedScholarNo,
                 caste: caste || '',
-                dobInWords: dobInWords || '',
+                dobInWords: dobInWords || (dob ? convertDateToWords(dob) : ''),
                 medium: medium || '',
                 firstAdmissionClass: firstAdmissionClass || '',
                 firstAdmissionDate: firstAdmissionDate ? new Date(firstAdmissionDate) : undefined,
@@ -335,14 +341,16 @@ export async function PATCH(req: NextRequest) {
                 notes,
                 scholarNo: scholarNo !== undefined ? (scholarNo ? String(scholarNo).trim() : '') : undefined,
                 dob: dob ? new Date(dob) : undefined,
-                dobInWords: dobInWords !== undefined ? dobInWords : undefined,
+                dobInWords: dobInWords !== undefined 
+                    ? (dobInWords ? String(dobInWords).trim() : '') 
+                    : (dob ? convertDateToWords(dob) : undefined),
                 gender: gender as any,
                 caste: caste !== undefined ? caste : undefined,
                 medium: medium !== undefined ? medium : undefined,
-                aadhaarNo: aadhaarNo !== undefined ? aadhaarNo : undefined,
-                samagraId: samagraId !== undefined ? samagraId : undefined,
-                penId: penId !== undefined ? penId : undefined,
-                aparId: aparId !== undefined ? aparId : undefined,
+                aadhaarNo: aadhaarNo !== undefined ? cleanGovtId(aadhaarNo) : undefined,
+                samagraId: samagraId !== undefined ? cleanGovtId(samagraId) : undefined,
+                penId: penId !== undefined ? cleanGovtId(penId) : undefined,
+                aparId: aparId !== undefined ? cleanGovtId(aparId) : undefined,
                 bankName: bankName !== undefined ? bankName : undefined,
                 bankAccountNo: bankAccountNo !== undefined ? bankAccountNo : undefined,
                 ifsc: ifsc !== undefined ? ifsc : undefined,

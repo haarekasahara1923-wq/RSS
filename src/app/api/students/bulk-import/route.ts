@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { requireAuth } from '@/app/api/middleware'
 import { prisma } from '@/lib/prisma'
+import { cleanGovtId, convertDateToWords } from '@/lib/utils'
 
 // Normalize class name: removes "th", "st", "nd", "rd" suffixes, "class", "std", Roman numerals, etc.
 // e.g. "10th " -> "10", "10th Class" -> "10", "Class 10" -> "10", "Class X" -> "10", "1st" -> "1"
@@ -216,10 +217,10 @@ export async function POST(req: NextRequest) {
                         address: row.address ? String(row.address).trim() : '',
                         caste: row.caste ? String(row.caste).trim() : '',
                         medium: row.medium ? String(row.medium).trim() : '',
-                        aadhaarNo: row.aadhaarNo ? String(row.aadhaarNo).trim() : '',
-                        penId: row.penId ? String(row.penId).trim() : '',
-                        aparId: row.aparId ? String(row.aparId).trim() : '',
-                        samagraId: row.samagraId ? String(row.samagraId).trim() : '',
+                        aadhaarNo: cleanGovtId(row.aadhaarNo),
+                        penId: cleanGovtId(row.penId),
+                        aparId: cleanGovtId(row.aparId),
+                        samagraId: cleanGovtId(row.samagraId),
                         bankName: row.bankName ? String(row.bankName).trim() : '',
                         bankAccountNo: row.bankAccountNo ? String(row.bankAccountNo).trim() : '',
                         ifsc: row.ifsc ? String(row.ifsc).trim() : '',
@@ -233,7 +234,7 @@ export async function POST(req: NextRequest) {
                         totalFee: (matchedCourse.fees || 0) + (parseFloat(row.previousDueFee || row.previousDue || row.previousYearDue || 0) || 0),
                         paidFee: 0,
                         notes: '',
-                        dobInWords: '',
+                        dobInWords: row.dobInWords ? String(row.dobInWords).trim() : (dob ? convertDateToWords(dob) : ''),
                         subjectGroup: '',
                         scholarshipScheme: '',
                         feePlan: '',
