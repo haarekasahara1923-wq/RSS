@@ -272,7 +272,7 @@ export async function PATCH(req: NextRequest) {
             id, fullName, phone, courseId, batchId, status, fatherName, motherName, parentPhone, email, 
             totalFee, previousDueFee, admissionDate, notes, scholarNo, dob, dobInWords, gender, caste, medium, 
             aadhaarNo, samagraId, penId, aparId, bankName, bankAccountNo, ifsc, subjectGroup, photo,
-            aadhaarFront, aadhaarBack, samagraIdDoc, aparIdDoc, penIdDoc, bankPassbook
+            aadhaarFront, aadhaarBack, samagraIdDoc, aparIdDoc, penIdDoc, bankPassbook, scholarshipScheme
         } = body
 
         if (!id) return NextResponse.json({ error: 'Student ID is required' }, { status: 400 })
@@ -362,6 +362,7 @@ export async function PATCH(req: NextRequest) {
                 aparIdDoc: aparIdDoc !== undefined ? aparIdDoc : undefined,
                 penIdDoc: penIdDoc !== undefined ? penIdDoc : undefined,
                 bankPassbook: bankPassbook !== undefined ? bankPassbook : undefined,
+                scholarshipScheme: scholarshipScheme !== undefined ? (scholarshipScheme || '') : undefined,
             }
         })
 

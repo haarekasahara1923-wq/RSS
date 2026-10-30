@@ -72,6 +72,9 @@ export default function StudentsPage() {
         const total = Number(s.totalFee) || 0
         const base = Math.max(0, total - prevDue)
         const autoDobWords = s.dobInWords || (s.dob ? convertDateToWords(s.dob) : '')
+        // Determine feeWaiver from scholarshipScheme stored value
+        // baseFee already reflects net fee after waiver; feeWaiver is stored separately
+        const scheme = (s.scholarshipScheme || '').toUpperCase()
         setEditForm({
             ...s,
             dobInWords: autoDobWords,
@@ -82,6 +85,8 @@ export default function StudentsPage() {
             baseFee: base,
             previousDueFee: prevDue > 0 ? prevDue : '',
             totalFee: total,
+            feeWaiver: '',
+            scholarshipScheme: s.scholarshipScheme || '',
         })
         setIsEditing(true)
     }
@@ -2035,6 +2040,85 @@ export default function StudentsPage() {
                                     <div><label className="label">Samagra ID</label><input className="input" value={editForm.samagraId || ''} onChange={e => setEditForm({...editForm, samagraId: e.target.value})} /></div>
                                     <div><label className="label">PEN ID</label><input className="input" value={editForm.penId || ''} onChange={e => setEditForm({...editForm, penId: e.target.value})} /></div>
                                     <div><label className="label">APAR ID</label><input className="input" value={editForm.aparId || ''} onChange={e => setEditForm({...editForm, aparId: e.target.value})} /></div>
+
+                                    {/* ── Scholarship Scheme ── */}
+                                    <div className="col-span-2" style={{ padding: '14px 16px', background: 'rgba(99,102,241,0.07)', borderRadius: '10px', border: '1px solid rgba(99,102,241,0.25)' }}>
+                                        <div style={{ fontWeight: 700, fontSize: '13px', color: '#818cf8', marginBottom: '10px' }}>🎓 Scholarship Scheme</div>
+                                        <div className="grid-cols-2" style={{ gap: '12px' }}>
+                                            <div>
+                                                <label className="label">Scheme</label>
+                                                <select
+                                                    className="input"
+                                                    value={editForm.scholarshipScheme || ''}
+                                                    onChange={e => {
+                                                        const scheme = e.target.value
+                                                        const prevNum = parseFloat(editForm.previousDueFee) || 0
+                                                        if (scheme === 'RTE') {
+                                                            // RTE: full session fee waived → total = prevDue only
+                                                            const sessionFee = parseFloat(editForm.baseFee) || 0
+                                                            setEditForm({
+                                                                ...editForm,
+                                                                scholarshipScheme: scheme,
+                                                                feeWaiver: sessionFee.toString(),
+                                                                baseFee: 0,
+                                                                totalFee: prevNum
+                                                            })
+                                                        } else if (scheme === '') {
+                                                            // No scheme — reset waiver
+                                                            const waiverNum = 0
+                                                            setEditForm({
+                                                                ...editForm,
+                                                                scholarshipScheme: scheme,
+                                                                feeWaiver: '',
+                                                            })
+                                                        } else {
+                                                            // Other — keep current waiver value
+                                                            setEditForm({ ...editForm, scholarshipScheme: scheme })
+                                                        }
+                                                    }}
+                                                >
+                                                    <option value="">-- No Scheme --</option>
+                                                    <option value="RTE">RTE (Full Fee Waiver)</option>
+                                                    <option value="Other">Other (Partial Waiver)</option>
+                                                </select>
+                                            </div>
+                                            {editForm.scholarshipScheme && editForm.scholarshipScheme !== 'RTE' && (
+                                                <div>
+                                                    <label className="label">Fee Waiver Amount (₹)</label>
+                                                    <input
+                                                        type="number"
+                                                        className="input"
+                                                        placeholder="Enter waiver amount..."
+                                                        value={editForm.feeWaiver ?? ''}
+                                                        onChange={e => {
+                                                            const waiverStr = e.target.value
+                                                            const waiverNum = waiverStr === '' ? 0 : (parseFloat(waiverStr) || 0)
+                                                            const prevNum = parseFloat(editForm.previousDueFee) || 0
+                                                            // baseFee = originalSessionFee - waiver
+                                                            const origSession = (parseFloat(editForm.baseFee) || 0) + (parseFloat(editForm.feeWaiver) || 0)
+                                                            const newBase = Math.max(0, origSession - waiverNum)
+                                                            setEditForm({
+                                                                ...editForm,
+                                                                feeWaiver: waiverStr,
+                                                                baseFee: newBase,
+                                                                totalFee: newBase + prevNum
+                                                            })
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                            {editForm.scholarshipScheme === 'RTE' && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(16,185,129,0.1)', borderRadius: '8px', padding: '8px 12px', border: '1px solid rgba(16,185,129,0.3)' }}>
+                                                    <span style={{ fontSize: '20px' }}>✅</span>
+                                                    <div>
+                                                        <div style={{ fontWeight: 700, fontSize: '12px', color: '#10b981' }}>RTE – Full Session Fee Waived</div>
+                                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Only previous year due (if any) will be charged</div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     <div>
                                         <label className="label">Current Session Fee (₹)</label>
                                         <input 
@@ -2079,10 +2163,15 @@ export default function StudentsPage() {
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                                             <div>
                                                 <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)' }}>
-                                                    💰 Total Payable Fee (Current Session + Previous Due)
+                                                    💰 Total Payable Fee
                                                 </div>
                                                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                                    Auto-calculated: Session ₹{Number(editForm.baseFee || 0).toLocaleString('en-IN')} + Prev Due ₹{Number(editForm.previousDueFee || 0).toLocaleString('en-IN')} = ₹{Number(editForm.totalFee || 0).toLocaleString('en-IN')}
+                                                    {editForm.scholarshipScheme === 'RTE'
+                                                        ? `RTE Waiver Applied — Session Fee Waived + Prev Due ₹${Number(editForm.previousDueFee || 0).toLocaleString('en-IN')}`
+                                                        : editForm.scholarshipScheme && editForm.feeWaiver
+                                                            ? `Session ₹${Number(editForm.baseFee || 0).toLocaleString('en-IN')} (after ₹${Number(editForm.feeWaiver || 0).toLocaleString('en-IN')} waiver) + Prev Due ₹${Number(editForm.previousDueFee || 0).toLocaleString('en-IN')}`
+                                                            : `Session ₹${Number(editForm.baseFee || 0).toLocaleString('en-IN')} + Prev Due ₹${Number(editForm.previousDueFee || 0).toLocaleString('en-IN')}`
+                                                    } = ₹{Number(editForm.totalFee || 0).toLocaleString('en-IN')}
                                                 </div>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
