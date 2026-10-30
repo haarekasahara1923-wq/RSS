@@ -170,6 +170,49 @@ export default function StudentsPage() {
     const [importResult, setImportResult] = useState<any>(null)
     const importFileRef = useRef<HTMLInputElement>(null)
 
+    // Top scrollbar mirror refs and states for both student tables
+    const topScrollAllRef = useRef<HTMLDivElement>(null)
+    const tableAllRef = useRef<HTMLDivElement>(null)
+    const topScrollClassRef = useRef<HTMLDivElement>(null)
+    const tableClassRef = useRef<HTMLDivElement>(null)
+    const [tableAllWidth, setTableAllWidth] = useState(0)
+    const [tableClassWidth, setTableClassWidth] = useState(0)
+    const isSyncingAllRef = useRef(false)
+    const isSyncingClassRef = useRef(false)
+
+    const handleTopAllScroll = () => {
+        if (isSyncingAllRef.current) return
+        isSyncingAllRef.current = true
+        if (tableAllRef.current && topScrollAllRef.current) {
+            tableAllRef.current.scrollLeft = topScrollAllRef.current.scrollLeft
+        }
+        requestAnimationFrame(() => { isSyncingAllRef.current = false })
+    }
+    const handleTableAllScroll = () => {
+        if (isSyncingAllRef.current) return
+        isSyncingAllRef.current = true
+        if (topScrollAllRef.current && tableAllRef.current) {
+            topScrollAllRef.current.scrollLeft = tableAllRef.current.scrollLeft
+        }
+        requestAnimationFrame(() => { isSyncingAllRef.current = false })
+    }
+    const handleTopClassScroll = () => {
+        if (isSyncingClassRef.current) return
+        isSyncingClassRef.current = true
+        if (tableClassRef.current && topScrollClassRef.current) {
+            tableClassRef.current.scrollLeft = topScrollClassRef.current.scrollLeft
+        }
+        requestAnimationFrame(() => { isSyncingClassRef.current = false })
+    }
+    const handleTableClassScroll = () => {
+        if (isSyncingClassRef.current) return
+        isSyncingClassRef.current = true
+        if (topScrollClassRef.current && tableClassRef.current) {
+            topScrollClassRef.current.scrollLeft = tableClassRef.current.scrollLeft
+        }
+        requestAnimationFrame(() => { isSyncingClassRef.current = false })
+    }
+
     // Column mapping state
     const [colMap, setColMap] = useState<Record<string, string>>({})
     const [excelHeaders, setExcelHeaders] = useState<string[]>([])
@@ -619,6 +662,41 @@ export default function StudentsPage() {
         document.addEventListener('mousedown', handler)
         return () => document.removeEventListener('mousedown', handler)
     }, [])
+
+    // Synchronize top scrollbar width with actual table scrollWidth
+    useEffect(() => {
+        const updateWidths = () => {
+            if (tableAllRef.current) {
+                setTableAllWidth(tableAllRef.current.scrollWidth)
+            }
+            if (tableClassRef.current) {
+                setTableClassWidth(tableClassRef.current.scrollWidth)
+            }
+        }
+        updateWidths()
+        const timer = setTimeout(updateWidths, 150)
+
+        let roAll: ResizeObserver | null = null
+        let roClass: ResizeObserver | null = null
+        if (typeof ResizeObserver !== 'undefined') {
+            if (tableAllRef.current) {
+                roAll = new ResizeObserver(updateWidths)
+                roAll.observe(tableAllRef.current)
+            }
+            if (tableClassRef.current) {
+                roClass = new ResizeObserver(updateWidths)
+                roClass.observe(tableClassRef.current)
+            }
+        }
+
+        window.addEventListener('resize', updateWidths)
+        return () => {
+            clearTimeout(timer)
+            roAll?.disconnect()
+            roClass?.disconnect()
+            window.removeEventListener('resize', updateWidths)
+        }
+    }, [loading, selectionMode, sortedStudents, sortedClasswiseStudents, selectedCourseId, selectedBatchId])
 
     const getActiveToken = () => {
         return token || (typeof window !== 'undefined' ? (localStorage.getItem('scalevo_token') || localStorage.getItem('udba_token')) : '') || ''
@@ -1604,8 +1682,55 @@ export default function StudentsPage() {
                             <p style={{ color: 'var(--text-muted)' }}>No students found for this class{selectedBatchId ? '/batch' : ''}.</p>
                         </div>
                     ) : (
-                        <div className="table-container">
-                            <table>
+                        <div style={{ position: 'relative' }}>
+                            {/* Top mirror scrollbar with quick scroll buttons */}
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    marginBottom: '6px',
+                                    padding: '4px 10px',
+                                    background: 'var(--surface-2)',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border)',
+                                }}
+                            >
+                                <button
+                                    type="button"
+                                    className="btn btn-sm"
+                                    style={{ padding: '2px 8px', height: '24px', fontSize: '11px', lineHeight: 1 }}
+                                    onClick={() => { tableClassRef.current?.scrollBy({ left: -250, behavior: 'smooth' }) }}
+                                    title="Scroll Left"
+                                >
+                                    ◀
+                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 600, flexShrink: 0, userSelect: 'none' }}>
+                                    <span>Scroll Table:</span>
+                                </div>
+                                <div
+                                    ref={topScrollClassRef}
+                                    style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', height: '14px' }}
+                                    onScroll={handleTopClassScroll}
+                                >
+                                    <div style={{ height: '1px', width: `${tableClassWidth || 1200}px` }} />
+                                </div>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm"
+                                    style={{ padding: '2px 8px', height: '24px', fontSize: '11px', lineHeight: 1 }}
+                                    onClick={() => { tableClassRef.current?.scrollBy({ left: 250, behavior: 'smooth' }) }}
+                                    title="Scroll Right"
+                                >
+                                    ▶
+                                </button>
+                            </div>
+                            <div
+                                className="table-container"
+                                ref={tableClassRef}
+                                onScroll={handleTableClassScroll}
+                            >
+                            <table style={{ minWidth: '1100px' }}>
                                 <thead>
                                     <tr>
                                         <th>#</th>
@@ -1675,6 +1800,7 @@ export default function StudentsPage() {
                                     })}
                                 </tbody>
                             </table>
+                            </div>
                         </div>
                     )}
 
@@ -1843,7 +1969,7 @@ export default function StudentsPage() {
                     </div>
                 </div>
 
-                <div className="table-container">
+                <div>
                     {loading ? (
                         <div style={{ padding: '40px', textAlign: 'center' }}>
                             <div className="spinner" style={{ margin: '0 auto 12px', width: '32px', height: '32px' }} />
@@ -1856,7 +1982,55 @@ export default function StudentsPage() {
                             <Link href="/dashboard/students/add" className="btn btn-primary">Add First Student</Link>
                         </div>
                     ) : (
-                        <table>
+                        <div style={{ position: 'relative' }}>
+                            {/* Top mirror scrollbar with quick scroll buttons */}
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    marginBottom: '6px',
+                                    padding: '4px 10px',
+                                    background: 'var(--surface-2)',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border)',
+                                }}
+                            >
+                                <button
+                                    type="button"
+                                    className="btn btn-sm"
+                                    style={{ padding: '2px 8px', height: '24px', fontSize: '11px', lineHeight: 1 }}
+                                    onClick={() => { tableAllRef.current?.scrollBy({ left: -250, behavior: 'smooth' }) }}
+                                    title="Scroll Left"
+                                >
+                                    ◀
+                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 600, flexShrink: 0, userSelect: 'none' }}>
+                                    <span>Scroll Table:</span>
+                                </div>
+                                <div
+                                    ref={topScrollAllRef}
+                                    style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', height: '14px' }}
+                                    onScroll={handleTopAllScroll}
+                                >
+                                    <div style={{ height: '1px', width: `${tableAllWidth || 1200}px` }} />
+                                </div>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm"
+                                    style={{ padding: '2px 8px', height: '24px', fontSize: '11px', lineHeight: 1 }}
+                                    onClick={() => { tableAllRef.current?.scrollBy({ left: 250, behavior: 'smooth' }) }}
+                                    title="Scroll Right"
+                                >
+                                    ▶
+                                </button>
+                            </div>
+                            <div
+                                className="table-container"
+                                ref={tableAllRef}
+                                onScroll={handleTableAllScroll}
+                            >
+                                <table style={{ minWidth: '1100px' }}>
                             <thead>
                                 <tr>
                                     <th onClick={() => handleHeaderSort('scholarNo')} style={{ cursor: 'pointer', userSelect: 'none' }} title="Click to sort by Scholar No">
@@ -1981,7 +2155,9 @@ export default function StudentsPage() {
                                     )
                                 })}
                             </tbody>
-                        </table>
+                            </table>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
