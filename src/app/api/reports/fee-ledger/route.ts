@@ -433,8 +433,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate parent receipt counter
+    // Tenant 1 starts with 1001 base offset, Tenant 2 starts with 0001
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: user!.tenantId },
+      select: { id: true, name: true, slug: true },
+    })
+    const isHigherSecondary =
+      tenant?.id === 'cmuv23jwe000004l8lg5f1kr1' ||
+      /higher\s*secondary/i.test(tenant?.name || '') ||
+      tenant?.slug === 'rss-public-school'
+
     const paymentCount = await prisma.payment.count({ where: { tenantId: user!.tenantId } })
-    const parentReceiptNo = `REC-P${String(paymentCount + 1).padStart(5, '0')}`
+    const baseOffset = isHigherSecondary ? 1000 : 0
+    const parentReceiptNo = `REC-P${String(baseOffset + paymentCount + 1).padStart(5, '0')}`
 
     const distributions: {
       studentId: string

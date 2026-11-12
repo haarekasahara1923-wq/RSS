@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { requireAuth, requireWriteAccess } from '@/app/api/middleware'
 import { prisma } from '@/lib/prisma'
 import { dayStart, dayEnd, todayIST } from '@/lib/accounts'
+import { getNextReceiptNumber } from '@/lib/receiptNumber'
 
 /** Convert YYYY-MM-DD into a timestamp; today's date keeps the current time */
 function paymentDate(date?: string): Date | undefined {
@@ -59,21 +60,10 @@ export async function POST(req: NextRequest) {
 
         // Use a transaction to ensure both payment is created and student's paidFee is updated
         const result = await prisma.$transaction(async (tx) => {
-            // Sequential receipt number: find highest existing number for this tenant this year
-            const year = new Date().getFullYear()
-            const prefix = `REC-${year}-`
-            const lastPayment = await tx.payment.findFirst({
-                where: { tenantId: user!.tenantId, receiptNo: { startsWith: prefix } },
-                orderBy: { receiptNo: 'desc' },
-                select: { receiptNo: true }
-            })
-            let nextNum = 1
-            if (lastPayment?.receiptNo) {
-                const parts = lastPayment.receiptNo.split('-')
-                const lastNum = parseInt(parts[parts.length - 1], 10)
-                if (!isNaN(lastNum)) nextNum = lastNum + 1
-            }
-            const receiptNo = `${prefix}${nextNum.toString().padStart(4, '0')}`
+            // Sequential receipt number:
+            // Tenant 1 (RSS Public Higher Secondary School) starts from 1001
+            // Tenant 2 (RSS Public School) starts from 001 (continues undisturbed)
+            const receiptNo = await getNextReceiptNumber(tx, user!.tenantId)
 
             const payment = await tx.payment.create({
                 data: {

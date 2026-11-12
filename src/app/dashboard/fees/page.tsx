@@ -118,37 +118,37 @@ function generateReceiptPDF(opts: {
         const tableBody = (distributions && distributions.length > 0)
             ? distributions.map((d: any, i: number) => `
                 <tr>
-                    <td style="padding:3px 6px;font-size:10px;border-bottom:1px solid #e2e8f0;text-align:center;">${i + 1}</td>
-                    <td style="padding:3px 6px;font-size:10px;border-bottom:1px solid #e2e8f0;font-weight:700;">
+                    <td style="padding:3px 6px;font-size:13px;border-bottom:1px solid #e2e8f0;text-align:center;">${i + 1}</td>
+                    <td style="padding:3px 6px;font-size:13.5px;border-bottom:1px solid #e2e8f0;font-weight:700;">
                         ${d.studentName} ${d.scholarNo && d.scholarNo !== '-' ? `(Sch: ${d.scholarNo})` : ''} • ${d.class}
                     </td>
-                    <td style="padding:3px 6px;font-size:10px;border-bottom:1px solid #e2e8f0;">Sibling Fee Allocation</td>
-                    <td style="padding:3px 6px;font-size:10px;border-bottom:1px solid #e2e8f0;text-align:right;">₹${(d.previousOutstanding ?? 0).toLocaleString('en-IN')}</td>
-                    <td style="padding:3px 6px;font-size:10px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:700;color:#059669;">₹${parseFloat(d.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td style="padding:3px 6px;font-size:13px;border-bottom:1px solid #e2e8f0;">Sibling Fee Allocation</td>
+                    <td style="padding:3px 6px;font-size:13px;border-bottom:1px solid #e2e8f0;text-align:right;">₹${(d.previousOutstanding ?? 0).toLocaleString('en-IN')}</td>
+                    <td style="padding:3px 6px;font-size:14px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:800;color:#059669;">₹${parseFloat(d.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                 </tr>
             `).join('')
             : `
                 <tr>
-                    <td style="padding:4px 6px;font-size:10.5px;border-bottom:1px solid #e2e8f0;text-align:center;">1</td>
-                    <td style="padding:4px 6px;font-size:10.5px;border-bottom:1px solid #e2e8f0;font-weight:600;" colspan="2">${installmentLabel}</td>
-                    <td style="padding:4px 6px;font-size:10.5px;border-bottom:1px solid #e2e8f0;">Fee Deposit</td>
-                    <td style="padding:4px 6px;font-size:10.5px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:700;color:#059669;">₹${paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td style="padding:3px 6px;font-size:13px;border-bottom:1px solid #e2e8f0;text-align:center;">1</td>
+                    <td style="padding:3px 6px;font-size:14px;border-bottom:1px solid #e2e8f0;font-weight:700;" colspan="2">${installmentLabel}</td>
+                    <td style="padding:3px 6px;font-size:13px;border-bottom:1px solid #e2e8f0;">Fee Deposit</td>
+                    <td style="padding:3px 6px;font-size:14px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:800;color:#059669;">₹${paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                 </tr>
             `
 
         const tableHeaders = (distributions && distributions.length > 0)
             ? `<tr>
-                <th style="padding:3px 6px;font-size:9.5px;text-align:center;width:24px;">#</th>
-                <th style="padding:3px 6px;font-size:9.5px;text-align:left;">Student / Sibling Details</th>
-                <th style="padding:3px 6px;font-size:9.5px;text-align:left;">Type</th>
-                <th style="padding:3px 6px;font-size:9.5px;text-align:right;">Pre Due</th>
-                <th style="padding:3px 6px;font-size:9.5px;text-align:right;">Amount (₹)</th>
+                <th style="padding:3px 6px;font-size:12.5px;text-align:center;width:24px;">#</th>
+                <th style="padding:3px 6px;font-size:12.5px;text-align:left;">Student / Sibling Details</th>
+                <th style="padding:3px 6px;font-size:12.5px;text-align:left;">Type</th>
+                <th style="padding:3px 6px;font-size:12.5px;text-align:right;">Pre Due</th>
+                <th style="padding:3px 6px;font-size:12.5px;text-align:right;">Amount (₹)</th>
               </tr>`
             : `<tr>
-                <th style="padding:3px 6px;font-size:9.5px;text-align:center;width:24px;">#</th>
-                <th style="padding:3px 6px;font-size:9.5px;text-align:left;" colspan="2">Description</th>
-                <th style="padding:3px 6px;font-size:9.5px;text-align:left;">Type</th>
-                <th style="padding:3px 6px;font-size:9.5px;text-align:right;">Amount (₹)</th>
+                <th style="padding:3px 6px;font-size:12.5px;text-align:center;width:24px;">#</th>
+                <th style="padding:3px 6px;font-size:12.5px;text-align:left;" colspan="2">Description</th>
+                <th style="padding:3px 6px;font-size:12.5px;text-align:left;">Type</th>
+                <th style="padding:3px 6px;font-size:12.5px;text-align:right;">Amount (₹)</th>
               </tr>`
 
         return `
@@ -167,7 +167,7 @@ function generateReceiptPDF(opts: {
                     </div>
                 </div>
                 <div class="r-rec-badge">
-                    <div class="r-copy-tag" style="background:${badgeBg};color:${badgeColor};border:1px solid ${badgeColor};">${copyType}</div>
+                    <div class="r-copy-tag" style="background:${badgeBg};color:${badgeColor};border:1.5px solid ${badgeColor};">${copyType}</div>
                     <div class="r-rec-no">${receipt.receiptNo || 'N/A'}</div>
                     <div class="r-rec-dt">${depositDate}</div>
                 </div>
@@ -195,10 +195,10 @@ function generateReceiptPDF(opts: {
                 <tbody>${tableBody}</tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="${distributions && distributions.length > 0 ? 4 : 4}" style="padding:4px 6px;font-size:10px;font-weight:700;text-align:right;">
+                        <td colspan="${distributions && distributions.length > 0 ? 4 : 4}" style="padding:3px 6px;font-size:13.5px;font-weight:700;text-align:right;">
                             Total Amount Received:
                         </td>
-                        <td style="padding:4px 6px;font-size:11px;font-weight:800;color:#059669;text-align:right;">
+                        <td style="padding:3px 6px;font-size:15px;font-weight:900;color:#059669;text-align:right;">
                             ₹${paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </td>
                     </tr>
@@ -235,116 +235,152 @@ function generateReceiptPDF(opts: {
 <meta charset="UTF-8"/>
 <title>Fee Receipt – ${receipt.receiptNo || 'N/A'}</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{background:#f1f5f9;font-family:'Inter',sans-serif;color:#0f172a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+html,body{background:#f1f5f9;font-family:'Inter',-apple-system,sans-serif;color:#0f172a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+.no-print {
+    background:#1e293b;
+    color:#fff;
+    padding:8px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    font-size:13px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.2);
+}
+.no-print button {
+    background:#10b981;
+    color:#fff;
+    border:none;
+    padding:6px 18px;
+    border-radius:6px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 2px 4px rgba(0,0,0,0.2);
+}
+.no-print button:hover {
+    background:#059669;
+}
+
 .a4-container{
-    width:210mm;
-    min-height:297mm;
-    max-height:297mm;
-    margin:10px auto;
+    width:200mm;
+    max-width:200mm;
+    height:285mm;
+    max-height:285mm;
+    margin:6px auto;
     background:#fff;
-    padding:5mm 7mm;
+    padding:0;
     box-sizing:border-box;
     display:flex;
     flex-direction:column;
     justify-content:space-between;
-    box-shadow:0 4px 24px rgba(0,0,0,0.1);
+    box-shadow:0 4px 24px rgba(0,0,0,0.12);
     overflow:hidden;
+    page-break-inside:avoid;
+    break-inside:avoid;
+    page-break-after:avoid;
+    break-after:avoid;
 }
 .receipt-card{
-    border:1px solid #cbd5e1;
+    border:1.5px solid #334155;
     border-radius:6px;
     background:#ffffff;
-    padding:7px 10px;
+    padding:6px 10px;
     display:flex;
     flex-direction:column;
     justify-content:space-between;
-    height:136mm;
-    max-height:136mm;
+    height:137mm;
+    max-height:137mm;
     box-sizing:border-box;
     position:relative;
     overflow:hidden;
+    page-break-inside:avoid;
+    break-inside:avoid;
+    page-break-after:avoid;
+    break-after:avoid;
 }
 .r-head{
     display:flex;
     align-items:center;
-    gap:10px;
+    gap:8px;
     border-bottom:1.5px solid #1a3c5e;
-    padding-bottom:4px;
-    margin-bottom:3px;
+    padding-bottom:3px;
+    margin-bottom:2px;
 }
 .r-logo{
-    width:38px;
-    height:38px;
+    width:36px;
+    height:36px;
     border-radius:6px;
     background:#f8fafc;
-    border:1px solid #e2e8f0;
+    border:1px solid #cbd5e1;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:22px;
+    font-size:20px;
     flex-shrink:0;
     overflow:hidden;
 }
 .r-logo img{width:100%;height:100%;object-fit:cover}
 .r-school{flex:1;line-height:1.2}
-.r-school-name{font-size:13.5px;font-weight:800;color:#1a3c5e;letter-spacing:0.3px}
-.r-school-sub{font-size:8.5px;color:#64748b;margin-top:2px}
+.r-school-name{font-size:16.5px;font-weight:900;color:#1a3c5e;letter-spacing:0.3px}
+.r-school-sub{font-size:11px;color:#475569;margin-top:2px}
 .r-rec-badge{text-align:right;flex-shrink:0}
-.r-copy-tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:800;letter-spacing:0.5px}
-.r-rec-no{font-size:11.5px;font-weight:800;color:#1a3c5e;margin-top:1px}
-.r-rec-dt{font-size:8.5px;color:#64748b}
+.r-copy-tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:12px;font-weight:900;letter-spacing:0.5px}
+.r-rec-no{font-size:14px;font-weight:900;color:#1a3c5e;margin-top:2px}
+.r-rec-dt{font-size:12px;color:#475569;font-weight:600}
 
 .r-band{
     background:#1a3c5e;
     color:#fff;
-    padding:3px 8px;
-    font-size:9px;
-    font-weight:700;
-    letter-spacing:1px;
+    padding:2.5px 8px;
+    font-size:12.5px;
+    font-weight:800;
+    letter-spacing:0.8px;
     display:flex;
     justify-content:space-between;
     align-items:center;
     border-radius:3px;
-    margin-bottom:4px;
+    margin-bottom:3px;
 }
 .r-band-pill{
     background:#fbbf24;
     color:#1a3c5e;
-    font-size:8px;
-    padding:1px 5px;
+    font-size:11px;
+    padding:1px 6px;
     border-radius:3px;
-    font-weight:800;
+    font-weight:900;
 }
 
 .r-grid{
     display:grid;
     grid-template-columns:repeat(3, 1fr);
-    gap:2px 6px;
+    gap:2px 8px;
     background:#f8fafc;
-    border:1px solid #e2e8f0;
+    border:1px solid #cbd5e1;
     border-radius:4px;
-    padding:3px 6px;
-    margin-bottom:4px;
+    padding:3px 8px;
+    margin-bottom:3px;
 }
-.r-cell{font-size:9.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.r-lbl{color:#64748b;font-weight:600;font-size:8px;text-transform:uppercase;margin-right:3px}
-.r-val{color:#0f172a;font-weight:700}
+.r-cell{font-size:14px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-lbl{color:#475569;font-weight:700;font-size:11.5px;text-transform:uppercase;margin-right:4px}
+.r-val{color:#0f172a;font-weight:800;font-size:14px}
 
 .r-table{
     width:100%;
     border-collapse:collapse;
-    margin-bottom:3px;
+    margin-bottom:2px;
 }
 .r-table th{
     background:#f1f5f9;
     color:#334155;
-    border:1px solid #cbd5e1;
-    font-weight:700;
+    border:1px solid #94a3b8;
+    font-weight:800;
 }
 .r-table td{
-    border:1px solid #e2e8f0;
+    border:1px solid #cbd5e1;
 }
 .r-table tfoot td{
     border-top:1.5px solid #10b981;
@@ -356,18 +392,19 @@ html,body{background:#f1f5f9;font-family:'Inter',sans-serif;color:#0f172a;-webki
     border:1px dashed #f59e0b;
     border-radius:4px;
     padding:2px 6px;
-    font-size:8.5px;
+    font-size:13.5px;
     color:#78350f;
-    margin-bottom:4px;
+    margin-bottom:3px;
     line-height:1.2;
 }
+.r-words strong{font-size:13px;color:#92400e}
 
 .r-foot{
     display:flex;
     justify-content:space-between;
     align-items:flex-end;
-    border-top:1px solid #e2e8f0;
-    padding-top:3px;
+    border-top:1px solid #cbd5e1;
+    padding-top:2px;
     position:relative;
 }
 .r-stamp{
@@ -377,29 +414,35 @@ html,body{background:#f1f5f9;font-family:'Inter',sans-serif;color:#0f172a;-webki
     transform:translateX(-50%) rotate(-6deg);
     border:1.5px solid #10b981;
     color:#10b981;
-    font-size:11px;
+    font-size:12px;
     font-weight:900;
-    padding:1px 6px;
+    padding:1px 8px;
     border-radius:4px;
     letter-spacing:2px;
-    opacity:0.8;
+    opacity:0.85;
 }
-.r-note{font-size:7.5px;color:#64748b;line-height:1.25;max-width:280px}
-.r-sig{text-align:center;min-width:120px}
-.r-sig-line{width:120px;height:22px;border-bottom:1px solid #334155;margin-bottom:1px;display:flex;align-items:flex-end;justify-content:center}
-.r-sig-line img{max-height:20px;max-width:110px;object-fit:contain}
-.r-sig-lbl{font-size:8px;font-weight:700;color:#0f172a;text-transform:uppercase}
-.r-sig-sub{font-size:7px;color:#64748b}
+.r-note{font-size:10.5px;color:#64748b;line-height:1.25;max-width:320px}
+.r-sig{text-align:center;min-width:130px}
+.r-sig-line{width:130px;height:20px;border-bottom:1px solid #334155;margin-bottom:2px;display:flex;align-items:flex-end;justify-content:center}
+.r-sig-line img{max-height:18px;max-width:120px;object-fit:contain}
+.r-sig-lbl{font-size:12px;font-weight:800;color:#0f172a;text-transform:uppercase}
+.r-sig-sub{font-size:10.5px;color:#64748b}
 
 .cut-line{
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:8.5px;
+    font-size:11px;
     font-weight:700;
-    color:#94a3b8;
-    height:7mm;
+    color:#64748b;
+    height:5mm;
+    max-height:5mm;
+    line-height:5mm;
+    margin:1mm 0;
     user-select:none;
+    box-sizing:border-box;
+    page-break-inside:avoid;
+    break-inside:avoid;
 }
 
 @page {
@@ -414,29 +457,61 @@ html,body{background:#f1f5f9;font-family:'Inter',sans-serif;color:#0f172a;-webki
         padding:0 !important;
         width:100% !important;
         height:100% !important;
+        max-height:297mm !important;
+        overflow:hidden !important;
+    }
+    .no-print{
+        display:none !important;
     }
     .a4-container{
         width:100% !important;
-        height:287mm !important;
-        max-height:287mm !important;
-        margin:0 !important;
-        padding:2mm 4mm !important;
+        max-width:200mm !important;
+        height:285mm !important;
+        max-height:285mm !important;
+        margin:0 auto !important;
+        padding:0 !important;
         box-shadow:none !important;
         border:none !important;
+        display:flex !important;
+        flex-direction:column !important;
+        justify-content:space-between !important;
         page-break-inside:avoid !important;
+        break-inside:avoid !important;
         page-break-after:avoid !important;
+        break-after:avoid !important;
+        page-break-before:avoid !important;
+        break-before:avoid !important;
         overflow:hidden !important;
     }
     .receipt-card{
-        height:136mm !important;
-        max-height:136mm !important;
+        height:137mm !important;
+        max-height:137mm !important;
         page-break-inside:avoid !important;
+        break-inside:avoid !important;
         page-break-after:avoid !important;
+        break-after:avoid !important;
+        overflow:hidden !important;
+        box-sizing:border-box !important;
+    }
+    .cut-line{
+        height:5mm !important;
+        max-height:5mm !important;
+        line-height:5mm !important;
+        margin:1mm 0 !important;
+        page-break-inside:avoid !important;
+        break-inside:avoid !important;
+        page-break-after:avoid !important;
+        break-after:avoid !important;
+        box-sizing:border-box !important;
     }
 }
 </style>
 </head>
 <body>
+<div class="no-print">
+    <span><strong>Single A4 Page:</strong> Office Copy (top) + Parent Copy (bottom)</span>
+    <button onclick="window.print()">🖨️ Print / Save as PDF</button>
+</div>
 <div class="a4-container">
     ${renderReceiptCard('OFFICE COPY')}
     <div class="cut-line">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { requireAuth, requireWriteAccess } from '@/app/api/middleware'
 import { prisma } from '@/lib/prisma'
+import { getNextReceiptNumber } from '@/lib/receiptNumber'
 
 export async function GET(req: NextRequest) {
     const { error, user } = requireAuth(req)
@@ -110,6 +111,7 @@ export async function PATCH(req: NextRequest) {
                     })
                 }
             } else if (newAmount > 0) {
+                const receiptNo = await getNextReceiptNumber(tx, user!.tenantId)
                 await tx.payment.create({
                     data: {
                         tenantId: user!.tenantId,
@@ -117,6 +119,7 @@ export async function PATCH(req: NextRequest) {
                         feeId: id,
                         amount: newAmount,
                         mode: paymentMode as any,
+                        receiptNo,
                         notes: `Slot Payment: ${oldFee.notes || 'Custom Slot'}`
                     }
                 })
