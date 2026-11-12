@@ -58,10 +58,12 @@ export async function POST(req: NextRequest) {
             })
         }
 
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://udba.vercel.app'
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://rss-black-gamma.vercel.app'
         const resetUrl = `${appUrl}/reset-password?token=${resetToken}`
-        const schoolName = 'Universal Day Boarding Academy'
-        const fromEmail = process.env.SMTP_USER || 'noreply@udba.ac.in'
+        const schoolName = process.env.NEXT_PUBLIC_SCHOOL_NAME || 'RSS Public School'
+        const schoolAddress = process.env.NEXT_PUBLIC_SCHOOL_ADDRESS || 'Ayodhya Nagari, AB Road, Gol Pahadiya, Lashkar, Gwalior (MP)'
+        const schoolPhone = process.env.NEXT_PUBLIC_SCHOOL_PHONE || '917489315077'
+        const fromEmail = process.env.SMTP_USER || 'rsspublic1979@gmail.com'
 
         // Send email via SMTP (Gmail)
         const transporter = createTransporter()
@@ -88,7 +90,7 @@ export async function POST(req: NextRequest) {
             <td style="background:linear-gradient(135deg,#1a5c38,#0f3d26);padding:32px;text-align:center;">
               <div style="font-size:40px;margin-bottom:12px;">🏫</div>
               <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:800;">${schoolName}</h1>
-              <p style="margin:6px 0 0;color:rgba(255,255,255,0.7);font-size:13px;">📍 Pinto Park, Gwalior (MP)</p>
+              <p style="margin:6px 0 0;color:rgba(255,255,255,0.7);font-size:13px;">📍 ${schoolAddress}</p>
             </td>
           </tr>
 
@@ -100,7 +102,7 @@ export async function POST(req: NextRequest) {
               </div>
               <h2 style="margin:0 0 12px;color:#1e293b;font-size:20px;font-weight:700;text-align:center;">Password Reset Request</h2>
               <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 24px;text-align:center;">
-                We received a request to reset the password for your UDBA account.<br>
+                We received a request to reset the password for your ${schoolName} account.<br>
                 Click the button below to set a new password.
               </p>
 
@@ -130,8 +132,8 @@ export async function POST(req: NextRequest) {
           <tr>
             <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:20px 40px;text-align:center;">
               <p style="margin:0;color:#94a3b8;font-size:12px;">
-                © ${new Date().getFullYear()} ${schoolName} &nbsp;|&nbsp; Pinto Park, Gwalior (MP)<br>
-                Need help? Contact us at <a href="https://wa.me/917879337770" style="color:#1a5c38;">+91 7879337770</a>
+                © ${new Date().getFullYear()} ${schoolName} &nbsp;|&nbsp; ${schoolAddress}<br>
+                Need help? Contact us at <a href="https://wa.me/${schoolPhone}" style="color:#1a5c38;">+${schoolPhone}</a>
               </p>
             </td>
           </tr>

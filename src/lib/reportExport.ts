@@ -338,7 +338,7 @@ export function generateAndPrintPDF(options: ReportPDFOptions) {
         <div class="header-meta">
             <div class="badge">Official Report</div>
             <div><strong>Generated:</strong> ${generatedDate}</div>
-            <div><strong>System:</strong> UDBA ERP Portal</div>
+            <div><strong>System:</strong> ${schoolName || 'RSS Public School'} ERP Portal</div>
         </div>
     </div>
 

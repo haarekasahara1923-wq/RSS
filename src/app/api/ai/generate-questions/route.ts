@@ -63,7 +63,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Subject is required' }, { status: 400 })
         }
 
-        const systemContent = `You are an expert ${subject} teacher creating school exams for Universal Day Boarding Academy. You must output a JSON object containing a property 'questions' which is an array of ${count} objects. Each object must precisely match this format: { "subject": "${subject}", "topic": "${topic || subject}", "questionText": "Question text here", "type": "${type}", "options": ["Option A", "Option B", "Option C", "Option D"], "correctAnswer": "Exact matching string from options array", "marks": ${difficulty === 'HARD' ? 4 : difficulty === 'EASY' ? 1 : 2}, "difficulty": "${difficulty}", "explanation": "Explanation for the answer" }. For DESCRIPTIVE type, you can leave options array empty and correctAnswer empty.`
+        const schoolName = process.env.NEXT_PUBLIC_SCHOOL_NAME || 'RSS Public School'
+        const systemContent = `You are an expert ${subject} teacher creating school exams for ${schoolName}. You must output a JSON object containing a property 'questions' which is an array of ${count} objects. Each object must precisely match this format: { "subject": "${subject}", "topic": "${topic || subject}", "questionText": "Question text here", "type": "${type}", "options": ["Option A", "Option B", "Option C", "Option D"], "correctAnswer": "Exact matching string from options array", "marks": ${difficulty === 'HARD' ? 4 : difficulty === 'EASY' ? 1 : 2}, "difficulty": "${difficulty}", "explanation": "Explanation for the answer" }. For DESCRIPTIVE type, you can leave options array empty and correctAnswer empty.`
 
         const userContent = `Generate ${count} ${difficulty} level ${type} questions for the subject ${subject} on the topic of ${topic || 'general syllabus'}. Ensure the JSON output strictly follows the requested structure.`
 

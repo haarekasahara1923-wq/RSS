@@ -154,7 +154,7 @@ export default function ProfilePage() {
                             {[
                                 { label: 'Tenant ID', value: user?.tenantId?.slice(0, 12) + '...' || '' },
                                 { label: 'Internal School ID', value: tenant?.schoolCode || 'N/A' },
-                                { label: 'Platform', value: 'UDBA v2.0' },
+                                { label: 'Platform', value: 'RSS ERP v2.0' },
                                 { label: 'Region', value: 'India (Asia-South)' },
                             ].map(i => (
                                 <div key={i.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: '8px' }}>

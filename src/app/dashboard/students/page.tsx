@@ -2391,13 +2391,13 @@ export default function StudentsPage() {
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                                             <div>
                                                 <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
-                                                    👨‍👩‍👧 Family Siblings ({siblingList.length + 1}/3 Children)
+                                                    👨‍👩‍👧 Family Siblings ({siblingList.length + 1}/6 Children)
                                                 </h4>
                                                 <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-                                                    Link up to 3 siblings studying in this school for joint ledger & fee management
+                                                    Link up to 6 siblings studying in this school for joint ledger & fee management
                                                 </p>
                                             </div>
-                                            {siblingList.length + 1 < 3 ? (
+                                            {siblingList.length + 1 < 6 ? (
                                                 <button 
                                                     type="button" 
                                                     onClick={() => { setShowAddSiblingBox(!showAddSiblingBox); setSiblingFeedback(null); }}
@@ -2408,7 +2408,7 @@ export default function StudentsPage() {
                                                 </button>
                                             ) : (
                                                 <span style={{ fontSize: '11px', background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '3px 8px', borderRadius: '6px', fontWeight: '700' }}>
-                                                    ✓ Max 3 Siblings Linked
+                                                    ✓ Max 6 Siblings Linked
                                                 </span>
                                             )}
                                         </div>
@@ -2465,7 +2465,7 @@ export default function StudentsPage() {
                                         )}
 
                                         {/* Search Student Box for Adding Sibling */}
-                                        {showAddSiblingBox && siblingList.length + 1 < 3 && (
+                                        {showAddSiblingBox && siblingList.length + 1 < 6 && (
                                             <div style={{ marginTop: '12px', padding: '14px', background: 'var(--surface)', border: '1px solid #6366f1', borderRadius: '10px' }}>
                                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px' }}>
                                                     🔍 Search Student by Scholar No. or Name:
@@ -2493,7 +2493,7 @@ export default function StudentsPage() {
                                                         <div style={{ padding: '10px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>No students found matching "{siblingSearchQuery}"</div>
                                                     ) : (
                                                         siblingCandidates.map((candidate: any) => {
-                                                            const wouldExceed = (siblingList.length + 1) + candidate.currentGroupSize > 3
+                                                            const wouldExceed = (siblingList.length + 1) + candidate.currentGroupSize > 6
                                                             return (
                                                                 <div key={candidate.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderBottom: '1px solid var(--border)', fontSize: '12px' }}>
                                                                     <div>
@@ -2511,7 +2511,7 @@ export default function StudentsPage() {
                                                                         onClick={() => handleAddSibling(candidate.id)}
                                                                         className="btn btn-primary btn-sm"
                                                                         style={{ fontSize: '11px', padding: '4px 10px', opacity: wouldExceed ? 0.5 : 1 }}
-                                                                        title={wouldExceed ? 'Cannot link: total would exceed 3 siblings limit' : 'Add as Sibling'}
+                                                                        title={wouldExceed ? 'Cannot link: total would exceed 6 siblings limit' : 'Add as Sibling'}
                                                                     >
                                                                         {wouldExceed ? 'Limit Exceeded' : '➕ Add Sibling'}
                                                                     </button>

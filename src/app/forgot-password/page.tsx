@@ -134,8 +134,8 @@ export default function ForgotPasswordPage() {
                     </p>
                     <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)', marginTop: '10px' }}>
                         Need help?{' '}
-                        <a href="https://wa.me/917879337770" target="_blank" rel="noopener noreferrer" style={{ color: '#25d366', fontWeight: '600', textDecoration: 'none' }}>
-                            WhatsApp: +91 7879337770
+                        <a href="https://wa.me/917489315077" target="_blank" rel="noopener noreferrer" style={{ color: '#25d366', fontWeight: '600', textDecoration: 'none' }}>
+                            WhatsApp: +91 7489315077
                         </a>
                     </p>
                 </div>

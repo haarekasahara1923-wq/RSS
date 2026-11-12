@@ -18,6 +18,9 @@ interface Student {
     studentId?: string
     scholarNo?: string
     address?: string
+    hasSiblings?: boolean
+    siblingsCount?: number
+    siblingGroupId?: string | null
 }
 
 interface DepositModal {
@@ -27,6 +30,22 @@ interface DepositModal {
     date: string
     paymentMode: string
     processing: boolean
+}
+
+interface SiblingMember {
+    id: string
+    fullName: string
+    scholarNo?: string
+    courseName?: string
+    batchName?: string
+    fatherName?: string
+    phone?: string
+    parentPhone?: string
+    totalFee: number
+    paidFee: number
+    previousDueFee?: number
+    outstanding: number
+    isCurrent?: boolean
 }
 
 // ─── Number to Words (Indian) ─────────────────────────────────────────────────
@@ -60,26 +79,28 @@ function convertToWords(amount: number): string {
     return words + ' Only'
 }
 
-// ─── PDF Receipt Generator ────────────────────────────────────────────────────
+// ─── PDF Receipt Generator (Single A4 Page: Office Copy + Parent Copy) ───────
 function generateReceiptPDF(opts: {
     receipt: any
     student: Student
     tenant: any
     installmentLabel: string
+    distributions?: any[]
+    isCollective?: boolean
     win?: Window | null
 }) {
-    const { receipt, student, tenant, installmentLabel, win: providedWin } = opts
-    const schoolName = tenant?.name || 'School'
-    const schoolAddress = tenant?.address || ''
-    const schoolPhone = tenant?.phone || ''
-    const schoolEmail = tenant?.email || ''
+    const { receipt, student, tenant, installmentLabel, distributions, isCollective, win: providedWin } = opts
+    const schoolName = tenant?.name || process.env.NEXT_PUBLIC_SCHOOL_NAME || 'RSS Public School'
+    const schoolAddress = tenant?.address || process.env.NEXT_PUBLIC_SCHOOL_ADDRESS || 'Ayodhya Nagari, AB Road, Gol Pahadiya, Lashkar, Gwalior (MP)'
+    const schoolPhone = tenant?.phone || process.env.NEXT_PUBLIC_SCHOOL_PHONE || '917489315077'
+    const schoolEmail = tenant?.email || process.env.NEXT_PUBLIC_SCHOOL_EMAIL || 'rsspublic1979@gmail.com'
     const logoUrl = tenant?.logo || ''
     const directorSign = tenant?.directorSign || ''
     const schoolCode = tenant?.schoolCode || ''
 
     const depositDate = receipt.createdAt
-        ? new Date(receipt.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
-        : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+        ? new Date(receipt.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+        : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
 
     const paidAmount = parseFloat(receipt.amount || 0)
     const modeLabels: Record<string, string> = {
@@ -89,6 +110,125 @@ function generateReceiptPDF(opts: {
     const modeLabel = modeLabels[receipt.mode] || receipt.mode || 'Cash'
     const amtWords = convertToWords(paidAmount)
 
+    const renderReceiptCard = (copyType: 'OFFICE COPY' | 'PARENT COPY') => {
+        const isOffice = copyType === 'OFFICE COPY'
+        const badgeColor = isOffice ? '#1e3a8a' : '#065f46'
+        const badgeBg = isOffice ? '#dbeafe' : '#d1fae5'
+
+        const tableBody = (distributions && distributions.length > 0)
+            ? distributions.map((d: any, i: number) => `
+                <tr>
+                    <td style="padding:3px 6px;font-size:10px;border-bottom:1px solid #e2e8f0;text-align:center;">${i + 1}</td>
+                    <td style="padding:3px 6px;font-size:10px;border-bottom:1px solid #e2e8f0;font-weight:700;">
+                        ${d.studentName} ${d.scholarNo && d.scholarNo !== '-' ? `(Sch: ${d.scholarNo})` : ''} • ${d.class}
+                    </td>
+                    <td style="padding:3px 6px;font-size:10px;border-bottom:1px solid #e2e8f0;">Sibling Fee Allocation</td>
+                    <td style="padding:3px 6px;font-size:10px;border-bottom:1px solid #e2e8f0;text-align:right;">₹${(d.previousOutstanding ?? 0).toLocaleString('en-IN')}</td>
+                    <td style="padding:3px 6px;font-size:10px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:700;color:#059669;">₹${parseFloat(d.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                </tr>
+            `).join('')
+            : `
+                <tr>
+                    <td style="padding:4px 6px;font-size:10.5px;border-bottom:1px solid #e2e8f0;text-align:center;">1</td>
+                    <td style="padding:4px 6px;font-size:10.5px;border-bottom:1px solid #e2e8f0;font-weight:600;" colspan="2">${installmentLabel}</td>
+                    <td style="padding:4px 6px;font-size:10.5px;border-bottom:1px solid #e2e8f0;">Fee Deposit</td>
+                    <td style="padding:4px 6px;font-size:10.5px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:700;color:#059669;">₹${paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                </tr>
+            `
+
+        const tableHeaders = (distributions && distributions.length > 0)
+            ? `<tr>
+                <th style="padding:3px 6px;font-size:9.5px;text-align:center;width:24px;">#</th>
+                <th style="padding:3px 6px;font-size:9.5px;text-align:left;">Student / Sibling Details</th>
+                <th style="padding:3px 6px;font-size:9.5px;text-align:left;">Type</th>
+                <th style="padding:3px 6px;font-size:9.5px;text-align:right;">Pre Due</th>
+                <th style="padding:3px 6px;font-size:9.5px;text-align:right;">Amount (₹)</th>
+              </tr>`
+            : `<tr>
+                <th style="padding:3px 6px;font-size:9.5px;text-align:center;width:24px;">#</th>
+                <th style="padding:3px 6px;font-size:9.5px;text-align:left;" colspan="2">Description</th>
+                <th style="padding:3px 6px;font-size:9.5px;text-align:left;">Type</th>
+                <th style="padding:3px 6px;font-size:9.5px;text-align:right;">Amount (₹)</th>
+              </tr>`
+
+        return `
+        <div class="receipt-card">
+            <!-- Header -->
+            <div class="r-head">
+                <div class="r-logo">
+                    ${logoUrl ? `<img src="${logoUrl}" alt="Logo" onerror="this.parentElement.textContent='🏫'"/>` : '🏫'}
+                </div>
+                <div class="r-school">
+                    <div class="r-school-name">${schoolName.toUpperCase()}</div>
+                    <div class="r-school-sub">
+                        ${schoolAddress ? `📍 ${schoolAddress}` : ''}
+                        ${schoolPhone ? ` &nbsp;•&nbsp; 📞 ${schoolPhone}` : ''}
+                        ${schoolCode ? ` &nbsp;•&nbsp; Code: ${schoolCode}` : ''}
+                    </div>
+                </div>
+                <div class="r-rec-badge">
+                    <div class="r-copy-tag" style="background:${badgeBg};color:${badgeColor};border:1px solid ${badgeColor};">${copyType}</div>
+                    <div class="r-rec-no">${receipt.receiptNo || 'N/A'}</div>
+                    <div class="r-rec-dt">${depositDate}</div>
+                </div>
+            </div>
+
+            <!-- Title band -->
+            <div class="r-band">
+                <span>✦ ${isCollective ? 'COLLECTIVE SIBLING FAMILY FEE RECEIPT' : 'STUDENT FEE PAYMENT RECEIPT'} ✦</span>
+                <span class="r-band-pill">${copyType}</span>
+            </div>
+
+            <!-- Student Grid -->
+            <div class="r-grid">
+                <div class="r-cell"><span class="r-lbl">Scholar No:</span><span class="r-val" style="color:#1a3c5e;">${student.scholarNo || student.studentId || '—'}</span></div>
+                <div class="r-cell"><span class="r-lbl">Student:</span><span class="r-val">${student.fullName}</span></div>
+                <div class="r-cell"><span class="r-lbl">Class:</span><span class="r-val">${student.courseName}</span></div>
+                <div class="r-cell"><span class="r-lbl">Father's Name:</span><span class="r-val">${student.fatherName || '—'}</span></div>
+                <div class="r-cell"><span class="r-lbl">Contact:</span><span class="r-val">${student.parentPhone || student.phone || '—'}</span></div>
+                <div class="r-cell"><span class="r-lbl">Payment Mode:</span><span class="r-val">${modeLabel}</span></div>
+            </div>
+
+            <!-- Fee Table -->
+            <table class="r-table">
+                <thead>${tableHeaders}</thead>
+                <tbody>${tableBody}</tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="${distributions && distributions.length > 0 ? 4 : 4}" style="padding:4px 6px;font-size:10px;font-weight:700;text-align:right;">
+                            Total Amount Received:
+                        </td>
+                        <td style="padding:4px 6px;font-size:11px;font-weight:800;color:#059669;text-align:right;">
+                            ₹${paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <!-- Words -->
+            <div class="r-words">
+                <strong>Amount in Words:</strong> ${amtWords}
+            </div>
+
+            <!-- Footer -->
+            <div class="r-foot">
+                <div class="r-stamp">PAID</div>
+                <div class="r-note">
+                    • Computer-generated duplicate receipt. Valid for school records.<br/>
+                    • Retain this receipt for fee clearance confirmation.
+                </div>
+                <div class="r-sig">
+                    <div class="r-sig-line">
+                        ${directorSign ? `<img src="${directorSign}" alt="Sign"/>` : ''}
+                    </div>
+                    <div class="r-sig-lbl">Authorized Signatory</div>
+                    <div class="r-sig-sub">${schoolName}</div>
+                </div>
+            </div>
+        </div>
+        `
+    }
+
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -97,106 +237,220 @@ function generateReceiptPDF(opts: {
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#f0f4f8;display:flex;justify-content:center;padding:20px}
-.page{width:210mm;background:#fff;box-shadow:0 4px 32px rgba(0,0,0,0.12);border-radius:8px;overflow:hidden}
-.header{background:linear-gradient(135deg,#1a3c5e 0%,#0f2540 100%);color:#fff;padding:24px 32px;display:flex;align-items:center;gap:20px}
-.logo-box{width:68px;height:68px;border-radius:12px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0;overflow:hidden}
-.logo-box img{width:100%;height:100%;object-fit:cover}
-.school-info{flex:1}
-.school-name{font-size:19px;font-weight:800;letter-spacing:.5px;line-height:1.2}
-.school-sub{font-size:11px;color:rgba(255,255,255,.72);margin-top:5px;line-height:1.6}
-.rec-badge{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:12px;padding:12px 18px;text-align:center;flex-shrink:0}
-.rec-badge-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.65)}
-.rec-badge-no{font-size:17px;font-weight:800;color:#fbbf24;margin-top:3px}
-.rec-badge-dt{font-size:10px;color:rgba(255,255,255,.7);margin-top:2px}
-.title-band{background:#fbbf24;text-align:center;padding:6px;font-size:11px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:#1a3c5e}
-.body{padding:24px 32px}
-.stu-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:20px}
-.stu-cell{padding:10px 16px;border-bottom:1px solid #e2e8f0}
-.stu-cell:nth-child(odd){border-right:1px solid #e2e8f0;background:#f8fafc}
-.stu-cell:last-child,.stu-cell:nth-last-child(2){border-bottom:none}
-.lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;margin-bottom:2px}
-.val{font-size:13px;font-weight:600;color:#0f172a}
-table.fee{width:100%;border-collapse:collapse;margin-bottom:18px}
-table.fee thead tr{background:#1a3c5e;color:#fff}
-table.fee th{padding:10px 14px;font-size:11px;text-align:left;font-weight:700;letter-spacing:.4px}
-table.fee th:last-child{text-align:right}
-table.fee tbody tr:nth-child(even){background:#f8fafc}
-table.fee td{padding:10px 14px;font-size:13px;border-bottom:1px solid #e2e8f0}
-table.fee td:last-child{text-align:right;font-weight:700}
-table.fee tfoot tr{background:#ecfdf5}
-table.fee tfoot td{padding:12px 14px;font-weight:800;font-size:14px;border-top:2px solid #10b981}
-table.fee tfoot td:last-child{color:#059669;text-align:right}
-.words{background:#fffbeb;border:1px dashed #f59e0b;border-radius:8px;padding:10px 16px;margin-bottom:20px;font-size:12px;color:#78350f}
-.words strong{font-weight:700}
-.footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;position:relative}
-.note{font-size:10px;color:#64748b;max-width:260px;line-height:1.6}
-.sig{text-align:center;min-width:180px}
-.sig-line{width:180px;height:55px;border-bottom:1.5px solid #0f172a;margin-bottom:5px;display:flex;align-items:flex-end;justify-content:center}
-.sig-line img{max-height:52px;max-width:160px;object-fit:contain}
-.sig-lbl{font-size:10px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:.4px}
-.sig-sub{font-size:9px;color:#64748b;margin-top:1px}
-.stamp{position:absolute;top:-10px;right:0;border:3px solid #10b981;border-radius:8px;padding:4px 14px;font-size:20px;font-weight:900;color:#10b981;transform:rotate(-8deg);letter-spacing:3px;opacity:.85}
-@media print{body{background:#fff;padding:0}.page{width:100%;box-shadow:none}@page{margin:0;size:A5 landscape}}
+html,body{background:#f1f5f9;font-family:'Inter',sans-serif;color:#0f172a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.a4-container{
+    width:210mm;
+    min-height:297mm;
+    max-height:297mm;
+    margin:10px auto;
+    background:#fff;
+    padding:5mm 7mm;
+    box-sizing:border-box;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    box-shadow:0 4px 24px rgba(0,0,0,0.1);
+    overflow:hidden;
+}
+.receipt-card{
+    border:1px solid #cbd5e1;
+    border-radius:6px;
+    background:#ffffff;
+    padding:7px 10px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    height:136mm;
+    max-height:136mm;
+    box-sizing:border-box;
+    position:relative;
+    overflow:hidden;
+}
+.r-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    border-bottom:1.5px solid #1a3c5e;
+    padding-bottom:4px;
+    margin-bottom:3px;
+}
+.r-logo{
+    width:38px;
+    height:38px;
+    border-radius:6px;
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+    flex-shrink:0;
+    overflow:hidden;
+}
+.r-logo img{width:100%;height:100%;object-fit:cover}
+.r-school{flex:1;line-height:1.2}
+.r-school-name{font-size:13.5px;font-weight:800;color:#1a3c5e;letter-spacing:0.3px}
+.r-school-sub{font-size:8.5px;color:#64748b;margin-top:2px}
+.r-rec-badge{text-align:right;flex-shrink:0}
+.r-copy-tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:800;letter-spacing:0.5px}
+.r-rec-no{font-size:11.5px;font-weight:800;color:#1a3c5e;margin-top:1px}
+.r-rec-dt{font-size:8.5px;color:#64748b}
+
+.r-band{
+    background:#1a3c5e;
+    color:#fff;
+    padding:3px 8px;
+    font-size:9px;
+    font-weight:700;
+    letter-spacing:1px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-radius:3px;
+    margin-bottom:4px;
+}
+.r-band-pill{
+    background:#fbbf24;
+    color:#1a3c5e;
+    font-size:8px;
+    padding:1px 5px;
+    border-radius:3px;
+    font-weight:800;
+}
+
+.r-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:2px 6px;
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    border-radius:4px;
+    padding:3px 6px;
+    margin-bottom:4px;
+}
+.r-cell{font-size:9.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-lbl{color:#64748b;font-weight:600;font-size:8px;text-transform:uppercase;margin-right:3px}
+.r-val{color:#0f172a;font-weight:700}
+
+.r-table{
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:3px;
+}
+.r-table th{
+    background:#f1f5f9;
+    color:#334155;
+    border:1px solid #cbd5e1;
+    font-weight:700;
+}
+.r-table td{
+    border:1px solid #e2e8f0;
+}
+.r-table tfoot td{
+    border-top:1.5px solid #10b981;
+    background:#ecfdf5;
+}
+
+.r-words{
+    background:#fffbeb;
+    border:1px dashed #f59e0b;
+    border-radius:4px;
+    padding:2px 6px;
+    font-size:8.5px;
+    color:#78350f;
+    margin-bottom:4px;
+    line-height:1.2;
+}
+
+.r-foot{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-top:1px solid #e2e8f0;
+    padding-top:3px;
+    position:relative;
+}
+.r-stamp{
+    position:absolute;
+    left:50%;
+    bottom:2px;
+    transform:translateX(-50%) rotate(-6deg);
+    border:1.5px solid #10b981;
+    color:#10b981;
+    font-size:11px;
+    font-weight:900;
+    padding:1px 6px;
+    border-radius:4px;
+    letter-spacing:2px;
+    opacity:0.8;
+}
+.r-note{font-size:7.5px;color:#64748b;line-height:1.25;max-width:280px}
+.r-sig{text-align:center;min-width:120px}
+.r-sig-line{width:120px;height:22px;border-bottom:1px solid #334155;margin-bottom:1px;display:flex;align-items:flex-end;justify-content:center}
+.r-sig-line img{max-height:20px;max-width:110px;object-fit:contain}
+.r-sig-lbl{font-size:8px;font-weight:700;color:#0f172a;text-transform:uppercase}
+.r-sig-sub{font-size:7px;color:#64748b}
+
+.cut-line{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:8.5px;
+    font-weight:700;
+    color:#94a3b8;
+    height:7mm;
+    user-select:none;
+}
+
+@page {
+    size: A4 portrait;
+    margin: 4mm 5mm;
+}
+
+@media print{
+    html, body{
+        background:#fff !important;
+        margin:0 !important;
+        padding:0 !important;
+        width:100% !important;
+        height:100% !important;
+    }
+    .a4-container{
+        width:100% !important;
+        height:287mm !important;
+        max-height:287mm !important;
+        margin:0 !important;
+        padding:2mm 4mm !important;
+        box-shadow:none !important;
+        border:none !important;
+        page-break-inside:avoid !important;
+        page-break-after:avoid !important;
+        overflow:hidden !important;
+    }
+    .receipt-card{
+        height:136mm !important;
+        max-height:136mm !important;
+        page-break-inside:avoid !important;
+        page-break-after:avoid !important;
+    }
+}
 </style>
 </head>
 <body>
-<div class="page">
-  <div class="header">
-    <div class="logo-box">
-      ${logoUrl ? `<img src="${logoUrl}" alt="Logo" onerror="this.parentElement.textContent='🏫'"/>` : '🏫'}
+<div class="a4-container">
+    ${renderReceiptCard('OFFICE COPY')}
+    <div class="cut-line">
+        <span>✂ - - - - - - - - - - - - - - - - - - - - - - - - Cut Along This Line - - - - - - - - - - - - - - - - - - - - - - - - ✂</span>
     </div>
-    <div class="school-info">
-      <div class="school-name">${schoolName.toUpperCase()}</div>
-      <div class="school-sub">
-        ${schoolAddress ? `📍 ${schoolAddress}<br/>` : ''}
-        ${schoolPhone ? `📞 ${schoolPhone}` : ''}${schoolPhone && schoolEmail ? ' &nbsp;|&nbsp; ' : ''}${schoolEmail ? `✉ ${schoolEmail}` : ''}
-        ${schoolCode ? `<br/>School Code: ${schoolCode}` : ''}
-      </div>
-    </div>
-    <div class="rec-badge">
-      <div class="rec-badge-lbl">Receipt No.</div>
-      <div class="rec-badge-no">${receipt.receiptNo || 'N/A'}</div>
-      <div class="rec-badge-dt">${depositDate}</div>
-    </div>
-  </div>
-  <div class="title-band">✦ &nbsp; Fee Payment Receipt &nbsp; ✦</div>
-  <div class="body">
-    <div class="stu-grid">
-      <div class="stu-cell"><div class="lbl">Scholar No.</div><div class="val" style="color:#1a3c5e;font-weight:700;">${student.scholarNo || student.studentId || '—'}</div></div>
-      <div class="stu-cell"><div class="lbl">Student Name</div><div class="val">${student.fullName}</div></div>
-      <div class="stu-cell"><div class="lbl">Father's Name</div><div class="val">${student.fatherName || '—'}</div></div>
-      <div class="stu-cell"><div class="lbl">Class / Course</div><div class="val">${student.courseName}</div></div>
-      <div class="stu-cell"><div class="lbl">Contact</div><div class="val">${student.parentPhone || student.phone || '—'}</div></div>
-      <div class="stu-cell"><div class="lbl">Payment Mode</div><div class="val">${modeLabel}</div></div>
-    </div>
-    <table class="fee">
-      <thead><tr><th>#</th><th>Description</th><th>Type</th><th>Date</th><th>Amount (₹)</th></tr></thead>
-      <tbody>
-        <tr><td>1</td><td>${installmentLabel}</td><td>Fee Deposit</td><td>${depositDate}</td><td>₹${paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>
-      </tbody>
-      <tfoot><tr><td colspan="4">Total Amount Received</td><td>₹${paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr></tfoot>
-    </table>
-    <div class="words"><strong>Amount in Words:</strong> ${amtWords}</div>
-    <div class="footer">
-      <span class="stamp">PAID</span>
-      <div class="note">
-        <strong>Note:</strong><br/>
-        • This is a computer-generated receipt.<br/>
-        • Please retain this receipt for your records.<br/>
-        • Valid without physical stamp if system-generated.
-      </div>
-      <div class="sig">
-        <div class="sig-line">
-          ${directorSign ? `<img src="${directorSign}" alt="Signature"/>` : ''}
-        </div>
-        <div class="sig-lbl">Auth. Signatory</div>
-        <div class="sig-sub">${schoolName}</div>
-      </div>
-    </div>
-  </div>
+    ${renderReceiptCard('PARENT COPY')}
 </div>
-<script>window.onload=function(){window.print()}</script>
+<script>
+window.onload = function() {
+    setTimeout(function() {
+        window.print();
+    }, 400);
+};
+</script>
 </body>
 </html>`
     if (providedWin) {
@@ -204,7 +458,7 @@ table.fee tfoot td:last-child{color:#059669;text-align:right}
         providedWin.document.write(html)
         providedWin.document.close()
     } else {
-        const win = window.open('', '_blank', 'width=960,height=680')
+        const win = window.open('', '_blank', 'width=960,height=720')
         if (!win) { alert('Please allow popups for this site to download receipts.'); return }
         win.document.open()
         win.document.write(html)
@@ -227,6 +481,10 @@ export default function FeesPage() {
     const [feesLoading, setFeesLoading] = useState(false)
     const [paymentMode, setPaymentMode] = useState('CASH')
 
+    // Siblings Group State
+    const [siblingGroup, setSiblingGroup] = useState<SiblingMember[]>([])
+    const [loadingSiblings, setLoadingSiblings] = useState(false)
+
     // Deposit Modal
     const [depositModal, setDepositModal] = useState<DepositModal>({
         open: false,
@@ -234,6 +492,16 @@ export default function FeesPage() {
         amount: '',
         date: '',
         paymentMode: 'CASH',
+        processing: false,
+    })
+
+    // Collective Sibling Deposit Modal
+    const [collectiveDepositModal, setCollectiveDepositModal] = useState({
+        open: false,
+        amount: '',
+        date: '',
+        paymentMode: 'CASH',
+        notes: '',
         processing: false,
     })
 
@@ -262,10 +530,56 @@ export default function FeesPage() {
     const openInstallments = async (student: Student) => {
         setSelectedStudentForFees(student)
         setFeesLoading(true)
-        const res = await fetch(`/api/fees?studentId=${student.id}`, { headers: { Authorization: `Bearer ${token}` } })
-        const data = await res.json()
-        if (data.success) setStudentFees(data.data)
-        setFeesLoading(false)
+        setLoadingSiblings(true)
+
+        // 1. Fetch individual student installments
+        fetch(`/api/fees?studentId=${student.id}`, { headers: { Authorization: `Bearer ${token}` } })
+            .then(r => r.json())
+            .then(data => { if (data.success) setStudentFees(data.data); setFeesLoading(false) })
+            .catch(() => setFeesLoading(false))
+
+        // 2. Fetch linked siblings for this student
+        try {
+            const sibRes = await fetch(`/api/students/siblings?studentId=${student.id}`, { headers: { Authorization: `Bearer ${token}` } })
+            const sibData = await sibRes.json()
+            if (sibData.success && sibData.siblings && sibData.siblings.length > 0) {
+                const cur: SiblingMember = {
+                    id: student.id,
+                    fullName: student.fullName,
+                    scholarNo: student.scholarNo || student.studentId || '',
+                    courseName: student.courseName || '',
+                    fatherName: student.fatherName || '',
+                    phone: student.phone,
+                    parentPhone: student.parentPhone,
+                    totalFee: student.totalFee,
+                    paidFee: student.paidFee,
+                    previousDueFee: student.previousDueFee || 0,
+                    outstanding: Math.max(0, student.totalFee - student.paidFee),
+                    isCurrent: true,
+                }
+                const others: SiblingMember[] = sibData.siblings.map((s: any) => ({
+                    id: s.id,
+                    fullName: s.fullName,
+                    scholarNo: s.scholarNo || s.studentId || '',
+                    courseName: s.courseName || '',
+                    batchName: s.batchName || '',
+                    fatherName: s.fatherName || '',
+                    phone: s.phone,
+                    parentPhone: s.parentPhone,
+                    totalFee: s.totalFee,
+                    paidFee: s.paidFee,
+                    previousDueFee: s.previousDueFee || 0,
+                    outstanding: Math.max(0, s.totalFee - s.paidFee),
+                    isCurrent: false,
+                }))
+                setSiblingGroup([cur, ...others])
+            } else {
+                setSiblingGroup([])
+            }
+        } catch {
+            setSiblingGroup([])
+        }
+        setLoadingSiblings(false)
     }
 
     const openDepositModal = (fee: any) => {
@@ -285,9 +599,9 @@ export default function FeesPage() {
         if (!date) { alert('Please select or enter the Date of Deposit'); return }
 
         // Pre-open window before async to bypass popup blockers
-        const printWindow = window.open('', '_blank', 'width=960,height=680')
+        const printWindow = window.open('', '_blank', 'width=960,height=720')
         if (printWindow) {
-            printWindow.document.write('<div style="font-family:sans-serif;padding:40px;text-align:center;">Generating receipt, please wait...</div>')
+            printWindow.document.write('<div style="font-family:sans-serif;padding:40px;text-align:center;">Generating A4 duplicate receipt, please wait...</div>')
         }
 
         setDepositModal(prev => ({ ...prev, processing: true }))
@@ -306,10 +620,10 @@ export default function FeesPage() {
             })
             const data = await res.json()
             if (data.success) {
-                setToast('✅ Payment recorded! Generating receipt…')
+                setToast('✅ Payment recorded! Generating A4 duplicate receipt…')
                 setTimeout(() => setToast(''), 4000)
 
-                // Generate PDF receipt
+                // Generate PDF receipt (Office Copy + Parent Copy on 1 A4 page)
                 generateReceiptPDF({
                     receipt: { ...data.data, amount: parseFloat(amount) },
                     student: selectedStudentForFees!,
@@ -331,6 +645,74 @@ export default function FeesPage() {
             alert('Network error. Please try again.')
             if (printWindow) printWindow.close()
             setDepositModal(prev => ({ ...prev, processing: false }))
+        }
+    }
+
+    // Collective Sibling Fee Deposit
+    const handleCollectiveDepositSubmit = async () => {
+        const { amount, date, paymentMode: mode, notes } = collectiveDepositModal
+        if (!amount || parseFloat(amount) <= 0) { alert('Please enter a valid amount'); return }
+        if (!date) { alert('Please select or enter the Date of Deposit'); return }
+
+        const printWindow = window.open('', '_blank', 'width=960,height=720')
+        if (printWindow) {
+            printWindow.document.write('<div style="font-family:sans-serif;padding:40px;text-align:center;">Generating Sibling Group A4 Duplicate Receipt, please wait...</div>')
+        }
+
+        setCollectiveDepositModal(prev => ({ ...prev, processing: true }))
+        try {
+            const res = await fetch('/api/reports/fee-ledger', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({
+                    studentId: selectedStudentForFees!.id,
+                    siblingGroupId: selectedStudentForFees!.siblingGroupId,
+                    parentPhone: selectedStudentForFees!.parentPhone || selectedStudentForFees!.phone,
+                    totalAmount: parseFloat(amount),
+                    mode,
+                    date,
+                    notes: notes || 'Collective Sibling Group Fee Installment',
+                    receivedBy: tenant?.name || 'School Office',
+                })
+            })
+            const data = await res.json()
+            if (data.success) {
+                setToast(`✅ ${data.message}`)
+                setTimeout(() => setToast(''), 5000)
+
+                // Generate A4 duplicate receipt
+                generateReceiptPDF({
+                    receipt: {
+                        receiptNo: data.parentReceiptNo,
+                        amount: parseFloat(amount),
+                        mode,
+                        createdAt: date,
+                    },
+                    student: {
+                        ...selectedStudentForFees!,
+                        fullName: `${selectedStudentForFees!.fullName} & Sibling Group`,
+                        courseName: `${siblingGroup.length} Sibling Members`,
+                    },
+                    tenant,
+                    installmentLabel: 'Collective Sibling Fee Installment',
+                    distributions: data.distributions,
+                    isCollective: true,
+                    win: printWindow,
+                })
+
+                // Refresh views
+                fetchStudents()
+                openInstallments(selectedStudentForFees!)
+                setCollectiveDepositModal(prev => ({ ...prev, open: false, processing: false }))
+            } else {
+                alert(data.error || 'Collective fee deposit failed')
+                if (printWindow) printWindow.close()
+                setCollectiveDepositModal(prev => ({ ...prev, processing: false }))
+            }
+        } catch {
+            alert('Network error. Please try again.')
+            if (printWindow) printWindow.close()
+            setCollectiveDepositModal(prev => ({ ...prev, processing: false }))
         }
     }
 
@@ -540,13 +922,18 @@ export default function FeesPage() {
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                         <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '12px' }}>{s.fullName.charAt(0)}</div>
                                                         <div>
-                                                            <div style={{ fontWeight: '600', fontSize: '14px' }}>
+                                                            <div style={{ fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                                                 {s.scholarNo && (
                                                                     <span style={{ color: '#6366f1', fontWeight: '800', marginRight: '6px', fontSize: '12px' }}>
                                                                         [{s.scholarNo}]
                                                                     </span>
                                                                 )}
-                                                                {s.fullName}
+                                                                <span>{s.fullName}</span>
+                                                                {s.hasSiblings && (
+                                                                    <span style={{ fontSize: '10px', background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
+                                                                        👨‍👩‍👧 Siblings ({(s.siblingsCount || 0) + 1})
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{s.phone}</div>
                                                         </div>
@@ -574,9 +961,9 @@ export default function FeesPage() {
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                                                         <button onClick={() => openInstallments(s)} className="btn btn-primary btn-sm" style={{ padding: '5px 10px', fontSize: '11px', fontWeight: '700' }}>
-                                                            📜 Installments
+                                                            {s.hasSiblings ? '👨‍👩‍👧 Installments / Siblings' : '📜 Installments'}
                                                         </button>
                                                         {pending > 0 && (
                                                             <button onClick={() => sendWhatsAppReminder(s)} style={{ padding: '5px 10px', background: '#25d36615', border: '1px solid #25d36640', borderRadius: '6px', color: '#25d366', fontSize: '11px', cursor: 'pointer', fontWeight: '700' }}>
@@ -605,7 +992,7 @@ export default function FeesPage() {
             {/* ── Installments Modal ──────────────────────────────────────────── */}
             {selectedStudentForFees && (
                 <div className="modal-overlay" onClick={() => setSelectedStudentForFees(null)}>
-                    <div className="modal" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+                    <div className="modal" style={{ maxWidth: '720px' }} onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <div>
                                 <h3 style={{ fontWeight: '700', fontSize: '18px' }}>📜 Fee Installments</h3>
@@ -621,6 +1008,124 @@ export default function FeesPage() {
                             <button onClick={() => setSelectedStudentForFees(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer' }}>✕</button>
                         </div>
                         <div className="modal-body">
+                            {/* ── Linked Siblings Family Banner ─────────────────────────────────── */}
+                            {siblingGroup.length > 1 && (
+                                <div style={{
+                                    background: 'linear-gradient(135deg, rgba(99,102,241,0.14), rgba(139,92,246,0.08))',
+                                    border: '1.5px solid rgba(99,102,241,0.35)',
+                                    borderRadius: '12px',
+                                    padding: '14px 16px',
+                                    marginBottom: '16px',
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                                        <div>
+                                            <div style={{ fontSize: '14px', fontWeight: '800', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span>👨‍👩‍👧 Linked Siblings Group ({siblingGroup.length} Children)</span>
+                                            </div>
+                                            <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                All attached siblings studying in this school with joint fee breakdown
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const totalFamDue = siblingGroup.reduce((sum, s) => sum + s.outstanding, 0)
+                                                setCollectiveDepositModal({
+                                                    open: true,
+                                                    amount: totalFamDue > 0 ? String(totalFamDue) : '',
+                                                    date: new Date().toISOString().split('T')[0],
+                                                    paymentMode: 'CASH',
+                                                    notes: '',
+                                                    processing: false,
+                                                })
+                                            }}
+                                            className="btn btn-sm"
+                                            style={{
+                                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                color: '#fff',
+                                                border: 'none',
+                                                fontWeight: '800',
+                                                fontSize: '12px',
+                                                padding: '8px 16px',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
+                                            }}
+                                        >
+                                            💰 Deposit Sibling Collective Fee
+                                        </button>
+                                    </div>
+
+                                    {/* Sibling family quick cards */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', marginTop: '12px' }}>
+                                        {siblingGroup.map(sib => {
+                                            const isCurrent = sib.id === selectedStudentForFees.id
+                                            return (
+                                                <div
+                                                    key={sib.id}
+                                                    onClick={() => {
+                                                        if (!isCurrent) {
+                                                            const found = students.find(s => s.id === sib.id) || {
+                                                                id: sib.id,
+                                                                fullName: sib.fullName,
+                                                                scholarNo: sib.scholarNo,
+                                                                courseName: sib.courseName,
+                                                                totalFee: sib.totalFee,
+                                                                paidFee: sib.paidFee,
+                                                                previousDueFee: sib.previousDueFee,
+                                                                status: 'ACTIVE',
+                                                                fatherName: sib.fatherName,
+                                                                phone: sib.phone || '',
+                                                                parentPhone: sib.parentPhone || '',
+                                                                hasSiblings: true,
+                                                                siblingGroupId: selectedStudentForFees.siblingGroupId,
+                                                            }
+                                                            openInstallments(found as Student)
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        padding: '10px 12px',
+                                                        borderRadius: '8px',
+                                                        border: isCurrent ? '2px solid #6366f1' : '1px solid var(--border)',
+                                                        background: isCurrent ? 'rgba(99,102,241,0.2)' : 'var(--surface)',
+                                                        cursor: isCurrent ? 'default' : 'pointer',
+                                                        transition: 'all 0.2s',
+                                                    }}
+                                                    title={isCurrent ? 'Viewing this sibling' : 'Click to switch and view installments for this sibling'}
+                                                >
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '12px', fontWeight: '800', color: isCurrent ? '#a5b4fc' : 'var(--text-primary)' }}>
+                                                            {isCurrent ? '👑 ' : '👫 '} {sib.fullName}
+                                                        </span>
+                                                        {isCurrent && (
+                                                            <span style={{ fontSize: '9px', background: '#6366f1', color: '#fff', padding: '1px 5px', borderRadius: '4px', fontWeight: '800' }}>Active</span>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                        {sib.courseName} {sib.scholarNo ? `• [${sib.scholarNo}]` : ''}
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '11px', fontWeight: '700' }}>
+                                                        <span style={{ color: '#10b981' }}>Paid: {formatCurrency(sib.paidFee)}</span>
+                                                        <span style={{ color: sib.outstanding > 0 ? '#ef4444' : '#10b981' }}>
+                                                            {sib.outstanding > 0 ? `Due: ${formatCurrency(sib.outstanding)}` : '✓ Clear'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+
+                                    {/* Family collective summary */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', padding: '8px 12px', background: 'rgba(0,0,0,0.18)', borderRadius: '6px', fontSize: '11.5px', fontWeight: '700' }}>
+                                        <span>Family Total: {formatCurrency(siblingGroup.reduce((s, x) => s + x.totalFee, 0))}</span>
+                                        <span style={{ color: '#10b981' }}>Total Paid: {formatCurrency(siblingGroup.reduce((s, x) => s + x.paidFee, 0))}</span>
+                                        <span style={{ color: '#ef4444' }}>Total Due: {formatCurrency(siblingGroup.reduce((s, x) => s + x.outstanding, 0))}</span>
+                                    </div>
+                                </div>
+                            )}
                             {feesLoading ? (
                                 <div style={{ padding: '40px', textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
                             ) : studentFees.length === 0 ? (
@@ -968,6 +1473,198 @@ export default function FeesPage() {
                                     {depositModal.processing
                                         ? <><div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px', margin: 0 }} /> Processing…</>
                                         : <>💳 Deposit &amp; Generate Receipt</>}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Collective Sibling Fee Deposit Modal ─────────────────────────────── */}
+            {collectiveDepositModal.open && (
+                <div className="modal-overlay" style={{ zIndex: 1200 }} onClick={() => !collectiveDepositModal.processing && setCollectiveDepositModal(prev => ({ ...prev, open: false }))}>
+                    <div className="modal" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div>
+                                <h3 style={{ fontWeight: '800', fontSize: '18px', color: 'var(--text-primary)' }}>
+                                    👨‍👩‍👧 Collective Sibling Fee Deposit
+                                </h3>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                    Deposit gross fee installment distributed proportionately across all siblings' remaining dues
+                                </p>
+                            </div>
+                            <button onClick={() => !collectiveDepositModal.processing && setCollectiveDepositModal(prev => ({ ...prev, open: false }))} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+                        </div>
+                        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                            {/* Sibling Proportion Breakdown Table */}
+                            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+                                <div style={{ padding: '8px 12px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>
+                                    Family Sibling Proportionate Allocation Preview
+                                </div>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                                    <thead>
+                                        <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+                                            <th style={{ padding: '6px 10px', textAlign: 'left' }}>Student</th>
+                                            <th style={{ padding: '6px 10px', textAlign: 'left' }}>Class</th>
+                                            <th style={{ padding: '6px 10px', textAlign: 'right' }}>Remaining Due</th>
+                                            <th style={{ padding: '6px 10px', textAlign: 'right' }}>Share (%)</th>
+                                            <th style={{ padding: '6px 10px', textAlign: 'right', color: '#10b981' }}>Allocated (₹)</th>
+                                            <th style={{ padding: '6px 10px', textAlign: 'right', color: '#6366f1' }}>New Due</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(() => {
+                                            const totalFamOutstanding = siblingGroup.reduce((sum, s) => sum + s.outstanding, 0)
+                                            const grossInput = parseFloat(collectiveDepositModal.amount || '0')
+                                            const siblingsWithDues = siblingGroup.filter(s => s.outstanding > 0)
+                                            let runningAlloc = 0
+
+                                            return siblingGroup.map((sib) => {
+                                                let sibAlloc = 0
+                                                let sharePct = 0
+                                                if (totalFamOutstanding > 0 && sib.outstanding > 0 && grossInput > 0) {
+                                                    const isLastWithDues = sib.id === siblingsWithDues[siblingsWithDues.length - 1]?.id
+                                                    if (isLastWithDues) {
+                                                        sibAlloc = Math.max(0, Math.round((grossInput - runningAlloc) * 100) / 100)
+                                                    } else {
+                                                        const prop = sib.outstanding / totalFamOutstanding
+                                                        sibAlloc = Math.round(grossInput * prop * 100) / 100
+                                                        runningAlloc += sibAlloc
+                                                    }
+                                                    sharePct = Math.round((sib.outstanding / totalFamOutstanding) * 100)
+                                                }
+                                                const newDue = Math.max(0, sib.outstanding - sibAlloc)
+
+                                                return (
+                                                    <tr key={sib.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                        <td style={{ padding: '6px 10px', fontWeight: '700' }}>
+                                                            {sib.fullName} {sib.scholarNo ? `[${sib.scholarNo}]` : ''}
+                                                        </td>
+                                                        <td style={{ padding: '6px 10px', color: 'var(--text-muted)' }}>{sib.courseName}</td>
+                                                        <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: '700', color: sib.outstanding > 0 ? '#ef4444' : '#10b981' }}>
+                                                            {formatCurrency(sib.outstanding)}
+                                                        </td>
+                                                        <td style={{ padding: '6px 10px', textAlign: 'right', color: 'var(--text-muted)' }}>
+                                                            {sharePct}%
+                                                        </td>
+                                                        <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: '800', color: '#10b981' }}>
+                                                            {formatCurrency(sibAlloc)}
+                                                        </td>
+                                                        <td style={{ padding: '6px 10px', textAlign: 'right', fontWeight: '700', color: newDue > 0 ? '#f59e0b' : '#10b981' }}>
+                                                            {formatCurrency(newDue)}
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })
+                                        })()}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr style={{ background: 'rgba(16,185,129,0.08)', fontWeight: '800' }}>
+                                            <td colSpan={2} style={{ padding: '6px 10px' }}>Total Family Balance</td>
+                                            <td style={{ padding: '6px 10px', textAlign: 'right', color: '#ef4444' }}>
+                                                {formatCurrency(siblingGroup.reduce((s, x) => s + x.outstanding, 0))}
+                                            </td>
+                                            <td style={{ padding: '6px 10px', textAlign: 'right' }}>100%</td>
+                                            <td style={{ padding: '6px 10px', textAlign: 'right', color: '#10b981' }}>
+                                                {formatCurrency(parseFloat(collectiveDepositModal.amount || '0'))}
+                                            </td>
+                                            <td style={{ padding: '6px 10px', textAlign: 'right', color: '#6366f1' }}>
+                                                {formatCurrency(Math.max(0, siblingGroup.reduce((s, x) => s + x.outstanding, 0) - parseFloat(collectiveDepositModal.amount || '0')))}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            {/* Amount */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                                    Collective Gross Amount (₹) <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '15px', fontWeight: '700', color: 'var(--text-muted)' }}>₹</span>
+                                    <input
+                                        type="number"
+                                        className="input"
+                                        style={{ paddingLeft: '30px', fontSize: '18px', fontWeight: '800' }}
+                                        placeholder="0.00"
+                                        value={collectiveDepositModal.amount}
+                                        onChange={e => setCollectiveDepositModal(prev => ({ ...prev, amount: e.target.value }))}
+                                        min="0" step="0.01"
+                                    />
+                                </div>
+                                {collectiveDepositModal.amount && parseFloat(collectiveDepositModal.amount) > 0 && (
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontStyle: 'italic' }}>
+                                        {convertToWords(parseFloat(collectiveDepositModal.amount))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Date of Deposit */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                                    📅 Date of Deposit <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    className="input"
+                                    value={collectiveDepositModal.date}
+                                    onChange={e => setCollectiveDepositModal(prev => ({ ...prev, date: e.target.value }))}
+                                    max={new Date().toISOString().split('T')[0]}
+                                    style={{ fontSize: '14px', fontWeight: '600' }}
+                                />
+                            </div>
+
+                            {/* Payment Mode */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '6px', color: 'var(--text-secondary)' }}>Payment Mode</label>
+                                <select className="input" value={collectiveDepositModal.paymentMode} onChange={e => setCollectiveDepositModal(prev => ({ ...prev, paymentMode: e.target.value }))}>
+                                    <option value="CASH">💵 Cash</option>
+                                    <option value="UPI">📱 UPI</option>
+                                    <option value="BANK_TRANSFER">🏦 Bank Transfer</option>
+                                    <option value="CHEQUE">💳 Cheque</option>
+                                    <option value="CARD">💳 Card</option>
+                                    <option value="ONLINE">🌐 Online</option>
+                                </select>
+                            </div>
+
+                            {/* Notes */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '6px', color: 'var(--text-secondary)' }}>Notes / Reference (Optional)</label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    placeholder="e.g. Sibling collective deposit / UPI Reference"
+                                    value={collectiveDepositModal.notes}
+                                    onChange={e => setCollectiveDepositModal(prev => ({ ...prev, notes: e.target.value }))}
+                                />
+                            </div>
+
+                            {/* Note */}
+                            <div style={{ padding: '10px 14px', background: 'rgba(16,185,129,0.08)', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.25)', fontSize: '12px', color: '#059669', fontWeight: '600' }}>
+                                🧾 An A4 PDF receipt with duplicate copies (Office Copy &amp; Parent Copy) containing the full sibling distribution will be printed upon confirmation.
+                            </div>
+
+                            {/* Actions */}
+                            <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
+                                <button
+                                    onClick={() => !collectiveDepositModal.processing && setCollectiveDepositModal(prev => ({ ...prev, open: false }))}
+                                    className="btn btn-secondary"
+                                    style={{ flex: 1 }}
+                                    disabled={collectiveDepositModal.processing}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleCollectiveDepositSubmit}
+                                    className="btn btn-primary"
+                                    disabled={collectiveDepositModal.processing || !collectiveDepositModal.amount || !collectiveDepositModal.date}
+                                    style={{ flex: 2, background: 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '800' }}
+                                >
+                                    {collectiveDepositModal.processing
+                                        ? <><div className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px', margin: 0 }} /> Allocating &amp; Depositing…</>
+                                        : <>💳 Deposit &amp; Print A4 Duplicate Receipt</>}
                                 </button>
                             </div>
                         </div>

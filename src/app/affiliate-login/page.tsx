@@ -50,7 +50,7 @@ export default function AffiliateLoginPage() {
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                     <div style={{ width: '56px', height: '56px', background: 'linear-gradient(135deg, #10b981, #059669)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', margin: '0 auto 16px' }}>💰</div>
                     <h1 style={{ fontSize: '28px', fontWeight: '800', color: 'white' }}>Affiliate Login</h1>
-                    <p style={{ color: 'var(--text-secondary)', marginTop: '6px', fontSize: '14px' }}>Welcome back to UDBA Partner Program</p>
+                    <p style={{ color: 'var(--text-secondary)', marginTop: '6px', fontSize: '14px' }}>Welcome back to RSS Public School Partner Program</p>
                 </div>
 
                 <div className="card" style={{ borderRadius: '20px', padding: '32px' }}>
@@ -126,7 +126,7 @@ export default function AffiliateLoginPage() {
                 </div>
 
                 <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '14px', color: 'var(--text-muted)' }}>
-                    <Link href="/" style={{ color: 'var(--text-secondary)' }}>← Back to UDBA Home</Link>
+                    <Link href="/" style={{ color: 'var(--text-secondary)' }}>← Back to RSS Public School Home</Link>
                 </p>
             </div>
         </div>

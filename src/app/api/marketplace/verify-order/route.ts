@@ -88,7 +88,7 @@ export async function POST(req: Request) {
             try {
                 const resend = new Resend(process.env.RESEND_API_KEY)
                 await resend.emails.send({
-                    from: process.env.EMAIL_FROM || 'UDBA <onboarding@resend.dev>',
+                    from: process.env.EMAIL_FROM || 'RSS Public School <rsspublic1979@gmail.com>',
                     to: order.email,
                     subject: `Your Purchase Details - ${orderItems.length} Products`,
                     html: `
@@ -117,7 +117,7 @@ export async function POST(req: Request) {
                             <p style="font-size: 14px; color: #6b7280;">Links are linked to Google Drive. Please ensure you are logged into your Google account to access them.</p>
                             
                             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
-                            <p style="font-size: 12px; color: #9ca3af; text-align: center;">Best regards,<br>UDBA Gyankosh Team</p>
+                            <p style="font-size: 12px; color: #9ca3af; text-align: center;">Best regards,<br>RSS Public School Team</p>
                         </div>
                     `
                 })

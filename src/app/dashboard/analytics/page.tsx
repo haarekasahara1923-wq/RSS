@@ -56,11 +56,13 @@ export default function AnalyticsPage() {
     const handleExportCSV = () => {
         if (!data) return
         const timestamp = new Date().toISOString().split('T')[0]
+        const schoolName = tenant?.name || process.env.NEXT_PUBLIC_SCHOOL_NAME || 'RSS Public School'
+        const schoolAddress = tenant?.address || process.env.NEXT_PUBLIC_SCHOOL_ADDRESS || 'Ayodhya Nagari, AB Road, Gol Pahadiya, Lashkar, Gwalior (MP)'
         const csvRows: (string | number)[][] = [
-            ['UNIVERSAL DAY BOARDING ACADEMY - EXECUTIVE ANALYTICS REPORT'],
+            [`${schoolName.toUpperCase()} - EXECUTIVE ANALYTICS REPORT`],
             ['Generated On', new Date().toLocaleString('en-IN')],
-            ['Institute', tenant?.name || 'Universal Day Boarding Academy'],
-            ['Address', 'Pinto Park, Gwalior (MP)'],
+            ['Institute', schoolName],
+            ['Address', schoolAddress],
             [''],
             ['--- EXECUTIVE KEY PERFORMANCE INDICATORS ---'],
             ['Metric', 'Value', 'Context'],
@@ -99,16 +101,18 @@ export default function AnalyticsPage() {
             ...data.leadFunnel.map(l => [l.stage, l.count]),
         ]
 
-        downloadCSV(`udba-analytics-report-${timestamp}.csv`, csvRows)
+        downloadCSV(`analytics-report-${timestamp}.csv`, csvRows)
     }
 
     const handleExportPDF = () => {
         if (!data) return
+        const schoolName = tenant?.name || process.env.NEXT_PUBLIC_SCHOOL_NAME || 'RSS Public School'
+        const schoolAddress = [tenant?.address || process.env.NEXT_PUBLIC_SCHOOL_ADDRESS || '📍 Ayodhya Nagari, AB Road, Gol Pahadiya, Lashkar, Gwalior (MP)', tenant?.phone || process.env.NEXT_PUBLIC_SCHOOL_PHONE ? `Ph: ${tenant?.phone || process.env.NEXT_PUBLIC_SCHOOL_PHONE}` : ''].filter(Boolean).join(' • ')
         generateAndPrintPDF({
             title: 'Executive Analytics & Performance Report',
             subtitle: 'Institutional Performance, Financial Intelligence & Enrollment Analysis',
-            schoolName: tenant?.name || 'Universal Day Boarding Academy',
-            schoolAddress: '📍 Pinto Park, Gwalior (MP) • Ph: +91 7879337770',
+            schoolName,
+            schoolAddress,
             stats: [
                 { label: 'Total Revenue', value: formatCurrency(data.overview.totalRevenue), subtext: 'All-time collection', color: '#10b981' },
                 { label: 'This Month Revenue', value: formatCurrency(data.overview.thisMonthRevenue), subtext: 'Current month intake', color: '#10b981' },

@@ -69,6 +69,7 @@ export async function GET(req: NextRequest) {
           fatherName: true,
           totalFee: true,
           paidFee: true,
+          previousDueFee: true,
           status: true,
           siblingGroupId: true,
           course: { select: { name: true } },
@@ -124,6 +125,7 @@ export async function GET(req: NextRequest) {
           motherName: true,
           totalFee: true,
           paidFee: true,
+          previousDueFee: true,
           status: true,
           course: { select: { name: true } },
           batch: { select: { name: true } },
@@ -191,8 +193,8 @@ export async function GET(req: NextRequest) {
       },
       siblings,
       totalInGroup,
-      canAddMore: totalInGroup < 3,
-      maxAllowed: 3,
+      canAddMore: totalInGroup < 6,
+      maxAllowed: 6,
     })
   } catch (err: any) {
     console.error('Fetch siblings error:', err)
@@ -268,10 +270,10 @@ export async function POST(req: NextRequest) {
     // Combine unique IDs
     const combinedUniqueIds = Array.from(new Set([...groupStudentsA, ...groupStudentsB]))
 
-    // Enforce maximum 3 siblings rule
-    if (combinedUniqueIds.length > 3) {
+    // Enforce maximum 6 siblings rule
+    if (combinedUniqueIds.length > 6) {
       return NextResponse.json({
-        error: `Maximum 3 siblings allowed in a family group. Linking these would make ${combinedUniqueIds.length} siblings in total.`,
+        error: `Maximum 6 siblings allowed in a family group. Linking these would make ${combinedUniqueIds.length} siblings in total.`,
       }, { status: 400 })
     }
 
@@ -353,7 +355,8 @@ export async function POST(req: NextRequest) {
       siblingGroupId: targetGroupId,
       siblings: siblingsList,
       totalInGroup: updatedGroup.length,
-      canAddMore: updatedGroup.length < 3,
+      canAddMore: updatedGroup.length < 6,
+      maxAllowed: 6,
     })
   } catch (err: any) {
     console.error('Add sibling error:', err)

@@ -30,8 +30,9 @@ export default function ReportsPage() {
   const handleDownloadFeeCSV = () => {
     if (!data?.payments) return
     const timestamp = new Date().toISOString().split('T')[0]
+    const schoolTitle = (tenant?.name || 'RSS Public School').toUpperCase()
     const rows = [
-      ['UNIVERSAL DAY BOARDING ACADEMY - FEE COLLECTION REPORT'],
+      [`${schoolTitle} - FEE COLLECTION REPORT`],
       ['Generated On', new Date().toLocaleString('en-IN')],
       ['Total Collection', `₹${(data.totalCollection || 0).toLocaleString('en-IN')}`],
       ['This Month Collection', `₹${(data.todayCollection || 0).toLocaleString('en-IN')}`],
@@ -48,7 +49,7 @@ export default function ReportsPage() {
         new Date(p.createdAt).toLocaleDateString('en-IN')
       ])
     })
-    downloadCSV(`udba-fee-report-${timestamp}.csv`, rows)
+    downloadCSV(`fee-collection-report-${timestamp}.csv`, rows)
   }
 
   const handleDownloadFeePDF = () => {
@@ -84,8 +85,9 @@ export default function ReportsPage() {
   const handleDownloadAttendanceCSV = () => {
     if (!data?.records) return
     const timestamp = new Date().toISOString().split('T')[0]
+    const schoolTitle = (tenant?.name || 'RSS Public School').toUpperCase()
     const rows = [
-      ['UNIVERSAL DAY BOARDING ACADEMY - ATTENDANCE REPORT'],
+      [`${schoolTitle} - ATTENDANCE REPORT`],
       ['Generated On', new Date().toLocaleString('en-IN')],
       ['Present Count', data.present || 0],
       ['Absent Count', data.absent || 0],
@@ -102,7 +104,7 @@ export default function ReportsPage() {
         new Date(r.date).toLocaleDateString('en-IN'),
       ])
     })
-    downloadCSV(`udba-attendance-report-${timestamp}.csv`, rows)
+    downloadCSV(`attendance-report-${timestamp}.csv`, rows)
   }
 
   const handleDownloadAttendancePDF = () => {
@@ -139,8 +141,9 @@ export default function ReportsPage() {
   const handleDownloadStudentsCSV = () => {
     if (!data?.students) return
     const timestamp = new Date().toISOString().split('T')[0]
+    const schoolTitle = (tenant?.name || 'RSS Public School').toUpperCase()
     const rows = [
-      ['UNIVERSAL DAY BOARDING ACADEMY - STUDENTS ENROLLMENT DIRECTORY'],
+      [`${schoolTitle} - STUDENTS ENROLLMENT DIRECTORY`],
       ['Generated On', new Date().toLocaleString('en-IN')],
       ['Total Students', data.students.length],
       [''],
@@ -160,7 +163,7 @@ export default function ReportsPage() {
         s.status,
       ])
     })
-    downloadCSV(`udba-students-report-${timestamp}.csv`, rows)
+    downloadCSV(`students-report-${timestamp}.csv`, rows)
   }
 
   const handleDownloadStudentsPDF = () => {

@@ -344,7 +344,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { studentId, siblingGroupId, parentPhone, totalAmount, mode, notes, receivedBy } = await req.json()
+    const { studentId, siblingGroupId, parentPhone, totalAmount, mode, notes, receivedBy, date } = await req.json()
 
     if (!totalAmount || parseFloat(totalAmount) <= 0) {
       return NextResponse.json({ error: 'Valid gross amount is required' }, { status: 400 })
@@ -441,7 +441,9 @@ export async function POST(req: NextRequest) {
       studentName: string
       scholarNo: string
       class: string
+      previousOutstanding: number
       amount: number
+      newOutstanding: number
       receiptNo: string
     }[] = []
 
@@ -513,6 +515,7 @@ export async function POST(req: NextRequest) {
               ? `${notes} (Sibling Gross Payment: ${parentReceiptNo})`
               : `Sibling Gross Payment: ${parentReceiptNo}`,
             receivedBy: receivedBy || user!.email,
+            createdAt: date ? new Date(date) : new Date(),
           },
         })
 
@@ -522,12 +525,16 @@ export async function POST(req: NextRequest) {
           data: { paidFee: { increment: sibAmount } },
         })
 
+        const sibDuesEntry = duesMap.find(d => d.student.id === sib.id)
+        const prevOutstanding = sibDuesEntry ? sibDuesEntry.outstanding : sibAmount
         distributions.push({
           studentId: sib.id,
           studentName: sib.fullName,
           scholarNo: sib.scholarNo || '-',
           class: sib.course?.name || '-',
+          previousOutstanding: prevOutstanding,
           amount: sibAmount,
+          newOutstanding: Math.max(0, prevOutstanding - sibAmount),
           receiptNo,
         })
       }

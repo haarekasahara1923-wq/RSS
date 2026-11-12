@@ -59,7 +59,7 @@ export default function ParentChildren() {
   }, [selectedCourse, selectedBatch, token])
 
   const toggleStudent = (id: string) => {
-    setSelected(prev => prev.includes(id) ? prev.filter(s => s !== id) : prev.length < 3 ? [...prev, id] : prev)
+    setSelected(prev => prev.includes(id) ? prev.filter(s => s !== id) : prev.length < 6 ? [...prev, id] : prev)
   }
 
   const save = async () => {
@@ -92,7 +92,7 @@ export default function ParentChildren() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div>
         <h1 style={{ fontSize: '18px', fontWeight: '800', color: 'white', margin: 0 }}>👶 Link Children</h1>
-        <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Select up to 3 children from the list below</p>
+        <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>Select up to 6 children from the list below</p>
       </div>
 
       {msg && (

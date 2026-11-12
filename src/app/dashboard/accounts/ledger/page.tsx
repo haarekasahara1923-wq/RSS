@@ -103,8 +103,8 @@ export default function SchoolLedgerPage() {
     const today = data?.daily.find(d => d.date === localDay())
 
     const periodLabel = data ? `${prettyDay(data.from)} to ${prettyDay(data.to)}` : ''
-    const schoolName = tenant?.name || 'School'
-    const schoolAddress = [tenant?.address, tenant?.phone && `Ph: ${tenant.phone}`].filter(Boolean).join(' • ')
+    const schoolName = tenant?.name || process.env.NEXT_PUBLIC_SCHOOL_NAME || 'RSS Public School'
+    const schoolAddress = [tenant?.address || process.env.NEXT_PUBLIC_SCHOOL_ADDRESS || 'Ayodhya Nagari, AB Road, Gol Pahadiya, Lashkar, Gwalior (MP)', (tenant?.phone || process.env.NEXT_PUBLIC_SCHOOL_PHONE) && `Ph: ${tenant?.phone || process.env.NEXT_PUBLIC_SCHOOL_PHONE}`].filter(Boolean).join(' • ')
 
     /* ---------------- Exports ---------------- */
     const detailRows = (): (string | number)[][] => {

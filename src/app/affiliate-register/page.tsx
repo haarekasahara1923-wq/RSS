@@ -59,7 +59,7 @@ export default function AffiliateRegisterPage() {
             <div style={{ minHeight: '100vh', background: 'var(--background)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎉</div>
-                    <h2 style={{ fontSize: '28px', fontWeight: '800', color: 'white', marginBottom: '8px' }}>Welcome to UDBA Global Affiliate!</h2>
+                    <h2 style={{ fontSize: '28px', fontWeight: '800', color: 'white', marginBottom: '8px' }}>Welcome to RSS Public School Global Affiliate!</h2>
                     <p style={{ color: 'var(--text-secondary)' }}>Account created successfully. Redirecting to your dashboard...</p>
                     <div className="spinner" style={{ margin: '20px auto' }} />
                 </div>

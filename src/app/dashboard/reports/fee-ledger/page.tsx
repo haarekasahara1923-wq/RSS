@@ -15,7 +15,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 // ----- Main Component -----
 export default function FeeLedgerPage() {
-  const { token } = useAuth()
+  const { token, tenant } = useAuth()
   const [students, setStudents] = useState<any[]>([])
   const [summary, setSummary] = useState<any>(null)
   const [courses, setCourses] = useState<any[]>([])
@@ -67,8 +67,9 @@ export default function FeeLedgerPage() {
   // ---- Export to Excel ----
   const exportExcel = () => {
     if (students.length === 0) return
+    const schoolName = tenant?.name || process.env.NEXT_PUBLIC_SCHOOL_NAME || 'RSS Public School'
     const rows = [
-      ['Fee Ledger — Universal Day Boarding Academy'],
+      [`Fee Ledger — ${schoolName}`],
       ['Generated on:', new Date().toLocaleDateString('en-IN')],
       [],
       ['Sr#', 'Student ID', 'Name', 'Father Name', 'Class', 'Section', 'Phone', 'Parent Phone',
@@ -83,14 +84,15 @@ export default function FeeLedgerPage() {
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `UDBA_Fee_Ledger_${new Date().toISOString().slice(0, 10)}.csv`
+    const fileSlug = schoolName.replace(/[^a-zA-Z0-9]/g, '_')
+    a.download = `${fileSlug}_Fee_Ledger_${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
   }
 
   // ---- Print/PDF ----
   const printLedger = (studentId?: string) => {
     const data = studentId ? students.filter(s => s.id === studentId) : students
-    const html = buildPrintHTML(data, summary)
+    const html = buildPrintHTML(data, summary, tenant)
     const win = window.open('', '_blank', 'width=1100,height=800')
     if (!win) return
     win.document.write(html)
@@ -529,8 +531,12 @@ function StudentLedgerCard({ student, expanded, onToggle, onPrintStudent, onSibl
 }
 
 // ----- Print HTML builder -----
-function buildPrintHTML(students: any[], summary: any) {
+function buildPrintHTML(students: any[], summary: any, tenant?: any) {
   const now = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+  const schoolName = tenant?.name || process.env.NEXT_PUBLIC_SCHOOL_NAME || 'RSS Public School'
+  const schoolAddress = tenant?.address || process.env.NEXT_PUBLIC_SCHOOL_ADDRESS || 'Ayodhya Nagari, AB Road, Gol Pahadiya, Lashkar, Gwalior (MP)'
+  const schoolPhone = tenant?.phone || process.env.NEXT_PUBLIC_SCHOOL_PHONE || '917489315077'
+  const schoolEmail = tenant?.email || process.env.NEXT_PUBLIC_SCHOOL_EMAIL || 'rsspublic1979@gmail.com'
 
   const studentRows = students.map(s => `
     <div class="student-block" style="page-break-inside:avoid;margin-bottom:32px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
@@ -588,15 +594,15 @@ function buildPrintHTML(students: any[], summary: any) {
 
   return `<!DOCTYPE html><html><head>
     <meta charset="utf-8"/>
-    <title>Fee Ledger — UDBA</title>
+    <title>Fee Ledger — ${schoolName}</title>
     <style>
       body { font-family: Arial, sans-serif; margin: 0; padding: 24px; color: #1e293b; }
       @media print { body { padding: 0; } .no-print { display: none; } }
     </style>
   </head><body>
     <div style="text-align:center;margin-bottom:24px;border-bottom:2px solid #1a5c38;padding-bottom:16px;">
-      <h1 style="margin:0;font-size:22px;color:#1a5c38;">Universal Day Boarding Academy</h1>
-      <p style="margin:4px 0 0;font-size:13px;color:#64748b;">📍 Pinto Park, Gwalior (MP) | Fee Account Ledger</p>
+      <h1 style="margin:0;font-size:22px;color:#1a5c38;">${schoolName}</h1>
+      <p style="margin:4px 0 0;font-size:13px;color:#64748b;">📍 ${schoolAddress} ${schoolPhone ? `| Ph: ${schoolPhone}` : ''} | Fee Account Ledger</p>
       <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;">Generated: ${now}</p>
     </div>
     ${summary ? `
@@ -607,6 +613,6 @@ function buildPrintHTML(students: any[], summary: any) {
       <span>Outstanding: <strong style="color:#dc2626;">₹${summary.totalOutstanding?.toLocaleString('en-IN')}</strong></span>
     </div>` : ''}
     ${studentRows}
-    <p style="text-align:center;color:#9ca3af;font-size:11px;margin-top:24px;">This is a computer generated document. — UDBA, Gwalior</p>
+    <p style="text-align:center;color:#9ca3af;font-size:11px;margin-top:24px;">This is a computer generated document. — ${schoolName}</p>
   </body></html>`
 }

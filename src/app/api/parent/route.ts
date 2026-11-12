@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { studentIds } = body // max 3 student IDs to link
 
-  if (!studentIds || !Array.isArray(studentIds) || studentIds.length > 3) {
-    return NextResponse.json({ error: 'Provide 1-3 studentIds to link' }, { status: 400 })
+  if (!studentIds || !Array.isArray(studentIds) || studentIds.length > 6) {
+    return NextResponse.json({ error: 'Provide 1-6 studentIds to link' }, { status: 400 })
   }
 
   // Verify students belong to same tenant
