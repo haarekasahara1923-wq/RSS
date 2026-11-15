@@ -1,6 +1,7 @@
 'use client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useState, useEffect } from 'react'
+import { generateReceiptPDF } from '@/lib/receiptPdf'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(n: number) {
@@ -226,9 +227,19 @@ export default function ParentFeesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [expandedChild, setExpandedChild] = useState<string | null>(null)
+  const [toast, setToast] = useState('')
 
-  useEffect(() => {
+  const [collectiveDepositModal, setCollectiveDepositModal] = useState({
+    open: false,
+    amount: '',
+    paymentMode: 'UPI',
+    date: new Date().toISOString().split('T')[0],
+    processing: false,
+  })
+
+  const fetchLedger = () => {
     if (!token) return
+    setLoading(true)
     fetch('/api/parent/fee-ledger', {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -236,7 +247,6 @@ export default function ParentFeesPage() {
       .then((d) => {
         if (d.success) {
           setData(d)
-          // Auto-expand if single child
           if (d.children?.length === 1) setExpandedChild(d.children[0].studentId)
         } else {
           setError(d.error || 'Failed to load fee data')
@@ -244,7 +254,104 @@ export default function ParentFeesPage() {
         setLoading(false)
       })
       .catch(() => { setError('Network error. Please try again.'); setLoading(false) })
+  }
+
+  useEffect(() => {
+    fetchLedger()
   }, [token])
+
+  const handleCollectiveDepositSubmit = async () => {
+    const { amount, paymentMode, date } = collectiveDepositModal
+    if (!amount || parseFloat(amount) <= 0) { alert('Please enter a valid amount'); return }
+    if (!date) { alert('Please select a date'); return }
+
+    const printWindow = window.open('', '_blank', 'width=960,height=720')
+    if (printWindow) {
+      printWindow.document.write('<div style="font-family:sans-serif;padding:40px;text-align:center;">Generating Sibling Group A4 Duplicate Receipt, please wait...</div>')
+    }
+
+    setCollectiveDepositModal((prev) => ({ ...prev, processing: true }))
+    try {
+      const res = await fetch('/api/parent/fee-ledger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          totalAmount: parseFloat(amount),
+          mode: paymentMode,
+          date,
+          notes: 'Parent Portal Sibling Collective Deposit',
+        }),
+      })
+      const resp = await res.json()
+      if (resp.success) {
+        setToast(`✅ ${resp.message}`)
+        setTimeout(() => setToast(''), 5000)
+
+        // Generate A4 Duplicate Receipt with all siblings
+        generateReceiptPDF({
+          receipt: {
+            receiptNo: resp.parentReceiptNo,
+            amount: parseFloat(amount),
+            mode: paymentMode,
+            createdAt: date,
+          },
+          student: {
+            fullName: `${data.children[0]?.fullName || 'Student'} & Siblings`,
+            fatherName: data.children[0]?.fatherName,
+            parentPhone: data.children[0]?.parentPhone || data.children[0]?.phone,
+          },
+          tenant: data.school || tenant,
+          installmentLabel: 'Collective Sibling Fee Deposit',
+          distributions: resp.distributions,
+          isCollective: true,
+          win: printWindow,
+        })
+
+        fetchLedger()
+        setCollectiveDepositModal({ open: false, amount: '', paymentMode: 'UPI', date: new Date().toISOString().split('T')[0], processing: false })
+      } else {
+        alert(resp.error || 'Payment failed')
+        if (printWindow) printWindow.close()
+        setCollectiveDepositModal((prev) => ({ ...prev, processing: false }))
+      }
+    } catch {
+      alert('Network error. Please try again.')
+      if (printWindow) printWindow.close()
+      setCollectiveDepositModal((prev) => ({ ...prev, processing: false }))
+    }
+  }
+
+  const handleDownloadSingleReceipt = (child: any, payment: any) => {
+    generateReceiptPDF({
+      receipt: payment,
+      student: {
+        ...child,
+        courseName: child.course,
+      },
+      tenant: data.school || tenant,
+      installmentLabel: payment.notes || 'Fee Installment',
+    })
+  }
+
+  const handleDownloadCollectiveReceipt = (rec: any) => {
+    generateReceiptPDF({
+      receipt: {
+        receiptNo: rec.receiptNo,
+        amount: rec.totalAmount,
+        mode: rec.mode,
+        createdAt: rec.createdAt,
+      },
+      student: {
+        fullName: `Family Sibling Group (${rec.distributions?.length || data.children.length} Children)`,
+        fatherName: data.children[0]?.fatherName,
+        parentPhone: data.children[0]?.parentPhone || data.children[0]?.phone,
+      },
+      tenant: data.school || tenant,
+      installmentLabel: 'Collective Sibling Fee Installment',
+      distributions: rec.distributions,
+      isCollective: true,
+    })
+  }
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 0', flexDirection: 'column', gap: '14px' }}>
@@ -271,11 +378,18 @@ export default function ParentFeesPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: '24px', right: '24px', background: '#10b981', color: '#fff', padding: '12px 20px', borderRadius: '12px', fontWeight: '700', fontSize: '14px', zIndex: 9999, boxShadow: '0 8px 32px rgba(16,185,129,0.4)' }}>
+          {toast}
+        </div>
+      )}
+
       {/* Page Title */}
       <div>
-        <h1 style={{ fontSize: '18px', fontWeight: '800', color: 'white', margin: 0 }}>💳 Fee Ledger</h1>
+        <h1 style={{ fontSize: '18px', fontWeight: '800', color: 'white', margin: 0 }}>💳 Fee Ledger &amp; Receipts</h1>
         <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-          {isSibling ? 'Combined view for all your children' : 'Your child\'s complete fee record'}
+          {isSibling ? 'Combined view for all your children with collective fee payments and duplicate receipts' : 'Your child\'s complete fee record and printable receipts'}
         </p>
       </div>
 
@@ -302,18 +416,40 @@ export default function ParentFeesPage() {
               </div>
             ))}
           </div>
-          {/* Combined Download Button */}
-          <button
-            onClick={() => generateFeeLedgerPDF(children, school, true)}
-            style={{
-              marginTop: '12px', width: '100%', background: 'rgba(255,255,255,0.15)',
-              border: '1px solid rgba(255,255,255,0.3)', borderRadius: '10px', padding: '10px',
-              color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', gap: '8px',
-            }}
-          >
-            📥 Download Combined Ledger (PDF)
-          </button>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
+            {summary.dueAmount > 0 && (
+              <button
+                onClick={() => setCollectiveDepositModal({
+                  open: true,
+                  amount: String(summary.dueAmount),
+                  paymentMode: 'UPI',
+                  date: new Date().toISOString().split('T')[0],
+                  processing: false,
+                })}
+                style={{
+                  flex: 1, minWidth: '180px', background: 'linear-gradient(135deg, #10b981, #059669)',
+                  border: 'none', borderRadius: '10px', padding: '11px',
+                  color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(16,185,129,0.35)',
+                }}
+              >
+                💰 Deposit Sibling Collective Fee
+              </button>
+            )}
+            <button
+              onClick={() => generateFeeLedgerPDF(children, school, true)}
+              style={{
+                flex: 1, minWidth: '180px', background: 'rgba(255,255,255,0.15)',
+                border: '1px solid rgba(255,255,255,0.3)', borderRadius: '10px', padding: '11px',
+                color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', gap: '8px',
+              }}
+            >
+              📥 Download Combined Ledger (PDF)
+            </button>
+          </div>
         </div>
       ) : (
         /* Single child compact summary */
@@ -347,6 +483,52 @@ export default function ParentFeesPage() {
           >
             📥 Download Fee Ledger (PDF)
           </button>
+        </div>
+      )}
+
+      {/* ── Family Collective Receipts (Siblings) ────────────────────── */}
+      {data.collectiveReceipts && data.collectiveReceipts.length > 0 && (
+        <div style={{ background: '#1e293b', border: '1.5px solid rgba(99,102,241,0.35)', borderRadius: '14px', padding: '18px' }}>
+          <div style={{ fontSize: '13px', fontWeight: '800', color: '#818cf8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>👨‍👩‍👧 Family Collective Receipts ({data.collectiveReceipts.length})</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {data.collectiveReceipts.map((rec: any) => (
+              <div key={rec.receiptNo} style={{ background: '#0f172a', borderRadius: '12px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', border: '1px solid #334155' }}>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>🧾 Receipt: {rec.receiptNo}</span>
+                    <span style={{ fontSize: '10px', background: 'rgba(99,102,241,0.2)', color: '#818cf8', padding: '2px 8px', borderRadius: '12px' }}>
+                      Collective Sibling Deposit
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                    {fmtDate(rec.createdAt)} &nbsp;•&nbsp; {rec.mode || 'CASH'}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#cbd5e1', marginTop: '6px' }}>
+                    Distributed among: {rec.distributions?.map((d: any) => `${d.studentName} (${fmt(d.amount)})`).join(', ')}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '16px', fontWeight: '900', color: '#10b981' }}>{fmt(rec.totalAmount)}</div>
+                    <div style={{ fontSize: '10px', color: '#64748b' }}>Total Deposited</div>
+                  </div>
+                  <button
+                    onClick={() => handleDownloadCollectiveReceipt(rec)}
+                    style={{
+                      background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                      color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '8px',
+                      fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex',
+                      alignItems: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(99,102,241,0.3)',
+                    }}
+                  >
+                    🧾 Download A4 Duplicate Receipt
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -448,17 +630,30 @@ export default function ParentFeesPage() {
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {child.payments.map((p: any, idx: number) => (
-                        <div key={p.id} style={{ background: '#0f172a', borderRadius: '10px', padding: '11px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div key={p.id} style={{ background: '#0f172a', borderRadius: '10px', padding: '11px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', border: '1px solid #1e293b' }}>
                           <div>
                             <div style={{ fontSize: '12px', fontWeight: '700', color: '#4ade80' }}>
                               Receipt: {p.receiptNo || 'N/A'}
                             </div>
                             <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
                               {fmtDate(p.createdAt)} &nbsp;·&nbsp; {p.mode || 'CASH'}
+                              {p.notes && <span style={{ marginLeft: '6px', color: '#94a3b8' }}>• {p.notes}</span>}
                             </div>
                           </div>
-                          <div style={{ fontSize: '15px', fontWeight: '800', color: '#4ade80' }}>
-                            +₹{p.amount.toLocaleString('en-IN')}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ fontSize: '15px', fontWeight: '800', color: '#4ade80' }}>
+                              +₹{p.amount.toLocaleString('en-IN')}
+                            </div>
+                            <button
+                              onClick={() => handleDownloadSingleReceipt(child, p)}
+                              style={{
+                                background: 'rgba(99,102,241,0.15)', border: '1px solid #6366f1',
+                                borderRadius: '8px', color: '#818cf8', fontSize: '11px', fontWeight: '700',
+                                padding: '5px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                              }}
+                            >
+                              🧾 Receipt (PDF)
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -496,7 +691,180 @@ export default function ParentFeesPage() {
           <div>
             <div style={{ fontSize: '13px', fontWeight: '700', color: '#f87171' }}>Outstanding Fee Due</div>
             <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '3px' }}>
-              A total of {fmt(summary.dueAmount)} is pending. Please contact the school office to clear dues.
+              A total of {fmt(summary.dueAmount)} is pending. You can deposit a collective fee above to proportionately clear dues across all your children.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Parent Sibling Collective Deposit Modal ───────────────────── */}
+      {collectiveDepositModal.open && (
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+            background: 'rgba(0,0,0,0.7)', zIndex: 1200, display: 'flex',
+            alignItems: 'center', justifyContent: 'center', padding: '16px',
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={() => !collectiveDepositModal.processing && setCollectiveDepositModal((prev) => ({ ...prev, open: false }))}
+        >
+          <div
+            style={{
+              background: '#1e293b', border: '1.5px solid #334155', borderRadius: '16px',
+              maxWidth: '560px', width: '100%', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+              display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '90vh', overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #334155', paddingBottom: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: 'white' }}>
+                  💰 Deposit Sibling Collective Fee
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                  Amount will be proportionately distributed across all {children.length} children
+                </p>
+              </div>
+              <button
+                onClick={() => !collectiveDepositModal.processing && setCollectiveDepositModal((prev) => ({ ...prev, open: false }))}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Live Distribution Preview Table */}
+            <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '12px' }}>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: '#818cf8', textTransform: 'uppercase', marginBottom: '8px' }}>
+                Proportionate Allocation Preview
+              </div>
+              <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse', color: '#cbd5e1' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #334155', color: '#94a3b8' }}>
+                    <th style={{ textAlign: 'left', padding: '6px' }}>Child</th>
+                    <th style={{ textAlign: 'right', padding: '6px' }}>Current Due</th>
+                    <th style={{ textAlign: 'right', padding: '6px', color: '#4ade80' }}>Allocated Deposit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {children.map((child: any) => {
+                    const totalDueAll = children.reduce((s: number, c: any) => s + c.dueAmount, 0)
+                    const grossInput = parseFloat(collectiveDepositModal.amount || '0')
+                    const childrenWithDues = children.filter((c: any) => c.dueAmount > 0)
+                    const isLast = childrenWithDues[childrenWithDues.length - 1]?.studentId === child.studentId
+                    let alloc = 0
+                    if (totalDueAll > 0 && child.dueAmount > 0 && grossInput > 0) {
+                      if (isLast) {
+                        const sumOthers = childrenWithDues
+                          .slice(0, -1)
+                          .reduce((s: number, c: any) => s + Math.round(grossInput * (c.dueAmount / totalDueAll) * 100) / 100, 0)
+                        alloc = Math.max(0, Math.round((grossInput - sumOthers) * 100) / 100)
+                      } else {
+                        alloc = Math.round(grossInput * (child.dueAmount / totalDueAll) * 100) / 100
+                      }
+                    }
+                    return (
+                      <tr key={child.studentId} style={{ borderBottom: '1px solid #1e293b' }}>
+                        <td style={{ padding: '8px 6px', fontWeight: '600' }}>{child.fullName}</td>
+                        <td style={{ textAlign: 'right', padding: '8px 6px', color: child.dueAmount > 0 ? '#f87171' : '#4ade80' }}>
+                          {fmt(child.dueAmount)}
+                        </td>
+                        <td style={{ textAlign: 'right', padding: '8px 6px', fontWeight: '800', color: '#4ade80' }}>
+                          {fmt(alloc)}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Amount Input */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                Total Collective Amount (₹) *
+              </label>
+              <input
+                type="number"
+                value={collectiveDepositModal.amount}
+                onChange={(e) => setCollectiveDepositModal((prev) => ({ ...prev, amount: e.target.value }))}
+                placeholder="Enter collective fee amount"
+                style={{
+                  width: '100%', background: '#0f172a', border: '1px solid #334155',
+                  borderRadius: '8px', padding: '10px 14px', color: 'white',
+                  fontSize: '16px', fontWeight: '700', boxSizing: 'border-box',
+                }}
+                min="1"
+                step="0.01"
+              />
+              {collectiveDepositModal.amount && parseFloat(collectiveDepositModal.amount) > 0 && (
+                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', fontStyle: 'italic' }}>
+                  {convertToWords(parseFloat(collectiveDepositModal.amount))}
+                </div>
+              )}
+            </div>
+
+            {/* Date Input */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                Payment Date *
+              </label>
+              <input
+                type="date"
+                value={collectiveDepositModal.date}
+                onChange={(e) => setCollectiveDepositModal((prev) => ({ ...prev, date: e.target.value }))}
+                style={{
+                  width: '100%', background: '#0f172a', border: '1px solid #334155',
+                  borderRadius: '8px', padding: '10px 14px', color: 'white',
+                  fontSize: '14px', fontWeight: '600', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Mode Select */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                Payment Mode
+              </label>
+              <select
+                value={collectiveDepositModal.paymentMode}
+                onChange={(e) => setCollectiveDepositModal((prev) => ({ ...prev, paymentMode: e.target.value }))}
+                style={{
+                  width: '100%', background: '#0f172a', border: '1px solid #334155',
+                  borderRadius: '8px', padding: '10px 14px', color: 'white',
+                  fontSize: '14px', fontWeight: '600', boxSizing: 'border-box',
+                }}
+              >
+                <option value="UPI">📱 UPI / QR</option>
+                <option value="ONLINE">🌐 Net Banking / Online</option>
+                <option value="CARD">💳 Debit / Credit Card</option>
+                <option value="CASH">💵 Cash at School Counter</option>
+              </select>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+              <button
+                onClick={() => !collectiveDepositModal.processing && setCollectiveDepositModal((prev) => ({ ...prev, open: false }))}
+                style={{
+                  flex: 1, padding: '11px', background: '#334155', color: 'white',
+                  border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer',
+                }}
+                disabled={collectiveDepositModal.processing}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCollectiveDepositSubmit}
+                style={{
+                  flex: 2, padding: '11px', background: 'linear-gradient(135deg, #10b981, #059669)',
+                  color: 'white', border: 'none', borderRadius: '8px', fontWeight: '800',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                }}
+                disabled={collectiveDepositModal.processing || !collectiveDepositModal.amount || !collectiveDepositModal.date}
+              >
+                {collectiveDepositModal.processing ? 'Processing Payment…' : '💳 Confirm & Generate A4 Duplicate Receipt'}
+              </button>
             </div>
           </div>
         </div>

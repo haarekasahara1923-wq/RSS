@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrency } from '@/lib/utils'
 import { downloadCSV, generateAndPrintPDF } from '@/lib/reportExport'
+import { generateReceiptPDF, convertToWords } from '@/lib/receiptPdf'
 
 interface Student {
     id: string
@@ -30,6 +31,7 @@ interface DepositModal {
     date: string
     paymentMode: string
     processing: boolean
+    distributeSiblings?: boolean
 }
 
 interface SiblingMember {
@@ -46,499 +48,6 @@ interface SiblingMember {
     previousDueFee?: number
     outstanding: number
     isCurrent?: boolean
-}
-
-// ─── Number to Words (Indian) ─────────────────────────────────────────────────
-function convertToWords(amount: number): string {
-    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
-        'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
-        'Seventeen', 'Eighteen', 'Nineteen']
-    const tensArr = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
-    function chunk(n: number): string {
-        if (n === 0) return ''
-        if (n < 20) return ones[n] + ' '
-        if (n < 100) return tensArr[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '') + ' '
-        return ones[Math.floor(n / 100)] + ' Hundred ' + chunk(n % 100)
-    }
-    const rupees = Math.floor(amount)
-    const paise = Math.round((amount - rupees) * 100)
-    let words = ''
-    if (rupees === 0) words = 'Zero'
-    else {
-        const cr = Math.floor(rupees / 10000000)
-        const lk = Math.floor((rupees % 10000000) / 100000)
-        const th = Math.floor((rupees % 100000) / 1000)
-        const rest = rupees % 1000
-        if (cr) words += chunk(cr) + 'Crore '
-        if (lk) words += chunk(lk) + 'Lakh '
-        if (th) words += chunk(th) + 'Thousand '
-        if (rest) words += chunk(rest)
-    }
-    words = 'Rupees ' + words.trim()
-    if (paise > 0) words += ` and ${chunk(paise).trim()} Paise`
-    return words + ' Only'
-}
-
-// ─── PDF Receipt Generator (Single A4 Page: Office Copy + Parent Copy) ───────
-function generateReceiptPDF(opts: {
-    receipt: any
-    student: Student
-    tenant: any
-    installmentLabel: string
-    distributions?: any[]
-    isCollective?: boolean
-    win?: Window | null
-}) {
-    const { receipt, student, tenant, installmentLabel, distributions, isCollective, win: providedWin } = opts
-    const schoolName = tenant?.name || process.env.NEXT_PUBLIC_SCHOOL_NAME || 'RSS Public School'
-    const schoolAddress = tenant?.address || process.env.NEXT_PUBLIC_SCHOOL_ADDRESS || 'Ayodhya Nagari, AB Road, Gol Pahadiya, Lashkar, Gwalior (MP)'
-    const schoolPhone = tenant?.phone || process.env.NEXT_PUBLIC_SCHOOL_PHONE || '917489315077'
-    const schoolEmail = tenant?.email || process.env.NEXT_PUBLIC_SCHOOL_EMAIL || 'rsspublic1979@gmail.com'
-    const logoUrl = tenant?.logo || ''
-    const directorSign = tenant?.directorSign || ''
-    const schoolCode = tenant?.schoolCode || ''
-
-    const depositDate = receipt.createdAt
-        ? new Date(receipt.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-        : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-
-    const paidAmount = parseFloat(receipt.amount || 0)
-    const modeLabels: Record<string, string> = {
-        CASH: 'Cash', UPI: 'UPI', BANK_TRANSFER: 'Bank Transfer',
-        CHEQUE: 'Cheque', CARD: 'Card', ONLINE: 'Online',
-    }
-    const modeLabel = modeLabels[receipt.mode] || receipt.mode || 'Cash'
-    const amtWords = convertToWords(paidAmount)
-
-    const renderReceiptCard = (copyType: 'OFFICE COPY' | 'PARENT COPY') => {
-        const isOffice = copyType === 'OFFICE COPY'
-        const badgeColor = isOffice ? '#1e3a8a' : '#065f46'
-        const badgeBg = isOffice ? '#dbeafe' : '#d1fae5'
-
-        const tableBody = (distributions && distributions.length > 0)
-            ? distributions.map((d: any, i: number) => `
-                <tr>
-                    <td style="padding:3px 6px;font-size:13px;border-bottom:1px solid #e2e8f0;text-align:center;">${i + 1}</td>
-                    <td style="padding:3px 6px;font-size:13.5px;border-bottom:1px solid #e2e8f0;font-weight:700;">
-                        ${d.studentName} ${d.scholarNo && d.scholarNo !== '-' ? `(Sch: ${d.scholarNo})` : ''} • ${d.class}
-                    </td>
-                    <td style="padding:3px 6px;font-size:13px;border-bottom:1px solid #e2e8f0;">Sibling Fee Allocation</td>
-                    <td style="padding:3px 6px;font-size:13px;border-bottom:1px solid #e2e8f0;text-align:right;">₹${(d.previousOutstanding ?? 0).toLocaleString('en-IN')}</td>
-                    <td style="padding:3px 6px;font-size:14px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:800;color:#059669;">₹${parseFloat(d.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                </tr>
-            `).join('')
-            : `
-                <tr>
-                    <td style="padding:3px 6px;font-size:13px;border-bottom:1px solid #e2e8f0;text-align:center;">1</td>
-                    <td style="padding:3px 6px;font-size:14px;border-bottom:1px solid #e2e8f0;font-weight:700;" colspan="2">${installmentLabel}</td>
-                    <td style="padding:3px 6px;font-size:13px;border-bottom:1px solid #e2e8f0;">Fee Deposit</td>
-                    <td style="padding:3px 6px;font-size:14px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:800;color:#059669;">₹${paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                </tr>
-            `
-
-        const tableHeaders = (distributions && distributions.length > 0)
-            ? `<tr>
-                <th style="padding:3px 6px;font-size:12.5px;text-align:center;width:24px;">#</th>
-                <th style="padding:3px 6px;font-size:12.5px;text-align:left;">Student / Sibling Details</th>
-                <th style="padding:3px 6px;font-size:12.5px;text-align:left;">Type</th>
-                <th style="padding:3px 6px;font-size:12.5px;text-align:right;">Pre Due</th>
-                <th style="padding:3px 6px;font-size:12.5px;text-align:right;">Amount (₹)</th>
-              </tr>`
-            : `<tr>
-                <th style="padding:3px 6px;font-size:12.5px;text-align:center;width:24px;">#</th>
-                <th style="padding:3px 6px;font-size:12.5px;text-align:left;" colspan="2">Description</th>
-                <th style="padding:3px 6px;font-size:12.5px;text-align:left;">Type</th>
-                <th style="padding:3px 6px;font-size:12.5px;text-align:right;">Amount (₹)</th>
-              </tr>`
-
-        return `
-        <div class="receipt-card">
-            <!-- Header -->
-            <div class="r-head">
-                <div class="r-logo">
-                    ${logoUrl ? `<img src="${logoUrl}" alt="Logo" onerror="this.parentElement.textContent='🏫'"/>` : '🏫'}
-                </div>
-                <div class="r-school">
-                    <div class="r-school-name">${schoolName.toUpperCase()}</div>
-                    <div class="r-school-sub">
-                        ${schoolAddress ? `📍 ${schoolAddress}` : ''}
-                        ${schoolPhone ? ` &nbsp;•&nbsp; 📞 ${schoolPhone}` : ''}
-                        ${schoolCode ? ` &nbsp;•&nbsp; Code: ${schoolCode}` : ''}
-                    </div>
-                </div>
-                <div class="r-rec-badge">
-                    <div class="r-copy-tag" style="background:${badgeBg};color:${badgeColor};border:1.5px solid ${badgeColor};">${copyType}</div>
-                    <div class="r-rec-no">${receipt.receiptNo || 'N/A'}</div>
-                    <div class="r-rec-dt">${depositDate}</div>
-                </div>
-            </div>
-
-            <!-- Title band -->
-            <div class="r-band">
-                <span>✦ ${isCollective ? 'COLLECTIVE SIBLING FAMILY FEE RECEIPT' : 'STUDENT FEE PAYMENT RECEIPT'} ✦</span>
-                <span class="r-band-pill">${copyType}</span>
-            </div>
-
-            <!-- Student Grid -->
-            <div class="r-grid">
-                <div class="r-cell"><span class="r-lbl">Scholar No:</span><span class="r-val" style="color:#1a3c5e;">${student.scholarNo || student.studentId || '—'}</span></div>
-                <div class="r-cell"><span class="r-lbl">Student:</span><span class="r-val">${student.fullName}</span></div>
-                <div class="r-cell"><span class="r-lbl">Class:</span><span class="r-val">${student.courseName}</span></div>
-                <div class="r-cell"><span class="r-lbl">Father's Name:</span><span class="r-val">${student.fatherName || '—'}</span></div>
-                <div class="r-cell"><span class="r-lbl">Contact:</span><span class="r-val">${student.parentPhone || student.phone || '—'}</span></div>
-                <div class="r-cell"><span class="r-lbl">Payment Mode:</span><span class="r-val">${modeLabel}</span></div>
-            </div>
-
-            <!-- Fee Table -->
-            <table class="r-table">
-                <thead>${tableHeaders}</thead>
-                <tbody>${tableBody}</tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="${distributions && distributions.length > 0 ? 4 : 4}" style="padding:3px 6px;font-size:13.5px;font-weight:700;text-align:right;">
-                            Total Amount Received:
-                        </td>
-                        <td style="padding:3px 6px;font-size:15px;font-weight:900;color:#059669;text-align:right;">
-                            ₹${paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </td>
-                    </tr>
-                </tfoot>
-            </table>
-
-            <!-- Words -->
-            <div class="r-words">
-                <strong>Amount in Words:</strong> ${amtWords}
-            </div>
-
-            <!-- Footer -->
-            <div class="r-foot">
-                <div class="r-stamp">PAID</div>
-                <div class="r-note">
-                    • Computer-generated duplicate receipt. Valid for school records.<br/>
-                    • Retain this receipt for fee clearance confirmation.
-                </div>
-                <div class="r-sig">
-                    <div class="r-sig-line">
-                        ${directorSign ? `<img src="${directorSign}" alt="Sign"/>` : ''}
-                    </div>
-                    <div class="r-sig-lbl">Authorized Signatory</div>
-                    <div class="r-sig-sub">${schoolName}</div>
-                </div>
-            </div>
-        </div>
-        `
-    }
-
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<title>Fee Receipt – ${receipt.receiptNo || 'N/A'}</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{background:#f1f5f9;font-family:'Inter',-apple-system,sans-serif;color:#0f172a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-
-.no-print {
-    background:#1e293b;
-    color:#fff;
-    padding:8px 16px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:16px;
-    font-size:13px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.2);
-}
-.no-print button {
-    background:#10b981;
-    color:#fff;
-    border:none;
-    padding:6px 18px;
-    border-radius:6px;
-    font-size:13px;
-    font-weight:700;
-    cursor:pointer;
-    box-shadow:0 2px 4px rgba(0,0,0,0.2);
-}
-.no-print button:hover {
-    background:#059669;
-}
-
-.a4-container{
-    width:200mm;
-    max-width:200mm;
-    height:285mm;
-    max-height:285mm;
-    margin:6px auto;
-    background:#fff;
-    padding:0;
-    box-sizing:border-box;
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-    box-shadow:0 4px 24px rgba(0,0,0,0.12);
-    overflow:hidden;
-    page-break-inside:avoid;
-    break-inside:avoid;
-    page-break-after:avoid;
-    break-after:avoid;
-}
-.receipt-card{
-    border:1.5px solid #334155;
-    border-radius:6px;
-    background:#ffffff;
-    padding:6px 10px;
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-    height:137mm;
-    max-height:137mm;
-    box-sizing:border-box;
-    position:relative;
-    overflow:hidden;
-    page-break-inside:avoid;
-    break-inside:avoid;
-    page-break-after:avoid;
-    break-after:avoid;
-}
-.r-head{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    border-bottom:1.5px solid #1a3c5e;
-    padding-bottom:3px;
-    margin-bottom:2px;
-}
-.r-logo{
-    width:36px;
-    height:36px;
-    border-radius:6px;
-    background:#f8fafc;
-    border:1px solid #cbd5e1;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:20px;
-    flex-shrink:0;
-    overflow:hidden;
-}
-.r-logo img{width:100%;height:100%;object-fit:cover}
-.r-school{flex:1;line-height:1.2}
-.r-school-name{font-size:16.5px;font-weight:900;color:#1a3c5e;letter-spacing:0.3px}
-.r-school-sub{font-size:11px;color:#475569;margin-top:2px}
-.r-rec-badge{text-align:right;flex-shrink:0}
-.r-copy-tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:12px;font-weight:900;letter-spacing:0.5px}
-.r-rec-no{font-size:14px;font-weight:900;color:#1a3c5e;margin-top:2px}
-.r-rec-dt{font-size:12px;color:#475569;font-weight:600}
-
-.r-band{
-    background:#1a3c5e;
-    color:#fff;
-    padding:2.5px 8px;
-    font-size:12.5px;
-    font-weight:800;
-    letter-spacing:0.8px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    border-radius:3px;
-    margin-bottom:3px;
-}
-.r-band-pill{
-    background:#fbbf24;
-    color:#1a3c5e;
-    font-size:11px;
-    padding:1px 6px;
-    border-radius:3px;
-    font-weight:900;
-}
-
-.r-grid{
-    display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:2px 8px;
-    background:#f8fafc;
-    border:1px solid #cbd5e1;
-    border-radius:4px;
-    padding:3px 8px;
-    margin-bottom:3px;
-}
-.r-cell{font-size:14px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.r-lbl{color:#475569;font-weight:700;font-size:11.5px;text-transform:uppercase;margin-right:4px}
-.r-val{color:#0f172a;font-weight:800;font-size:14px}
-
-.r-table{
-    width:100%;
-    border-collapse:collapse;
-    margin-bottom:2px;
-}
-.r-table th{
-    background:#f1f5f9;
-    color:#334155;
-    border:1px solid #94a3b8;
-    font-weight:800;
-}
-.r-table td{
-    border:1px solid #cbd5e1;
-}
-.r-table tfoot td{
-    border-top:1.5px solid #10b981;
-    background:#ecfdf5;
-}
-
-.r-words{
-    background:#fffbeb;
-    border:1px dashed #f59e0b;
-    border-radius:4px;
-    padding:2px 6px;
-    font-size:13.5px;
-    color:#78350f;
-    margin-bottom:3px;
-    line-height:1.2;
-}
-.r-words strong{font-size:13px;color:#92400e}
-
-.r-foot{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-end;
-    border-top:1px solid #cbd5e1;
-    padding-top:2px;
-    position:relative;
-}
-.r-stamp{
-    position:absolute;
-    left:50%;
-    bottom:2px;
-    transform:translateX(-50%) rotate(-6deg);
-    border:1.5px solid #10b981;
-    color:#10b981;
-    font-size:12px;
-    font-weight:900;
-    padding:1px 8px;
-    border-radius:4px;
-    letter-spacing:2px;
-    opacity:0.85;
-}
-.r-note{font-size:10.5px;color:#64748b;line-height:1.25;max-width:320px}
-.r-sig{text-align:center;min-width:130px}
-.r-sig-line{width:130px;height:20px;border-bottom:1px solid #334155;margin-bottom:2px;display:flex;align-items:flex-end;justify-content:center}
-.r-sig-line img{max-height:18px;max-width:120px;object-fit:contain}
-.r-sig-lbl{font-size:12px;font-weight:800;color:#0f172a;text-transform:uppercase}
-.r-sig-sub{font-size:10.5px;color:#64748b}
-
-.cut-line{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:11px;
-    font-weight:700;
-    color:#64748b;
-    height:5mm;
-    max-height:5mm;
-    line-height:5mm;
-    margin:1mm 0;
-    user-select:none;
-    box-sizing:border-box;
-    page-break-inside:avoid;
-    break-inside:avoid;
-}
-
-@page {
-    size: A4 portrait;
-    margin: 4mm 5mm;
-}
-
-@media print{
-    html, body{
-        background:#fff !important;
-        margin:0 !important;
-        padding:0 !important;
-        width:100% !important;
-        height:100% !important;
-        max-height:297mm !important;
-        overflow:hidden !important;
-    }
-    .no-print{
-        display:none !important;
-    }
-    .a4-container{
-        width:100% !important;
-        max-width:200mm !important;
-        height:285mm !important;
-        max-height:285mm !important;
-        margin:0 auto !important;
-        padding:0 !important;
-        box-shadow:none !important;
-        border:none !important;
-        display:flex !important;
-        flex-direction:column !important;
-        justify-content:space-between !important;
-        page-break-inside:avoid !important;
-        break-inside:avoid !important;
-        page-break-after:avoid !important;
-        break-after:avoid !important;
-        page-break-before:avoid !important;
-        break-before:avoid !important;
-        overflow:hidden !important;
-    }
-    .receipt-card{
-        height:137mm !important;
-        max-height:137mm !important;
-        page-break-inside:avoid !important;
-        break-inside:avoid !important;
-        page-break-after:avoid !important;
-        break-after:avoid !important;
-        overflow:hidden !important;
-        box-sizing:border-box !important;
-    }
-    .cut-line{
-        height:5mm !important;
-        max-height:5mm !important;
-        line-height:5mm !important;
-        margin:1mm 0 !important;
-        page-break-inside:avoid !important;
-        break-inside:avoid !important;
-        page-break-after:avoid !important;
-        break-after:avoid !important;
-        box-sizing:border-box !important;
-    }
-}
-</style>
-</head>
-<body>
-<div class="no-print">
-    <span><strong>Single A4 Page:</strong> Office Copy (top) + Parent Copy (bottom)</span>
-    <button onclick="window.print()">🖨️ Print / Save as PDF</button>
-</div>
-<div class="a4-container">
-    ${renderReceiptCard('OFFICE COPY')}
-    <div class="cut-line">
-        <span>✂ - - - - - - - - - - - - - - - - - - - - - - - - Cut Along This Line - - - - - - - - - - - - - - - - - - - - - - - - ✂</span>
-    </div>
-    ${renderReceiptCard('PARENT COPY')}
-</div>
-<script>
-window.onload = function() {
-    setTimeout(function() {
-        window.print();
-    }, 400);
-};
-</script>
-</body>
-</html>`
-    if (providedWin) {
-        providedWin.document.open()
-        providedWin.document.write(html)
-        providedWin.document.close()
-    } else {
-        const win = window.open('', '_blank', 'width=960,height=720')
-        if (!win) { alert('Please allow popups for this site to download receipts.'); return }
-        win.document.open()
-        win.document.write(html)
-        win.document.close()
-    }
 }
 
 // ─── Main Page Component ──────────────────────────────────────────────────────
@@ -658,6 +167,7 @@ export default function FeesPage() {
     }
 
     const openDepositModal = (fee: any) => {
+        const hasSiblings = siblingGroup.length > 1
         setDepositModal({
             open: true,
             fee,
@@ -665,11 +175,12 @@ export default function FeesPage() {
             date: '',   // NO default — user must choose
             paymentMode: paymentMode,
             processing: false,
+            distributeSiblings: hasSiblings,
         })
     }
 
     const handleDepositSubmit = async () => {
-        const { fee, amount, date, paymentMode: mode } = depositModal
+        const { fee, amount, date, paymentMode: mode, distributeSiblings } = depositModal
         if (!fee || !amount || parseFloat(amount) <= 0) { alert('Please enter a valid amount'); return }
         if (!date) { alert('Please select or enter the Date of Deposit'); return }
 
@@ -680,41 +191,93 @@ export default function FeesPage() {
         }
 
         setDepositModal(prev => ({ ...prev, processing: true }))
+
         try {
-            const res = await fetch('/api/payments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({
-                    studentId: fee.studentId,
-                    feeId: fee.id,
-                    amount: parseFloat(amount),
-                    mode,
-                    date,
-                    notes: `Fee Deposit – ${fee.notes || 'Installment'}`,
+            if (distributeSiblings && siblingGroup.length > 1) {
+                // Sibling collective proportionate payment
+                const res = await fetch('/api/reports/fee-ledger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({
+                        studentId: selectedStudentForFees!.id,
+                        siblingGroupId: selectedStudentForFees!.siblingGroupId,
+                        parentPhone: selectedStudentForFees!.parentPhone || selectedStudentForFees!.phone,
+                        totalAmount: parseFloat(amount),
+                        mode,
+                        date,
+                        notes: `Fee Deposit – ${fee.notes || 'Installment'} (Collective Sibling Payment)`,
+                        receivedBy: tenant?.name || 'School Office',
+                    })
                 })
-            })
-            const data = await res.json()
-            if (data.success) {
-                setToast('✅ Payment recorded! Generating A4 duplicate receipt…')
-                setTimeout(() => setToast(''), 4000)
+                const data = await res.json()
+                if (data.success) {
+                    setToast(`✅ ${data.message || 'Payment recorded!'}`)
+                    setTimeout(() => setToast(''), 5000)
 
-                // Generate PDF receipt (Office Copy + Parent Copy on 1 A4 page)
-                generateReceiptPDF({
-                    receipt: { ...data.data, amount: parseFloat(amount) },
-                    student: selectedStudentForFees!,
-                    tenant,
-                    installmentLabel: fee.notes || 'Fee Installment',
-                    win: printWindow
-                })
+                    generateReceiptPDF({
+                        receipt: {
+                            receiptNo: data.parentReceiptNo,
+                            amount: parseFloat(amount),
+                            mode,
+                            createdAt: date,
+                        },
+                        student: {
+                            ...selectedStudentForFees!,
+                            fullName: `${selectedStudentForFees!.fullName} & Sibling Group`,
+                            courseName: `${siblingGroup.length} Sibling Members`,
+                        },
+                        tenant,
+                        installmentLabel: fee.notes ? `Collective: ${fee.notes}` : 'Collective Sibling Fee Installment',
+                        distributions: data.distributions,
+                        isCollective: true,
+                        win: printWindow,
+                    })
 
-                // Refresh
-                openInstallments(selectedStudentForFees!)
-                fetchStudents()
-                setDepositModal(prev => ({ ...prev, processing: false, open: false }))
+                    openInstallments(selectedStudentForFees!)
+                    fetchStudents()
+                    setDepositModal(prev => ({ ...prev, processing: false, open: false }))
+                } else {
+                    alert(data.error || 'Payment failed')
+                    if (printWindow) printWindow.close()
+                    setDepositModal(prev => ({ ...prev, processing: false }))
+                }
             } else {
-                alert(data.error || 'Payment failed')
-                if (printWindow) printWindow.close()
-                setDepositModal(prev => ({ ...prev, processing: false }))
+                // Single student payment
+                const res = await fetch('/api/payments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({
+                        studentId: fee.studentId,
+                        feeId: fee.id,
+                        amount: parseFloat(amount),
+                        mode,
+                        date,
+                        notes: `Fee Deposit – ${fee.notes || 'Installment'}`,
+                    })
+                })
+                const data = await res.json()
+                if (data.success) {
+                    setToast('✅ Payment recorded! Generating A4 duplicate receipt…')
+                    setTimeout(() => setToast(''), 4000)
+
+                    // Generate PDF receipt (Office Copy + Parent Copy on 1 A4 page)
+                    generateReceiptPDF({
+                        receipt: { ...data.data, amount: parseFloat(amount) },
+                        student: selectedStudentForFees!,
+                        tenant,
+                        installmentLabel: fee.notes || 'Fee Installment',
+                        win: printWindow
+                    })
+
+                    // Refresh
+                    openInstallments(selectedStudentForFees!)
+                    fetchStudents()
+                    setDepositModal(prev => ({ ...prev, processing: false, open: false }))
+                } else {
+                    alert(data.error || 'Payment failed')
+                    if (printWindow) printWindow.close()
+                    setDepositModal(prev => ({ ...prev, processing: false }))
+                }
             }
         } catch {
             alert('Network error. Please try again.')
@@ -1416,7 +979,7 @@ export default function FeesPage() {
             {/* ── Deposit Modal ───────────────────────────────────────────────── */}
             {depositModal.open && (
                 <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => !depositModal.processing && setDepositModal(prev => ({ ...prev, open: false }))}>
-                    <div className="modal" style={{ maxWidth: '440px' }} onClick={e => e.stopPropagation()}>
+                    <div className="modal" style={{ maxWidth: '540px' }} onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <div>
                                 <h3 style={{ fontWeight: '700', fontSize: '18px' }}>💳 Deposit Fee</h3>
@@ -1458,6 +1021,76 @@ export default function FeesPage() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Sibling Allocation Mode (if student has siblings) */}
+                            {siblingGroup.length > 1 && (
+                                <div style={{
+                                    padding: '12px 14px',
+                                    background: 'rgba(99,102,241,0.08)',
+                                    borderRadius: '10px',
+                                    border: '1.5px solid rgba(99,102,241,0.3)',
+                                }}>
+                                    <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#818cf8', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span>👨‍👩‍👧 Sibling Fee Allocation Mode ({siblingGroup.length} Children)</span>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer', fontWeight: depositModal.distributeSiblings ? '700' : '500' }}>
+                                            <input
+                                                type="radio"
+                                                name="siblingAllocMode"
+                                                checked={depositModal.distributeSiblings === true}
+                                                onChange={() => setDepositModal(prev => ({ ...prev, distributeSiblings: true }))}
+                                            />
+                                            <span>Distribute proportionately across all {siblingGroup.length} siblings (Recommended)</span>
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer', fontWeight: !depositModal.distributeSiblings ? '700' : '500' }}>
+                                            <input
+                                                type="radio"
+                                                name="siblingAllocMode"
+                                                checked={depositModal.distributeSiblings === false}
+                                                onChange={() => setDepositModal(prev => ({ ...prev, distributeSiblings: false }))}
+                                            />
+                                            <span>Deposit for {selectedStudentForFees?.fullName} only</span>
+                                        </label>
+                                    </div>
+
+                                    {depositModal.distributeSiblings && (
+                                        <div style={{ marginTop: '10px', fontSize: '11.5px', background: 'var(--surface)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                            <div style={{ fontWeight: '700', marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                                                Proportionate Allocation Preview:
+                                            </div>
+                                            {(() => {
+                                                const totalFamOutstanding = siblingGroup.reduce((sum, s) => sum + s.outstanding, 0)
+                                                const grossInput = parseFloat(depositModal.amount || '0')
+                                                const siblingsWithDues = siblingGroup.filter(s => s.outstanding > 0)
+                                                let runningAlloc = 0
+                                                return siblingGroup.map(sib => {
+                                                    let sibAlloc = 0
+                                                    if (totalFamOutstanding > 0 && sib.outstanding > 0 && grossInput > 0) {
+                                                        const isLastWithDues = sib.id === siblingsWithDues[siblingsWithDues.length - 1]?.id
+                                                        if (isLastWithDues) {
+                                                            sibAlloc = Math.max(0, Math.round((grossInput - runningAlloc) * 100) / 100)
+                                                        } else {
+                                                            sibAlloc = Math.round(grossInput * (sib.outstanding / totalFamOutstanding) * 100) / 100
+                                                            runningAlloc += sibAlloc
+                                                        }
+                                                    }
+                                                    const newDue = Math.max(0, sib.outstanding - sibAlloc)
+                                                    return (
+                                                        <div key={sib.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px dashed var(--border)' }}>
+                                                            <span><strong>{sib.fullName}</strong> ({sib.courseName}):</span>
+                                                            <span style={{ fontWeight: '700' }}>
+                                                                <span style={{ color: sibAlloc > 0 ? '#10b981' : 'var(--text-muted)' }}>+₹{sibAlloc.toLocaleString('en-IN')}</span>
+                                                                <span style={{ color: 'var(--text-muted)', marginLeft: '6px', fontSize: '10.5px' }}>(Rem: ₹{newDue.toLocaleString('en-IN')})</span>
+                                                            </span>
+                                                        </div>
+                                                    )
+                                                })
+                                            })()}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Amount */}
                             <div>

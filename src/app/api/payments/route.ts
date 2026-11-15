@@ -4,6 +4,7 @@ import { requireAuth, requireWriteAccess } from '@/app/api/middleware'
 import { prisma } from '@/lib/prisma'
 import { dayStart, dayEnd, todayIST } from '@/lib/accounts'
 import { getNextReceiptNumber } from '@/lib/receiptNumber'
+import { processSiblingCollectivePayment } from '@/lib/siblingPayment'
 
 /** Convert YYYY-MM-DD into a timestamp; today's date keeps the current time */
 function paymentDate(date?: string): Date | undefined {
@@ -52,10 +53,26 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json()
-        const { studentId, feeId, amount, mode, reference, receivedBy, notes, date } = body
+        const { studentId, feeId, amount, mode, reference, receivedBy, notes, date, distributeSiblings, siblingGroupId } = body
 
         if (!studentId || !amount) {
             return NextResponse.json({ error: 'Student ID and amount are required' }, { status: 400 })
+        }
+
+        // If collective sibling deposit requested, execute proportionate sibling distribution
+        if (distributeSiblings || siblingGroupId) {
+            const result = await processSiblingCollectivePayment({
+                tenantId: user!.tenantId,
+                studentId,
+                siblingGroupId,
+                totalAmount: parseFloat(amount),
+                mode,
+                date,
+                notes: notes || 'Collective Sibling Fee Installment',
+                receivedBy: receivedBy || user!.email,
+                userEmail: user!.email,
+            })
+            return NextResponse.json({ data: result, ...result }, { status: 201 })
         }
 
         // Use a transaction to ensure both payment is created and student's paidFee is updated

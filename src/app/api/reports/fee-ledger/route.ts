@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/app/api/middleware'
+import { processSiblingCollectivePayment } from '@/lib/siblingPayment'
 
 export const dynamic = 'force-dynamic'
 
@@ -339,224 +340,29 @@ export async function POST(req: NextRequest) {
   const { error, user } = requireAuth(req)
   if (error) return error
 
-  if (!['SUPER_ADMIN', 'COACHING_ADMIN', 'ADMIN_OPERATION'].includes(user!.role)) {
+  if (!['SUPER_ADMIN', 'COACHING_ADMIN', 'ADMIN_OPERATION', 'PARENT'].includes(user!.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   try {
-    const { studentId, siblingGroupId, parentPhone, totalAmount, mode, notes, receivedBy, date } = await req.json()
+    const body = await req.json()
+    const { studentId, siblingGroupId, parentPhone, totalAmount, mode, notes, receivedBy, date } = body
 
-    if (!totalAmount || parseFloat(totalAmount) <= 0) {
-      return NextResponse.json({ error: 'Valid gross amount is required' }, { status: 400 })
-    }
-
-    const grossAmount = parseFloat(totalAmount)
-
-    // Locate the siblings group
-    let siblings: any[] = []
-
-    // 1. By siblingGroupId
-    if (siblingGroupId) {
-      siblings = await prisma.student.findMany({
-        where: { tenantId: user!.tenantId, siblingGroupId },
-        include: {
-          course: { select: { name: true } },
-          batch: { select: { name: true } },
-          fees: { where: { status: { not: 'PAID' } }, orderBy: { dueDate: 'asc' } },
-        },
-      })
-    }
-
-    // 2. By studentId
-    if (siblings.length === 0 && studentId) {
-      const target = await prisma.student.findUnique({
-        where: { id: studentId, tenantId: user!.tenantId },
-        include: { parentLinks: true },
-      })
-
-      if (target?.siblingGroupId) {
-        siblings = await prisma.student.findMany({
-          where: { tenantId: user!.tenantId, siblingGroupId: target.siblingGroupId },
-          include: {
-            course: { select: { name: true } },
-            batch: { select: { name: true } },
-            fees: { where: { status: { not: 'PAID' } }, orderBy: { dueDate: 'asc' } },
-          },
-        })
-      } else if (target?.parentPhone || target?.phone) {
-        const phone = target.parentPhone || target.phone
-        siblings = await prisma.student.findMany({
-          where: {
-            tenantId: user!.tenantId,
-            OR: [{ parentPhone: phone }, { phone }],
-          },
-          include: {
-            course: { select: { name: true } },
-            batch: { select: { name: true } },
-            fees: { where: { status: { not: 'PAID' } }, orderBy: { dueDate: 'asc' } },
-          },
-        })
-      } else {
-        siblings = [target]
-      }
-    }
-
-    // 3. Fallback by parentPhone
-    if (siblings.length === 0 && parentPhone) {
-      siblings = await prisma.student.findMany({
-        where: {
-          tenantId: user!.tenantId,
-          OR: [{ parentPhone }, { phone: parentPhone }],
-        },
-        include: {
-          course: { select: { name: true } },
-          batch: { select: { name: true } },
-          fees: { where: { status: { not: 'PAID' } }, orderBy: { dueDate: 'asc' } },
-        },
-      })
-    }
-
-    if (siblings.length === 0) {
-      return NextResponse.json({ error: 'No students found for this sibling payment' }, { status: 404 })
-    }
-
-    // Calculate total outstanding balances
-    const duesMap = siblings.map(s => ({
-      student: s,
-      outstanding: Math.max(0, s.totalFee - s.paidFee),
-    }))
-
-    const totalOutstanding = duesMap.reduce((sum, d) => sum + d.outstanding, 0)
-
-    if (totalOutstanding <= 0) {
-      return NextResponse.json({ error: 'All siblings have already cleared their fees' }, { status: 400 })
-    }
-
-    // Generate parent receipt counter
-    // Tenant 1 starts with 1001 base offset, Tenant 2 starts with 0001
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: user!.tenantId },
-      select: { id: true, name: true, slug: true },
-    })
-    const isHigherSecondary =
-      tenant?.id === 'cmuv23jwe000004l8lg5f1kr1' ||
-      /higher\s*secondary/i.test(tenant?.name || '') ||
-      tenant?.slug === 'rss-public-school'
-
-    const paymentCount = await prisma.payment.count({ where: { tenantId: user!.tenantId } })
-    const baseOffset = isHigherSecondary ? 1000 : 0
-    const parentReceiptNo = `REC-P${String(baseOffset + paymentCount + 1).padStart(5, '0')}`
-
-    const distributions: {
-      studentId: string
-      studentName: string
-      scholarNo: string
-      class: string
-      previousOutstanding: number
-      amount: number
-      newOutstanding: number
-      receiptNo: string
-    }[] = []
-
-    // Proportional calculation
-    const siblingsWithDues = duesMap.filter(d => d.outstanding > 0)
-    let allocatedTotal = 0
-
-    const paymentPlans: { student: any; amount: number }[] = []
-
-    for (let i = 0; i < siblingsWithDues.length; i++) {
-      const item = siblingsWithDues[i]
-      let sibAmount = 0
-
-      if (i === siblingsWithDues.length - 1) {
-        // Last sibling gets the exact remainder to ensure gross total matches perfectly
-        sibAmount = Math.max(0, Math.round((grossAmount - allocatedTotal) * 100) / 100)
-      } else {
-        const proportion = item.outstanding / totalOutstanding
-        sibAmount = Math.round(grossAmount * proportion * 100) / 100
-        allocatedTotal += sibAmount
-      }
-
-      if (sibAmount > 0) {
-        paymentPlans.push({ student: item.student, amount: sibAmount })
-      }
-    }
-
-    // Execute database updates in transaction
-    await prisma.$transaction(async (tx) => {
-      for (const plan of paymentPlans) {
-        const sib = plan.student
-        const sibAmount = plan.amount
-        const receiptNo = `${parentReceiptNo}-${sib.scholarNo || sib.studentId || sib.id.slice(-4)}`
-
-        // Check if there are unpaid fee installments to allocate towards
-        let remainingToAllocate = sibAmount
-        let primaryFeeId: string | null = null
-
-        if (sib.fees && sib.fees.length > 0) {
-          for (const fee of sib.fees) {
-            if (remainingToAllocate <= 0) break
-            primaryFeeId = primaryFeeId || fee.id
-
-            const feeDue = fee.amount > 0 ? fee.amount : remainingToAllocate
-            const alloc = Math.min(feeDue, remainingToAllocate)
-            remainingToAllocate -= alloc
-
-            const newStatus = alloc >= feeDue ? 'PAID' : 'PARTIAL'
-            await tx.fee.update({
-              where: { id: fee.id },
-              data: {
-                status: newStatus as any,
-                paidDate: new Date(),
-              },
-            })
-          }
-        }
-
-        // Create individual Payment record for this sibling's ledger
-        await tx.payment.create({
-          data: {
-            tenantId: user!.tenantId,
-            studentId: sib.id,
-            feeId: primaryFeeId,
-            amount: sibAmount,
-            mode: mode || 'CASH',
-            receiptNo,
-            notes: notes
-              ? `${notes} (Sibling Gross Payment: ${parentReceiptNo})`
-              : `Sibling Gross Payment: ${parentReceiptNo}`,
-            receivedBy: receivedBy || user!.email,
-            createdAt: date ? new Date(date) : new Date(),
-          },
-        })
-
-        // Update student paid fee
-        await tx.student.update({
-          where: { id: sib.id },
-          data: { paidFee: { increment: sibAmount } },
-        })
-
-        const sibDuesEntry = duesMap.find(d => d.student.id === sib.id)
-        const prevOutstanding = sibDuesEntry ? sibDuesEntry.outstanding : sibAmount
-        distributions.push({
-          studentId: sib.id,
-          studentName: sib.fullName,
-          scholarNo: sib.scholarNo || '-',
-          class: sib.course?.name || '-',
-          previousOutstanding: prevOutstanding,
-          amount: sibAmount,
-          newOutstanding: Math.max(0, prevOutstanding - sibAmount),
-          receiptNo,
-        })
-      }
+    const result = await processSiblingCollectivePayment({
+      tenantId: user!.tenantId,
+      studentId,
+      siblingGroupId,
+      parentPhone,
+      parentUserId: user!.role === 'PARENT' ? user!.userId : undefined,
+      totalAmount,
+      mode,
+      notes,
+      receivedBy: receivedBy || (user!.role === 'PARENT' ? 'Parent Portal' : undefined),
+      userEmail: user!.email,
+      date,
     })
 
-    return NextResponse.json({
-      success: true,
-      message: `₹${grossAmount.toLocaleString('en-IN')} deposited & deferred proportionately among ${distributions.length} sibling(s)`,
-      parentReceiptNo,
-      distributions,
-    })
+    return NextResponse.json(result)
   } catch (err: any) {
     console.error('Sibling payment error:', err)
     return NextResponse.json({ error: 'Failed to process sibling payment: ' + (err.message || '') }, { status: 500 })
