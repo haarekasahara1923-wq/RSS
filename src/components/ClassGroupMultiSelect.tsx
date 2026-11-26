@@ -90,13 +90,11 @@ export default function ClassGroupMultiSelect({
   const handleGroupSelect = (group: string) => {
     onClassGroupChange(group)
     onBatchChange('')
+    onSelectedCourseIdsChange([])
     if (!group) {
-      onSelectedCourseIdsChange([])
       setDropdownOpen(false)
       return
     }
-    const matching = courses.filter((c) => getCourseClassGroup(c) === group)
-    onSelectedCourseIdsChange(matching.map((c) => c.id))
     setDropdownOpen(true)
   }
 
@@ -365,6 +363,35 @@ export default function ClassGroupMultiSelect({
           </select>
         </div>
       </div>
+
+      {/* Selected Classes Chips (when in Group mode) */}
+      {selectedClassGroup && selectedCourseIds.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700' }}>Selected Classes:</span>
+          {courses
+            .filter((c) => selectedCourseIds.includes(c.id))
+            .map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => toggleCourse(c.id)}
+                title="Click to unselect"
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '14px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  background: 'rgba(99,102,241,0.16)',
+                  border: '1px solid rgba(99,102,241,0.4)',
+                  color: '#a78bfa',
+                  cursor: 'pointer',
+                }}
+              >
+                ✓ {c.name} ✕
+              </button>
+            ))}
+        </div>
+      )}
 
       {/* Active Student Count Banner */}
       {studentCount !== null && selectedCourseIds.length > 0 && (
