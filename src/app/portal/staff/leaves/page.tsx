@@ -98,8 +98,8 @@ export default function StaffLeavesPage() {
                     <tbody>
                         {leaves.map((l: any) => (
                             <tr key={l.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                <td style={{ padding: '12px 16px' }}>{new Date(l.startDate).toLocaleDateString()}</td>
-                                <td style={{ padding: '12px 16px' }}>{new Date(l.endDate).toLocaleDateString()}</td>
+                                <td style={{ padding: '12px 16px' }}>{new Date(l.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+                                <td style={{ padding: '12px 16px' }}>{new Date(l.endDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                                 <td style={{ padding: '12px 16px' }}>{l.reason}</td>
                                 <td style={{ padding: '12px 16px' }}>
                                     <span style={{
@@ -110,7 +110,7 @@ export default function StaffLeavesPage() {
                                         {l.status}
                                     </span>
                                 </td>
-                                <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '14px' }}>{new Date(l.createdAt).toLocaleDateString()}</td>
+                                <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '14px' }}>{new Date(l.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                             </tr>
                         ))}
                         {leaves.length === 0 && (

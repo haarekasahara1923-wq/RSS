@@ -134,7 +134,7 @@ export default function AdminPayrollLedgerPage() {
                                     {l.status === 'UNPAID' ? (
                                         <button onClick={() => paySalary(l.id)} className="btn" style={{ padding: '6px 12px', background: '#3b82f6', color: 'white', borderRadius: '6px', fontSize: '12px', border: 'none', cursor: 'pointer' }}>Mark Paid</button>
                                     ) : (
-                                        <span style={{ color: '#64748b', fontSize: '12px' }}>Paid on {new Date(l.paidDate).toLocaleDateString()}</span>
+                                        <span style={{ color: '#64748b', fontSize: '12px' }}>Paid on {new Date(l.paidDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                                     )}
                                 </td>
                             </tr>

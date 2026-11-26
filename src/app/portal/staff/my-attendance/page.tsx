@@ -125,7 +125,7 @@ export default function StaffMyAttendancePage() {
                                 <tr><td colSpan={5} style={{ padding: '16px', textAlign: 'center' }}>Loading...</td></tr>
                             ) : attendances.map((a: any) => (
                                 <tr key={a.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                    <td style={{ padding: '12px 16px' }}>{new Date(a.date).toLocaleDateString()}</td>
+                                    <td style={{ padding: '12px 16px' }}>{new Date(a.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                                     <td style={{ padding: '12px 16px', fontWeight: 'bold', color: a.status === 'PRESENT' ? '#16a34a' : a.status === 'LEAVE' ? '#ca8a04' : '#dc2626' }}>{a.status}</td>
                                     <td style={{ padding: '12px 16px' }}>{a.inTime || '-'}</td>
                                     <td style={{ padding: '12px 16px' }}>{a.outTime || '-'}</td>

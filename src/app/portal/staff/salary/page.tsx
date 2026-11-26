@@ -68,7 +68,7 @@ export default function StaffSalaryLedgerPage() {
                                     </span>
                                 </td>
                                 <td style={{ padding: '12px 16px', color: '#64748b' }}>
-                                    {l.paidDate ? new Date(l.paidDate).toLocaleDateString() : '-'}
+                                    {l.paidDate ? new Date(l.paidDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
                                 </td>
                             </tr>
                         ))}

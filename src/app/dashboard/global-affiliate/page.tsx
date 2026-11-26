@@ -131,7 +131,7 @@ export default function AffiliateDashboard() {
                         {data.referrals.map((r: any) => (
                             <tr key={r.id}>
                                 <td>{r.tenantName}</td>
-                                <td>{new Date(r.referralDate).toLocaleDateString()}</td>
+                                <td>{new Date(r.referralDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                                 <td style={{ textAlign: 'right' }}>
                                     <span className={`badge ${r.status === 'ACTIVE' ? 'badge-success' : 'badge-warning'}`}>
                                         {r.status}

@@ -164,7 +164,7 @@ export default function AffiliateDashboard() {
                             <tbody>
                                 {withdrawals.map(w => (
                                     <tr key={w.id}>
-                                        <td>{new Date(w.requestedAt).toLocaleDateString()}</td>
+                                        <td>{new Date(w.requestedAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                                         <td>₹{w.amount}</td>
                                         <td><span className={`badge ${w.status === 'PENDING' ? 'badge-warning' : w.status === 'PAID' ? 'badge-success' : 'badge-danger'}`}>{w.status}</span></td>
                                     </tr>

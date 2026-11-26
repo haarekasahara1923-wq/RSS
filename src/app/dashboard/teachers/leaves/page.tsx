@@ -84,10 +84,10 @@ export default function AdminTeacherLeavesPage() {
                                         {l.teacher?.name || 'Unknown'}
                                     </div>
                                 </td>
-                                <td style={{ padding: '12px 16px' }}>{new Date(l.startDate).toLocaleDateString()}</td>
-                                <td style={{ padding: '12px 16px' }}>{new Date(l.endDate).toLocaleDateString()}</td>
+                                <td style={{ padding: '12px 16px' }}>{new Date(l.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+                                <td style={{ padding: '12px 16px' }}>{new Date(l.endDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                                 <td style={{ padding: '12px 16px', maxWidth: '200px' }}>{l.reason}</td>
-                                <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '14px' }}>{new Date(l.createdAt).toLocaleDateString()}</td>
+                                <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '14px' }}>{new Date(l.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                                 <td style={{ padding: '12px 16px' }}>
                                     <span style={{
                                         padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold',
