@@ -1,6 +1,7 @@
-﻿'use client'
+'use client'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 
 interface Student { id: string; fullName: string; studentId: string }
 interface Course  { id: string; name: string }
@@ -168,8 +169,7 @@ export default function ExamsPage() {
                         </div>
                         <div>
                             <label className="label">Test Date *</label>
-                            <input
-                                type="date"
+                            <DateInput
                                 className="input"
                                 value={form.date}
                                 onChange={e => setForm({ ...form, date: e.target.value })}

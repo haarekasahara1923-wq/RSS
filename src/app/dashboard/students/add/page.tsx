@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
+import DateInput from '@/components/DateInput'
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div>
@@ -437,7 +438,7 @@ export default function AddStudentPage() {
                             </select>
                         </Field>
                         <Field label="Date of Birth">
-                            <input className="input" type="date" value={form.dob} onChange={e => {
+                            <DateInput className="input" value={form.dob} onChange={e => {
                                 const val = e.target.value;
                                 setForm({ ...form, dob: val, dobInWords: convertDateToWords(val) });
                             }} />
@@ -543,13 +544,13 @@ export default function AddStudentPage() {
                             </select>
                         </Field>
                         <Field label="Admission Date">
-                            <input className="input" type="date" value={form.admissionDate} onChange={e => setForm({ ...form, admissionDate: e.target.value })} />
+                            <DateInput className="input" value={form.admissionDate} onChange={e => setForm({ ...form, admissionDate: e.target.value })} />
                         </Field>
                         <Field label="First Admission Class">
                             <input className="input" placeholder="e.g. 1st Grade" value={form.firstAdmissionClass} onChange={e => setForm({ ...form, firstAdmissionClass: e.target.value })} />
                         </Field>
                         <Field label="First Admission Date">
-                            <input className="input" type="date" value={form.firstAdmissionDate} onChange={e => setForm({ ...form, firstAdmissionDate: e.target.value })} />
+                            <DateInput className="input" value={form.firstAdmissionDate} onChange={e => setForm({ ...form, firstAdmissionDate: e.target.value })} />
                         </Field>
                         <Field label="Scholarship Scheme">
                             <input className="input" placeholder="e.g. RT" value={form.scholarshipScheme} onChange={e => {

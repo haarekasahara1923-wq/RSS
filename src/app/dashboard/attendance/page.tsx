@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 
 interface Batch { id: string; name: string; courseId: string; courseName: string }
 interface Student { id: string; fullName: string; batchId: string }
@@ -114,7 +115,7 @@ export default function AttendancePage() {
                     </div>
                     <div>
                         <label className="label">Date</label>
-                        <input className="input" type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} style={{ width: '180px' }} />
+                        <DateInput className="input" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} style={{ width: '180px' }} />
                     </div>
                 </div>
             </div>

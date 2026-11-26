@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth, useApi } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 import html2pdf from 'html2pdf.js'
 
 export default function GenerateTCPage() {
@@ -265,7 +266,7 @@ export default function GenerateTCPage() {
                         </div>
                         <div>
                             <label className="label">Date of Issue</label>
-                            <input type="date" className="input" value={tcDetails.issueDate} onChange={e => setTcDetails({...tcDetails, issueDate: e.target.value})} />
+                            <DateInput className="input" value={tcDetails.issueDate} onChange={e => setTcDetails({...tcDetails, issueDate: e.target.value})} />
                         </div>
                         <div>
                             <label className="label">Result</label>

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 
 /* ═══════════════════════════════════════════════
    Types
@@ -475,7 +476,7 @@ export default function StaffManagementPage() {
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                         <h3 style={{ fontWeight: '700', fontSize: '15px' }}>📋 Mark & View Staff Attendance</h3>
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                            <input type="date" value={attDate} onChange={e => { setAttDate(e.target.value); fetchAttendance(e.target.value) }} className="input" style={{ margin: 0 }} />
+                            <DateInput value={attDate} onChange={e => { setAttDate(e.target.value); fetchAttendance(e.target.value) }} className="input" style={{ margin: 0 }} />
                             <button onClick={() => fetchAttendance(attDate)} className="btn btn-secondary btn-sm">🔄</button>
                         </div>
                     </div>
@@ -822,7 +823,7 @@ export default function StaffManagementPage() {
                                 </div>
                                 <div>
                                     <label className="label">Join Date</label>
-                                    <input className="input" type="date" value={staffForm.joinDate} onChange={e => setStaffForm({ ...staffForm, joinDate: e.target.value })} />
+                                    <DateInput className="input" value={staffForm.joinDate} onChange={e => setStaffForm({ ...staffForm, joinDate: e.target.value })} />
                                 </div>
                             </div>
                         </div>

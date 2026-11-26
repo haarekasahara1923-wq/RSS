@@ -1,6 +1,7 @@
 'use client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useState, useEffect, useCallback } from 'react'
+import DateInput from '@/components/DateInput'
 import { Search, Download, FileSpreadsheet, Filter, X, Users, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react'
 
 // ----- Helpers -----
@@ -174,9 +175,9 @@ export default function FeeLedgerPage() {
             <div>
               <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '5px', fontWeight: '600' }}>Date Range</label>
               <div style={{ display: 'flex', gap: '6px' }}>
-                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                <DateInput value={dateFrom} onChange={e => setDateFrom(e.target.value)}
                   style={{ flex: 1, padding: '9px 8px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: 'white', fontSize: '12px', outline: 'none' }} />
-                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                <DateInput value={dateTo} onChange={e => setDateTo(e.target.value)}
                   style={{ flex: 1, padding: '9px 8px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: 'white', fontSize: '12px', outline: 'none' }} />
               </div>
             </div>

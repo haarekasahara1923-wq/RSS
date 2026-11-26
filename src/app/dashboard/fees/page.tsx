@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 import { formatCurrency } from '@/lib/utils'
 import { downloadCSV, generateAndPrintPDF } from '@/lib/reportExport'
 import { generateReceiptPDF, convertToWords } from '@/lib/receiptPdf'
@@ -1122,8 +1123,7 @@ export default function FeesPage() {
                                     📅 Date of Deposit <span style={{ color: '#ef4444' }}>*</span>
                                     <span style={{ fontSize: '11px', fontWeight: '400', color: 'var(--text-muted)', marginLeft: '8px' }}>Select from calendar or type</span>
                                 </label>
-                                <input
-                                    type="date"
+                                <DateInput
                                     className="input"
                                     value={depositModal.date}
                                     onChange={e => setDepositModal(prev => ({ ...prev, date: e.target.value }))}
@@ -1314,8 +1314,7 @@ export default function FeesPage() {
                                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '6px', color: 'var(--text-secondary)' }}>
                                     📅 Date of Deposit <span style={{ color: '#ef4444' }}>*</span>
                                 </label>
-                                <input
-                                    type="date"
+                                <DateInput
                                     className="input"
                                     value={collectiveDepositModal.date}
                                     onChange={e => setCollectiveDepositModal(prev => ({ ...prev, date: e.target.value }))}

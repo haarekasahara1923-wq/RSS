@@ -1,11 +1,12 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function fmtDate(d: string) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function fmtTime(t: string) {
@@ -340,11 +341,11 @@ export default function StaffExamTimetable() {
             <div style={{ display: 'flex', gap: '12px' }}>
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>Exam Start Date</label>
-                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={inputStyle} required />
+                <DateInput value={startDate} onChange={e => setStartDate(e.target.value)} style={inputStyle} required />
               </div>
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>Exam End Date</label>
-                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={inputStyle} required />
+                <DateInput value={endDate} onChange={e => setEndDate(e.target.value)} style={inputStyle} required />
               </div>
             </div>
 
@@ -374,7 +375,7 @@ export default function StaffExamTimetable() {
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
                       <div style={{ flex: '1 1 130px' }}>
                         <label style={{ ...labelStyle, fontSize: '10px' }}>Date</label>
-                        <input type="date" value={row.date} onChange={e => updateRow(i, 'date', e.target.value)} style={{ ...inputStyle, padding: '8px' }} required />
+                        <DateInput value={row.date} onChange={e => updateRow(i, 'date', e.target.value)} style={{ ...inputStyle, padding: '8px' }} required />
                       </div>
                       <div style={{ flex: '2 1 150px' }}>
                         <label style={{ ...labelStyle, fontSize: '10px' }}>Subject / Paper</label>

@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 import Link from 'next/link'
 import Script from 'next/script'
 import { formatDate, formatCurrency, convertDateToWords, cleanGovtId } from '@/lib/utils'
@@ -2185,7 +2186,7 @@ export default function StudentsPage() {
                                     <div><label className="label">Parent Phone</label><input className="input" value={editForm.parentPhone || ''} onChange={e => setEditForm({...editForm, parentPhone: e.target.value})} /></div>
                                     <div><label className="label">Father's Name</label><input className="input" value={editForm.fatherName || ''} onChange={e => setEditForm({...editForm, fatherName: e.target.value})} /></div>
                                     <div><label className="label">Mother's Name</label><input className="input" value={editForm.motherName || ''} onChange={e => setEditForm({...editForm, motherName: e.target.value})} /></div>
-                                    <div><label className="label">DOB</label><input type="date" className="input" value={editForm.dob ? new Date(editForm.dob).toISOString().split('T')[0] : ''} onChange={e => setEditForm({...editForm, dob: e.target.value})} /></div>
+                                    <div><label className="label">DOB</label><DateInput className="input" value={editForm.dob ? new Date(editForm.dob).toISOString().split('T')[0] : ''} onChange={e => setEditForm({...editForm, dob: e.target.value})} /></div>
                                     <div><label className="label">DOB in words</label><input className="input" value={editForm.dobInWords || ''} onChange={e => setEditForm({...editForm, dobInWords: e.target.value})} /></div>
                                     <div>
                                         <label className="label">Gender</label>

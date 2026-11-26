@@ -1,5 +1,6 @@
 'use client'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 import { useState, useEffect } from 'react'
 import { generateReceiptPDF } from '@/lib/receiptPdf'
 
@@ -809,8 +810,7 @@ export default function ParentFeesPage() {
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
                 Payment Date *
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={collectiveDepositModal.date}
                 onChange={(e) => setCollectiveDepositModal((prev) => ({ ...prev, date: e.target.value }))}
                 style={{

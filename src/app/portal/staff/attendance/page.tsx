@@ -1,5 +1,6 @@
 'use client'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 import { useState, useEffect } from 'react'
 
 export default function StaffAttendance() {
@@ -126,7 +127,7 @@ export default function StaffAttendance() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#1e293b', padding: '16px', borderRadius: '14px', border: '1px solid #334155' }}>
         <div>
           <label style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '6px', display: 'block' }}>Date</label>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
+          <DateInput value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <div style={{ flex: 1 }}>

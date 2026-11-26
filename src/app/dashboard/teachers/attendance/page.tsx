@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 
 export default function AdminTeacherAttendancePage() {
     const { token } = useAuth()
@@ -86,7 +87,7 @@ export default function AdminTeacherAttendancePage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>Teacher Live Attendance</h1>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="input" />
+                    <DateInput value={date} onChange={e => setDate(e.target.value)} className="input" />
                     <button onClick={markAbsents} className="btn btn-secondary" style={{ whiteSpace: 'nowrap' }}>
                         Mark Unmarked as Absent
                     </button>

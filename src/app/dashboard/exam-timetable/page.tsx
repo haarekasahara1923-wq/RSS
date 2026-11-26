@@ -4,12 +4,13 @@ import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import ClassGroupMultiSelect from '@/components/ClassGroupMultiSelect'
 import SubjectScheduleBuilder, { TimeTableRow } from '@/components/SubjectScheduleBuilder'
+import DateInput from '@/components/DateInput'
 import { getGroupSubjects } from '@/lib/classGroups'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function fmtDate(d: string) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function fmtTime(t: string) {
@@ -460,8 +461,7 @@ export default function DashboardExamTimetable() {
                 <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700', marginBottom: '6px', display: 'block' }}>
                   Exam Start Date *
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   value={startDate}
                   onChange={e => setStartDate(e.target.value)}
                   className="input"
@@ -473,8 +473,7 @@ export default function DashboardExamTimetable() {
                 <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700', marginBottom: '6px', display: 'block' }}>
                   Exam End Date *
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   value={endDate}
                   onChange={e => setEndDate(e.target.value)}
                   className="input"

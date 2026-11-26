@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 
 export default function StaffAdmitCards() {
     const { token, tenant } = useAuth()
@@ -215,8 +216,7 @@ export default function StaffAdmitCards() {
                     <div style={{ display: 'flex', gap: '12px' }}>
                         <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>Start Date</label>
-                            <input
-                                type="date"
+                            <DateInput
                                 value={startDate}
                                 onChange={e => setStartDate(e.target.value)}
                                 style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#0f172a', border: '1px solid #334155', color: 'white' }}
@@ -225,8 +225,7 @@ export default function StaffAdmitCards() {
                         </div>
                         <div style={{ flex: 1 }}>
                             <label style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>End Date</label>
-                            <input
-                                type="date"
+                            <DateInput
                                 value={endDate}
                                 onChange={e => setEndDate(e.target.value)}
                                 style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#0f172a', border: '1px solid #334155', color: 'white' }}
@@ -242,7 +241,7 @@ export default function StaffAdmitCards() {
                         </div>
                         {timeTable.map((row, idx) => (
                             <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                                <input type="date" value={row.date} onChange={e => { const t = [...timeTable]; t[idx].date = e.target.value; setTimeTable(t) }} style={{ flex: 1, padding: '8px', borderRadius: '6px', background: '#1e293b', border: '1px solid #334155', color: 'white' }} required />
+                                <DateInput value={row.date} onChange={e => { const t = [...timeTable]; t[idx].date = e.target.value; setTimeTable(t) }} style={{ flex: 1, padding: '8px', borderRadius: '6px', background: '#1e293b', border: '1px solid #334155', color: 'white' }} required />
                                 <input type="text" placeholder="Subject" value={row.subject} onChange={e => { const t = [...timeTable]; t[idx].subject = e.target.value; setTimeTable(t) }} style={{ flex: 1.5, padding: '8px', borderRadius: '6px', background: '#1e293b', border: '1px solid #334155', color: 'white' }} required />
                                 <input type="time" value={row.startTime} onChange={e => { const t = [...timeTable]; t[idx].startTime = e.target.value; setTimeTable(t) }} style={{ flex: 1, padding: '8px', borderRadius: '6px', background: '#1e293b', border: '1px solid #334155', color: 'white' }} required />
                                 <input type="time" value={row.endTime} onChange={e => { const t = [...timeTable]; t[idx].endTime = e.target.value; setTimeTable(t) }} style={{ flex: 1, padding: '8px', borderRadius: '6px', background: '#1e293b', border: '1px solid #334155', color: 'white' }} required />

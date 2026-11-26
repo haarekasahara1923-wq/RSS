@@ -1,4 +1,5 @@
 'use client'
+import DateInput from '@/components/DateInput'
 
 /** Local (browser) YYYY-MM-DD */
 export function localDay(d: Date = new Date()): string {
@@ -16,7 +17,7 @@ export function fyStartDay(d: Date = new Date()): string {
 export function prettyDay(day: string): string {
     if (!day) return ''
     const [y, m, d] = day.split('-').map(Number)
-    return new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    return new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 export type RangePreset = 'today' | 'yesterday' | 'week' | 'month' | 'lastMonth' | 'fy' | 'all'
@@ -73,12 +74,12 @@ export default function DateRangeBar({
             <div className="acc-range-dates">
                 <label className="acc-date-field">
                     <span>📅 From</span>
-                    <input id="range-from" type="date" className="input" value={from} max={to}
+                    <DateInput id="range-from" className="input" value={from} max={to}
                         onChange={e => e.target.value && onChange({ from: e.target.value, to })} />
                 </label>
                 <label className="acc-date-field">
                     <span>📅 To</span>
-                    <input id="range-to" type="date" className="input" value={to} min={from} max={localDay()}
+                    <DateInput id="range-to" className="input" value={to} min={from} max={localDay()}
                         onChange={e => e.target.value && onChange({ from, to: e.target.value })} />
                 </label>
             </div>

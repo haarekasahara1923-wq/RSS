@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { downloadCSV, downloadExcel, generateAndPrintPDF } from '@/lib/reportExport'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
@@ -280,7 +281,7 @@ export default function ExpensesPage() {
                                 <div className="grid-cols-2">
                                     <div>
                                         <label className="label">📅 Expense Date *</label>
-                                        <input id="expense-date" className="input" type="date" value={form.date} max={localDay()} onChange={e => setForm({ ...form, date: e.target.value })} required style={{ colorScheme: 'dark' }} />
+                                        <DateInput id="expense-date" className="input" value={form.date} max={localDay()} onChange={e => setForm({ ...form, date: e.target.value })} required style={{ colorScheme: 'dark' }} />
                                     </div>
                                     <div>
                                         <label className="label">Amount (₹) *</label>

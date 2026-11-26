@@ -1,5 +1,6 @@
 'use client'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 import { useState, useEffect } from 'react'
 
 export default function StaffHomework() {
@@ -393,8 +394,7 @@ export default function StaffHomework() {
               <label style={{ fontSize: '12px', fontWeight: '600', color: '#cbd5e1', marginBottom: '6px', display: 'block' }}>
                 Submission Due Date
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={form.dueDate}
                 onChange={e => setForm(p => ({ ...p, dueDate: e.target.value }))}
                 style={inputStyle}

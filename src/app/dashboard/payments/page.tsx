@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { downloadCSV, downloadExcel, generateAndPrintPDF } from '@/lib/reportExport'
 import DateRangeBar, { localDay, presetRange, prettyDay } from '@/components/accounts/DateRangeBar'
@@ -381,7 +382,7 @@ export default function PaymentsPage() {
                                 <div className="grid-cols-2">
                                     <div>
                                         <label className="label">📅 Payment Date *</label>
-                                        <input id="fee-date" className="input" type="date" value={feeForm.date} max={localDay()} onChange={e => setFeeForm({ ...feeForm, date: e.target.value })} required style={{ colorScheme: 'dark' }} />
+                                        <DateInput id="fee-date" className="input" value={feeForm.date} max={localDay()} onChange={e => setFeeForm({ ...feeForm, date: e.target.value })} required style={{ colorScheme: 'dark' }} />
                                     </div>
                                     <div>
                                         <label className="label">Amount (₹) *</label>
@@ -427,7 +428,7 @@ export default function PaymentsPage() {
                                 <div className="grid-cols-2">
                                     <div>
                                         <label className="label">📅 Date *</label>
-                                        <input id="income-date" className="input" type="date" value={incForm.date} max={localDay()} onChange={e => setIncForm({ ...incForm, date: e.target.value })} required style={{ colorScheme: 'dark' }} />
+                                        <DateInput id="income-date" className="input" value={incForm.date} max={localDay()} onChange={e => setIncForm({ ...incForm, date: e.target.value })} required style={{ colorScheme: 'dark' }} />
                                     </div>
                                     <div>
                                         <label className="label">Amount (₹) *</label>

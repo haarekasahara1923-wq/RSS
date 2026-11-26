@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 import { FeatureGate } from '../layout'
 
 interface Lead {
@@ -186,7 +187,7 @@ export default function LeadsPage() {
                                             <select className="input" value={form.source} onChange={e => setForm({ ...form, source: e.target.value })}>
                                                 {SOURCES.map(s => <option key={s}>{s}</option>)}
                                             </select></div>
-                                        <div><label className="label">Follow-up Date</label><input className="input" type="date" value={form.followUpDate} onChange={e => setForm({ ...form, followUpDate: e.target.value })} /></div>
+                                        <div><label className="label">Follow-up Date</label><DateInput className="input" value={form.followUpDate} onChange={e => setForm({ ...form, followUpDate: e.target.value })} /></div>
                                     </div>
                                     <div><label className="label">Notes</label><textarea className="input" rows={2} placeholder="Details about the inquiry..." value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ resize: 'none' }} /></div>
                                 </div>

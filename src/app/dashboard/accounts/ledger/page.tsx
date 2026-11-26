@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import DateInput from '@/components/DateInput'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrency } from '@/lib/utils'
 import { downloadCSV, downloadExcel, generateAndPrintPDF } from '@/lib/reportExport'
@@ -357,7 +358,7 @@ export default function SchoolLedgerPage() {
                                     </div>
                                     <div>
                                         <label className="label">📅 Ledger Start Date</label>
-                                        <input id="opening-date" className="input" type="date" value={settings.openingDate} max={localDay()} onChange={e => setSettings({ ...settings, openingDate: e.target.value })} style={{ colorScheme: 'dark' }} />
+                                        <DateInput id="opening-date" className="input" value={settings.openingDate} max={localDay()} onChange={e => setSettings({ ...settings, openingDate: e.target.value })} style={{ colorScheme: 'dark' }} />
                                     </div>
                                 </div>
                                 <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Leave the start date empty to include all historical transactions.</p>

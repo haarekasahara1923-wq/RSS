@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import DateInput from '@/components/DateInput'
 
 export default function StaffLeavesPage() {
     const { token, user } = useAuth()
@@ -70,11 +71,11 @@ export default function StaffLeavesPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
                         <label className="label">Start Date</label>
-                        <input type="date" required value={startDate} onChange={e => setStartDate(e.target.value)} className="input" />
+                        <DateInput required value={startDate} onChange={e => setStartDate(e.target.value)} className="input" />
                     </div>
                     <div>
                         <label className="label">End Date</label>
-                        <input type="date" required value={endDate} onChange={e => setEndDate(e.target.value)} className="input" />
+                        <DateInput required value={endDate} onChange={e => setEndDate(e.target.value)} className="input" />
                     </div>
                 </div>
                 <div>

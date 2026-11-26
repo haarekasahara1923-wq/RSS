@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useId, useRef } from 'react'
+import DateInput from '@/components/DateInput'
 
 export interface TimeTableRow {
   date: string
@@ -211,8 +212,7 @@ export default function SubjectScheduleBuilder({
             >
               <div>
                 <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Date *</label>
-                <input
-                  type="date"
+                <DateInput
                   value={row.date}
                   onChange={(e) => updateRow(idx, 'date', e.target.value)}
                   className="input"
