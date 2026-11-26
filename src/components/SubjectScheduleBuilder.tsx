@@ -1,5 +1,5 @@
 'use client'
-import { useId } from 'react'
+import { useEffect, useId, useRef } from 'react'
 
 export interface TimeTableRow {
   date: string
@@ -27,6 +27,39 @@ export default function SubjectScheduleBuilder({
   subtitle = 'Add all papers with dates and timings. This timetable will be printed below each admit card.',
 }: SubjectScheduleBuilderProps) {
   const datalistId = useId()
+  const prevAutoSubjectsRef = useRef<string[]>([])
+
+  // Automatically prefill schedule rows whenever selected class/group subjects change
+  useEffect(() => {
+    const prevKeys = new Set(prevAutoSubjectsRef.current.map((s) => s.trim().toLowerCase()))
+    const nextKeys = new Set(availableSubjects.map((s) => s.trim().toLowerCase()))
+
+    const sameAsPrev =
+      prevKeys.size === nextKeys.size &&
+      Array.from(nextKeys).every((k) => prevKeys.has(k))
+    if (sameAsPrev) return
+
+    // Keep rows that are still in nextKeys OR were manually added (not in prevKeys),
+    // preserving any dates/timings already filled by the user.
+    const keptRows = rows.filter((r) => {
+      const key = r.subject.trim().toLowerCase()
+      return nextKeys.has(key) || (key !== '' && !prevKeys.has(key))
+    })
+
+    const keptKeys = new Set(keptRows.map((r) => r.subject.trim().toLowerCase()))
+    const addedRows: TimeTableRow[] = availableSubjects
+      .filter((s) => !keptKeys.has(s.trim().toLowerCase()))
+      .map((subj) => ({
+        date: '',
+        subject: subj,
+        startTime: '09:00',
+        endTime: '12:00',
+        duration: '3h',
+      }))
+
+    prevAutoSubjectsRef.current = availableSubjects
+    onChange([...keptRows, ...addedRows])
+  }, [availableSubjects])
 
   const addRow = (subjectName = '') => {
     onChange([
