@@ -27,17 +27,15 @@ export default function SubjectScheduleBuilder({
   subtitle = 'Add all papers with dates and timings. This timetable will be printed below each admit card.',
 }: SubjectScheduleBuilderProps) {
   const datalistId = useId()
-  const prevAutoSubjectsRef = useRef<string[]>([])
+  const prevAutoKeyRef = useRef<string>('')
+  const availableKey = availableSubjects.map((s) => s.trim().toLowerCase()).join('|')
 
   // Automatically prefill schedule rows whenever selected class/group subjects change
   useEffect(() => {
-    const prevKeys = new Set(prevAutoSubjectsRef.current.map((s) => s.trim().toLowerCase()))
-    const nextKeys = new Set(availableSubjects.map((s) => s.trim().toLowerCase()))
+    if (availableKey === prevAutoKeyRef.current) return
 
-    const sameAsPrev =
-      prevKeys.size === nextKeys.size &&
-      Array.from(nextKeys).every((k) => prevKeys.has(k))
-    if (sameAsPrev) return
+    const prevKeys = new Set(prevAutoKeyRef.current ? prevAutoKeyRef.current.split('|').filter(Boolean) : [])
+    const nextKeys = new Set(availableSubjects.map((s) => s.trim().toLowerCase()).filter(Boolean))
 
     // Keep rows that are still in nextKeys OR were manually added (not in prevKeys),
     // preserving any dates/timings already filled by the user.
@@ -57,9 +55,10 @@ export default function SubjectScheduleBuilder({
         duration: '3h',
       }))
 
-    prevAutoSubjectsRef.current = availableSubjects
+    prevAutoKeyRef.current = availableKey
     onChange([...keptRows, ...addedRows])
-  }, [availableSubjects])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableKey])
 
   const addRow = (subjectName = '') => {
     onChange([

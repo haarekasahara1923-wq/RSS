@@ -40,13 +40,16 @@ export function getGroupSubjects(
   const result: string[] = []
   for (const c of courses) {
     if (!selectedCourseIds.includes(c.id)) continue
-    for (const subj of c.subjects || []) {
-      const trimmed = subj.trim()
-      if (!trimmed) continue
-      const key = trimmed.toLowerCase()
-      if (!seen.has(key)) {
-        seen.add(key)
-        result.push(trimmed)
+    for (const rawSubj of c.subjects || []) {
+      const parts = String(rawSubj).split(',')
+      for (const part of parts) {
+        const trimmed = part.trim()
+        if (!trimmed) continue
+        const key = trimmed.toLowerCase()
+        if (!seen.has(key)) {
+          seen.add(key)
+          result.push(trimmed)
+        }
       }
     }
   }
