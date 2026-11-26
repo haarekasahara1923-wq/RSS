@@ -2,6 +2,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import ClassGroupMultiSelect from '@/components/ClassGroupMultiSelect'
+import SubjectScheduleBuilder, { TimeTableRow } from '@/components/SubjectScheduleBuilder'
+import { getGroupSubjects } from '@/lib/classGroups'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function fmtDate(d: string) {
@@ -165,12 +168,13 @@ export default function DashboardExamTimetable() {
   const [events, setEvents] = useState<any[]>([])
 
   // Form state
-  const [selectedCourse, setSelectedCourse] = useState('')
+  const [selectedClassGroup, setSelectedClassGroup] = useState('')
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([])
   const [selectedBatch, setSelectedBatch] = useState('')
   const [examName, setExamName] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [rows, setRows] = useState<{ date: string; subject: string; startTime: string; endTime: string; duration: string }[]>([])
+  const [rows, setRows] = useState<TimeTableRow[]>([])
   const [classStudentCount, setClassStudentCount] = useState<number | null>(null)
 
   const [loading, setLoading] = useState(false)
@@ -187,6 +191,7 @@ export default function DashboardExamTimetable() {
   useEffect(() => {
     if (!token) return
     fetchCourses()
+    fetchBatches()
     fetchEvents()
   }, [token])
 
@@ -200,31 +205,13 @@ export default function DashboardExamTimetable() {
     }
   }
 
-  const fetchBatches = async (courseId: string) => {
+  const fetchBatches = async () => {
     try {
-      const res = await fetch(`/api/batches?courseId=${courseId}`, { headers })
+      const res = await fetch('/api/batches', { headers })
       const d = await res.json()
       if (d.success) setBatches(d.data || [])
     } catch (err) {
       console.error(err)
-    }
-  }
-
-  const handleCourseChange = async (courseId: string) => {
-    setSelectedCourse(courseId)
-    setSelectedBatch('')
-    if (!courseId) {
-      setBatches([])
-      setClassStudentCount(null)
-      return
-    }
-    fetchBatches(courseId)
-    try {
-      const res = await fetch(`/api/students?courseId=${courseId}`, { headers })
-      const data = await res.json()
-      if (data.success) setClassStudentCount(data.data?.length || 0)
-    } catch {
-      setClassStudentCount(null)
     }
   }
 
@@ -240,19 +227,14 @@ export default function DashboardExamTimetable() {
     setFetchingEvents(false)
   }
 
-  const addRow = () => setRows([...rows, { date: '', subject: '', startTime: '09:00', endTime: '12:00', duration: '3h' }])
-  const removeRow = (i: number) => setRows(rows.filter((_, idx) => idx !== i))
-  const updateRow = (i: number, key: string, val: string) => {
-    const updated = [...rows]
-    updated[i] = { ...updated[i], [key]: val }
-    if ((key === 'startTime' || key === 'endTime') && updated[i].startTime && updated[i].endTime) {
-      updated[i].duration = computeDuration(updated[i].startTime, updated[i].endTime)
-    }
-    setRows(updated)
-  }
+  const availableSubjects = getGroupSubjects(courses, selectedCourseIds)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (selectedCourseIds.length === 0) {
+      showToast('⚠️ Please select at least one class')
+      return
+    }
     if (rows.length === 0) { showToast('⚠️ Add at least one subject to the exam time table'); return }
     setLoading(true)
     try {
@@ -261,8 +243,8 @@ export default function DashboardExamTimetable() {
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({
           examName,
-          courseId: selectedCourse,
-          batchId: selectedBatch,
+          courseIds: selectedCourseIds,
+          batchId: selectedCourseIds.length === 1 ? selectedBatch : '',
           startDate,
           endDate,
           timeTable: rows
@@ -270,7 +252,11 @@ export default function DashboardExamTimetable() {
       })
       const d = await res.json()
       if (d.success) {
-        showToast('✅ Exam Time Table & Admit Cards created successfully!')
+        const count = d.createdCount || 1
+        const skippedMsg = Array.isArray(d.skipped) && d.skipped.length > 0
+          ? ` (Skipped ${d.skipped.length} without students)`
+          : ''
+        showToast(`✅ Exam Time Table & Admit Cards created for ${count} class${count > 1 ? 'es' : ''}!${skippedMsg}`)
         resetForm()
         fetchEvents()
         setShowForm(false)
@@ -306,7 +292,8 @@ export default function DashboardExamTimetable() {
     setExamName('')
     setStartDate('')
     setEndDate('')
-    setSelectedCourse('')
+    setSelectedClassGroup('')
+    setSelectedCourseIds([])
     setSelectedBatch('')
     setRows([])
     setClassStudentCount(null)
@@ -436,45 +423,20 @@ export default function DashboardExamTimetable() {
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Class & Section Selection */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
-              <div>
-                <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700', marginBottom: '6px', display: 'block' }}>
-                  Select Class / Course *
-                </label>
-                <select
-                  value={selectedCourse}
-                  onChange={e => handleCourseChange(e.target.value)}
-                  className="input"
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px' }}
-                  required
-                >
-                  <option value="">-- Choose Class --</option>
-                  {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                {classStudentCount !== null && (
-                  <div style={{ fontSize: '12px', color: classStudentCount > 0 ? '#10b981' : '#ef4444', fontWeight: '700', marginTop: '6px' }}>
-                    {classStudentCount > 0 ? `👥 ${classStudentCount} Active Students will receive this Admit Card` : '⚠️ No active students found in this class'}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700', marginBottom: '6px', display: 'block' }}>
-                  Section / Batch (Optional)
-                </label>
-                <select
-                  value={selectedBatch}
-                  onChange={e => setSelectedBatch(e.target.value)}
-                  className="input"
-                  disabled={!selectedCourse}
-                  style={{ width: '100%', padding: '12px', borderRadius: '10px', opacity: !selectedCourse ? 0.5 : 1 }}
-                >
-                  <option value="">{batches.length > 0 ? '-- All Sections / Whole Class --' : '-- Whole Class (No Sections) --'}</option>
-                  {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
-              </div>
-            </div>
+            {/* Class Group, Multi-Class Tick Selection & Section */}
+            <ClassGroupMultiSelect
+              courses={courses}
+              batches={batches}
+              selectedClassGroup={selectedClassGroup}
+              onClassGroupChange={setSelectedClassGroup}
+              selectedCourseIds={selectedCourseIds}
+              onSelectedCourseIdsChange={setSelectedCourseIds}
+              selectedBatch={selectedBatch}
+              onBatchChange={setSelectedBatch}
+              token={token}
+              studentCount={classStudentCount}
+              onStudentCountChange={setClassStudentCount}
+            />
 
             {/* Exam Name */}
             <div>
@@ -523,129 +485,12 @@ export default function DashboardExamTimetable() {
             </div>
 
             {/* Subject Time Table Schedule Builder */}
-            <div style={{ background: 'var(--surface-2)', padding: '16px', borderRadius: '14px', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                    📚 Exam Time Table Subjects ({rows.length} added)
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    Add all papers with dates and timings. This timetable will be printed below each admit card.
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={addRow}
-                  style={{
-                    background: 'var(--primary)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '8px 14px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer'
-                  }}
-                >
-                  + Add Subject
-                </button>
-              </div>
-
-              {rows.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: '10px', fontSize: '13px' }}>
-                  Click <strong>"+ Add Subject"</strong> to enter exam dates, subjects, and timings.
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {rows.map((row, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border)',
-                        padding: '12px',
-                        borderRadius: '10px',
-                        display: 'grid',
-                        gridTemplateColumns: '1.2fr 2fr 1fr 1fr 1fr auto',
-                        gap: '8px',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <div>
-                        <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Date *</label>
-                        <input
-                          type="date"
-                          value={row.date}
-                          onChange={e => updateRow(idx, 'date', e.target.value)}
-                          className="input"
-                          style={{ width: '100%', padding: '8px', borderRadius: '6px', fontSize: '12px' }}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Subject / Paper *</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Science / Mathematics"
-                          value={row.subject}
-                          onChange={e => updateRow(idx, 'subject', e.target.value)}
-                          className="input"
-                          style={{ width: '100%', padding: '8px', borderRadius: '6px', fontSize: '12px' }}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Start Time</label>
-                        <input
-                          type="time"
-                          value={row.startTime}
-                          onChange={e => updateRow(idx, 'startTime', e.target.value)}
-                          className="input"
-                          style={{ width: '100%', padding: '8px', borderRadius: '6px', fontSize: '12px' }}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>End Time</label>
-                        <input
-                          type="time"
-                          value={row.endTime}
-                          onChange={e => updateRow(idx, 'endTime', e.target.value)}
-                          className="input"
-                          style={{ width: '100%', padding: '8px', borderRadius: '6px', fontSize: '12px' }}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Duration</label>
-                        <input
-                          type="text"
-                          value={row.duration}
-                          readOnly
-                          className="input"
-                          style={{ width: '100%', padding: '8px', borderRadius: '6px', fontSize: '12px', color: '#10b981', fontWeight: '700' }}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeRow(idx)}
-                        style={{
-                          background: 'rgba(239,68,68,0.15)',
-                          border: '1px solid rgba(239,68,68,0.3)',
-                          color: '#ef4444',
-                          padding: '8px 10px',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          marginTop: '14px'
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <SubjectScheduleBuilder
+              rows={rows}
+              onChange={setRows}
+              availableSubjects={availableSubjects}
+              computeDuration={computeDuration}
+            />
 
             <button
               type="submit"
