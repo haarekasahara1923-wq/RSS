@@ -78,8 +78,9 @@ export async function POST(req: NextRequest) {
             },
             { status: 201 }
         )
-    } catch (err) {
+    } catch (err: any) {
         console.error('Create admit card event error:', err)
-        return NextResponse.json({ error: 'Failed to create admit card event' }, { status: 500 })
+        const msg = err?.message || 'Failed to create admit card event'
+        return NextResponse.json({ error: msg }, { status: 500 })
     }
 }

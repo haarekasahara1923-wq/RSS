@@ -83,8 +83,9 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     )
-  } catch (err) {
+  } catch (err: any) {
     console.error('Create exam timetable error:', err)
-    return NextResponse.json({ error: 'Failed to create exam timetable' }, { status: 500 })
+    const msg = err?.message || 'Failed to create exam timetable'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

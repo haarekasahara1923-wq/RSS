@@ -18,6 +18,20 @@ export interface SkippedCourseInfo {
   reason: string
 }
 
+let rollNoColumnEnsured: Promise<void> | null = null
+
+export async function ensureAdmitCardRollNoColumn(): Promise<void> {
+  if (!rollNoColumnEnsured) {
+    rollNoColumnEnsured = prisma
+      .$executeRawUnsafe(`ALTER TABLE "AdmitCard" ADD COLUMN IF NOT EXISTS "rollNo" TEXT`)
+      .then(() => undefined)
+      .catch(() => {
+        rollNoColumnEnsured = null
+      })
+  }
+  await rollNoColumnEnsured
+}
+
 /**
  * Create AdmitCardEvent (with attached timeTable) and student AdmitCards
  * for one or more selected classes (courses).
@@ -32,6 +46,14 @@ export async function createAdmitCardEventsForCourses({
   endDate,
   timeTable,
 }: CreateAdmitCardEventsInput) {
+  await ensureAdmitCardRollNoColumn()
+
+  const parsedStart = new Date(startDate)
+  const parsedEnd = new Date(endDate)
+  if (Number.isNaN(parsedStart.getTime()) || Number.isNaN(parsedEnd.getTime())) {
+    throw new Error('Invalid exam start or end date')
+  }
+
   const uniqueCourseIds = Array.from(new Set(courseIds.filter(Boolean)))
   const isSingleCourse = uniqueCourseIds.length === 1
   const createdEvents: any[] = []
