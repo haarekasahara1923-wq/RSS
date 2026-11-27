@@ -7,6 +7,7 @@ import ClassGroupMultiSelect from '@/components/ClassGroupMultiSelect'
 import SubjectScheduleBuilder, { TimeTableRow } from '@/components/SubjectScheduleBuilder'
 import DateInput from '@/components/DateInput'
 import { getGroupSubjects } from '@/lib/classGroups'
+import { formatRollNoPreview } from '@/lib/rollNumber'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function fmtDate(d: string) {
@@ -88,8 +89,8 @@ function generateAdmitCardsPrintHTML(eventDetails: any, tenant: any, singleCard?
               <span class="detail-value highlight">${card.student.fullName}</span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">SCHOLAR / ROLL NO</span>
-              <span class="detail-value">${card.student.scholarNo || 'N/A'}</span>
+              <span class="detail-label">ROLL NO</span>
+              <span class="detail-value highlight">${card.rollNo || card.student.scholarNo || 'N/A'}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">FATHER'S NAME</span>
@@ -491,6 +492,7 @@ function DashboardAdmitCardsContent() {
     if (!searchStudent) return true
     const q = searchStudent.toLowerCase()
     return (
+      c.rollNo?.toLowerCase().includes(q) ||
       c.student.fullName?.toLowerCase().includes(q) ||
       c.student.scholarNo?.toLowerCase().includes(q) ||
       c.student.fatherName?.toLowerCase().includes(q)
@@ -624,6 +626,40 @@ function DashboardAdmitCardsContent() {
               studentCount={formStudentCount}
               onStudentCountChange={setFormStudentCount}
             />
+
+            {formCourseIds.length > 0 && (
+              <div style={{
+                background: 'rgba(56,189,248,0.08)',
+                border: '1px solid rgba(56,189,248,0.28)',
+                borderRadius: '10px',
+                padding: '10px 14px',
+                fontSize: '12px',
+                color: '#7dd3fc',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontWeight: '800', color: '#38bdf8' }}>🔢 Sequential Roll No. Series:</span>
+                {courses
+                  .filter(c => formCourseIds.includes(c.id))
+                  .map(c => (
+                    <span
+                      key={c.id}
+                      style={{
+                        background: 'rgba(15,23,42,0.55)',
+                        border: '1px solid rgba(56,189,248,0.3)',
+                        padding: '3px 9px',
+                        borderRadius: '6px',
+                        fontWeight: '700',
+                        color: 'var(--text-primary)'
+                      }}
+                    >
+                      {c.name}: <span style={{ color: '#fbbf24' }}>{formatRollNoPreview(c.name, formCourseIds.length === 1 && formStudentCount !== null ? formStudentCount : undefined)}</span>
+                    </span>
+                  ))}
+              </div>
+            )}
 
             {/* Exam Name */}
             <div>
@@ -1053,6 +1089,7 @@ function DashboardAdmitCardsContent() {
                                   {card.student.fullName}
                                 </div>
                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                  <span>Roll No: <strong style={{ color: '#38bdf8' }}>{card.rollNo || 'N/A'}</strong></span>
                                   <span>Scholar No: <strong>{card.student.scholarNo || 'N/A'}</strong></span>
                                   {card.student.fatherName && <span>Father: {card.student.fatherName}</span>}
                                 </div>

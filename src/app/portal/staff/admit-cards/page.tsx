@@ -491,7 +491,7 @@ export default function StaffAdmitCards() {
                                     </div>
                                     <div>
                                         <div style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>{card.student.fullName}</div>
-                                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>ID: {card.student.scholarNo || 'N/A'}</div>
+                                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>Roll No: <strong style={{ color: '#38bdf8' }}>{card.rollNo || 'N/A'}</strong> • ID: {card.student.scholarNo || 'N/A'}</div>
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -543,7 +543,7 @@ export default function StaffAdmitCards() {
                                                     <div class="student-info">
                                                         <div class="student-details">
                                                             <div><strong>Student Name:</strong> ${card.student.fullName}</div>
-                                                            <div><strong>Scholar / Roll No:</strong> ${card.student.scholarNo || 'N/A'}</div>
+                                                            <div><strong>Roll No:</strong> ${card.rollNo || card.student.scholarNo || 'N/A'}</div>
                                                             <div><strong>Father's Name:</strong> ${card.student.fatherName || 'N/A'}</div>
                                                             <div><strong>Class & Batch:</strong> ${eventDetails.course.name} - ${eventDetails.batch.name}</div>
                                                             <div><strong>Date of Birth:</strong> ${card.student.dob ? new Date(card.student.dob).toLocaleDateString('en-IN') : 'N/A'}</div>

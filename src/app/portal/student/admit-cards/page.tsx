@@ -137,7 +137,7 @@ export default function StudentAdmitCards() {
                                 <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                     {[
                                         { label: "Student's Name", value: card.student.fullName },
-                                        { label: "Scholar No / Roll No", value: card.student.scholarNo || 'N/A' },
+                                        { label: "Roll No", value: card.rollNo || card.student.scholarNo || 'N/A' },
                                         { label: "Father's Name", value: card.student.fatherName || 'N/A' },
                                         { label: "Class & Section", value: `${card.event.course.name} - ${card.event.batch.name}` },
                                         { label: "Date of Birth", value: card.student.dob ? new Date(card.student.dob).toLocaleDateString('en-IN') : 'N/A' },

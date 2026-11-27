@@ -14,6 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ even
                 course: { select: { name: true } },
                 batch: { select: { name: true } },
                 admitCards: {
+                    orderBy: [{ rollNo: 'asc' }, { createdAt: 'asc' }],
                     include: {
                         student: {
                             select: {

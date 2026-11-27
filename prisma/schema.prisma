@@ -1178,6 +1178,7 @@ model AdmitCard {
   tenantId           String
   eventId            String
   studentId          String
+  rollNo             String?
   isPublished        Boolean  @default(false)
   isBlocked          Boolean  @default(false)
   superAdminApproved Boolean  @default(false)

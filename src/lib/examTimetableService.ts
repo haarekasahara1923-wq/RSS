@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { generateClassRollNumber } from '@/lib/rollNumber'
 
 export interface CreateAdmitCardEventsInput {
   tenantId: string
@@ -77,6 +78,7 @@ export async function createAdmitCardEventsForCourses({
     const students = await prisma.student.findMany({
       where: studentWhere,
       select: { id: true },
+      orderBy: [{ fullName: 'asc' }, { createdAt: 'asc' }],
     })
 
     if (students.length === 0) {
@@ -99,9 +101,10 @@ export async function createAdmitCardEventsForCourses({
         createdBy: userId,
         timeTable,
         admitCards: {
-          create: students.map((s) => ({
+          create: students.map((s, idx) => ({
             tenantId,
             studentId: s.id,
+            rollNo: generateClassRollNumber(course.name, idx),
           })),
         },
       },
